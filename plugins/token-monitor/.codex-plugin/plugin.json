@@ -1,0 +1,26 @@
+{
+  "name": "token-monitor",
+  "version": "1.2.0",
+  "description": "Native Codex usage monitor with optional SSH remotes and explicit setup.",
+  "author": {
+    "name": "TokenMonitor contributors"
+  },
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "TokenMonitor",
+    "shortDescription": "Local and SSH Codex usage monitor",
+    "longDescription": "Set up, diagnose, update, and uninstall TokenMonitor, an independent native monitor for local and optional SSH remote Codex usage. Remote setup is managed in the app Settings and uses a dedicated SSH identity; it does not reuse OpenAI remote connections. Apple silicon and macOS 13 or later required. Includes a prebuilt companion app; no Python, Xcode, MCP server, or model calls are needed by the monitor. Setup installs six user hooks and a per-user launch helper. macOS first-open approval and Codex hook trust are required. Removing this plugin alone does not uninstall the companion.",
+    "developerName": "TokenMonitor contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Local companion setup and maintenance"
+    ],
+    "defaultPrompt": [
+      "Set up TokenMonitor.",
+      "Diagnose TokenMonitor.",
+      "Uninstall TokenMonitor."
+    ],
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/icon.png"
+  }
+}

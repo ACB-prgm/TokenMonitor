@@ -1,0 +1,3 @@
+// swift-tools-version: 5.9
+import PackageDescription
+let package = Package(name: "CodexUsageMonitor", platforms: [.macOS(.v13)], products: [.executable(name: "CodexUsageMonitor", targets: ["CodexUsageMonitor"])], targets: [.target(name: "MonitorCore", linkerSettings: [.linkedLibrary("sqlite3")]), .executableTarget(name: "CodexUsageMonitor", dependencies: ["MonitorCore"]), .testTarget(name: "MonitorCoreTests", dependencies: ["MonitorCore"])])

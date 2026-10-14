@@ -34,7 +34,6 @@ From this plugin directory:
 npm ci --ignore-scripts
 npm run build
 npm run typecheck
-npm test
 ```
 
 The source manifest expects the bundled arm64 Node runtime. Download the exact
@@ -43,6 +42,7 @@ official archive specified in `scripts/runtime.json` into the repository's
 
 ```sh
 python3 scripts/prepare-runtime.py
+npm test
 python3 ../../scripts/package-embedded.py
 python3 ../../scripts/test_embedded_archive.py
 ```

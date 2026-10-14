@@ -14,6 +14,14 @@ Executed on Apple silicon macOS with the bundled Node 24.21.0 runtime:
 - Native monitor regression suite: 62 Swift tests and 7 Python tests pass.
 - Official Node archive checksum verified; executable declares minimum macOS 13.5.
 
+Host diagnosis: the legacy `.mcp.json` loader in this Codex build does not expand
+`${PLUGIN_ROOT}` in the command, arguments, or working directory. `codex mcp list`
+showed a literal placeholder and a nonexistent working directory; desktop logs
+confirmed startup failed with `No such file or directory`. The launcher now uses
+`/bin/sh`, relative script arguments, and `cwd: "."`, which Codex resolves against
+the installed plugin directory. Tests launch the exact manifest configuration,
+including an extracted package directory containing spaces.
+
 The separate local plugin was installed through the Codex CLI. Installation does
 not prove that its panel rendered. Computer Use refused access to the Codex app;
 therefore user-click opening, actual host delivery of result metadata, live

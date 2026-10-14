@@ -1,9 +1,9 @@
 {
   "mcpServers": {
     "token-monitor-embedded": {
-      "command": "${PLUGIN_ROOT}/runtime/node",
-      "args": ["${PLUGIN_ROOT}/server/dist/index.mjs"],
-      "cwd": "${PLUGIN_ROOT}"
+      "command": "/bin/sh",
+      "args": ["./scripts/launch.sh"],
+      "cwd": "."
     }
   }
 }

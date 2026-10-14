@@ -6,12 +6,16 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { App } from '@modelcontextprotocol/ext-apps';
 import { AppBridge } from '@modelcontextprotocol/ext-apps/app-bridge';
 import { fileURLToPath } from 'node:url';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 async function connectedClient() {
   const client = new Client({ name: 'embedded-prototype-tests', version: '0.1.0' });
-  const transport = new StdioClientTransport({ command: process.execPath,
-    args: [root + '/server/dist/index.mjs'], cwd: root, stderr: 'pipe' });
+  const manifest = JSON.parse(await readFile(root + '/.mcp.json', 'utf8'));
+  const config = manifest.mcpServers['token-monitor-embedded'];
+  const transport = new StdioClientTransport({ command: config.command,
+    args: config.args, cwd: path.resolve(root, config.cwd), stderr: 'pipe' });
   await client.connect(transport);
   return { client, transport };
 }

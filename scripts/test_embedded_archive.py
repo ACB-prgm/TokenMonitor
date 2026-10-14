@@ -37,8 +37,10 @@ class EmbeddedArchiveTests(unittest.TestCase):
                 {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/list'},
                 {'jsonrpc': '2.0', 'id': 3, 'method': 'tools/call', 'params': {'name': 'get_monitor_state', 'arguments': {}}},
             ]
-            process = subprocess.Popen([str(node), str(package / 'server/dist/index.mjs')],
-                cwd=directory, env={'PATH': '/usr/bin:/bin', 'NODE_PATH': ''},
+            config = json.loads((package / '.mcp.json').read_text())['mcpServers']['token-monitor-embedded']
+            self.assertNotIn('${PLUGIN_ROOT}', json.dumps(config))
+            process = subprocess.Popen([config['command'], *config['args']],
+                cwd=package / config['cwd'], env={'PATH': '/usr/bin:/bin', 'NODE_PATH': ''},
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             try:
                 def call(request):

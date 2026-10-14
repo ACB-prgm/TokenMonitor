@@ -10,8 +10,11 @@ prototype has no lifecycle hooks and changes no monitor state or registrations.
 
 ## Try the installed prototype
 
-Open **TokenMonitor Embedded** from the conversation's **Open app** menu. If the
-entry is missing in an existing chat, start a new local chat. The panel should
+Fully quit and reopen ChatGPT/Codex after installing the local plugin. Open an
+existing local conversation, then use its **⋯ → Plugins → TokenMonitor Embedded**
+menu. The installed app labels this control **Plugins**, although the extension
+documentation calls it an app entrypoint. The empty new-chat screen does not have
+the conversation menu. The panel should
 show an increasing successful-refresh count approximately every two seconds.
 The Refresh button should update the same count. No prompt is sent.
 

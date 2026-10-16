@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 0.1.1 — feasibility prototype
+# TokenMonitor Embedded 0.1.2 — feasibility prototype
 
 This independent local plugin tests opening an MCP App inside a Codex conversation
 panel and refreshing it without a model turn. **It is not the full token monitor
@@ -26,6 +26,18 @@ Once open, the panel should show an increasing successful-refresh count
 approximately every two seconds. The Refresh button should update the same
 count. These refreshes call the app-only `get_monitor_state` tool directly,
 without sending prompts or requiring further model turns.
+
+### Test a persistent display mode
+
+The inline launcher test worked according to user feedback. It does not establish
+that the widget persists as the conversation scrolls. Version 0.1.2 reports the
+host's `displayMode` and `availableDisplayModes`, and enables **Keep visible (PiP)**
+only when the host advertises picture-in-picture. Check both the returned mode
+and actual placement while scrolling. **Open expanded view** tests the host's
+fullscreen presentation separately; its name does not guarantee a side panel.
+Unsupported modes remain disabled, and rejected/fallback requests do not report
+success. Neither control can attach to Codex's native composer/status area;
+there is no documented plugin extension point for that specific location.
 
 Expand **Host metadata fields** to inspect field names and types. Values such as
 task IDs and other host metadata are not exposed by these diagnostics. This

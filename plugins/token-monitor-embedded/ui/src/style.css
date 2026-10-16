@@ -8,3 +8,7 @@ dd { margin: 0; font-variant-numeric: tabular-nums; } p { line-height: 1.6; }
 button { padding: 7px 12px; border: 1px solid light-dark(#ccc, #555); border-radius: 6px; font: inherit; cursor: pointer; }
 details { margin-top: 20px; } summary { cursor: pointer; } pre { overflow: auto; font-size: 11px; }
 .hint { color: light-dark(#626262, #aaa); font-size: 11px; } [role="alert"] { color: light-dark(#9a3020, #ff9980); }
+.display-test { margin-top: 20px; padding-top: 14px; border-top: 1px solid light-dark(#ddd, #444); }
+.display-test h2 { font-size: 13px; margin: 0; }
+.display-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+button:disabled { cursor: default; opacity: .5; }

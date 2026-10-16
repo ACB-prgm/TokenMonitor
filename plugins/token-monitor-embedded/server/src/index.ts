@@ -6,8 +6,8 @@ import path from 'node:path';
 import { z } from 'zod';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const resourceUri = 'ui://token-monitor-embedded/panel.html';
-const server = new McpServer({ name: 'token-monitor-embedded', version: '0.1.1' });
+const resourceUri = 'ui://token-monitor-embedded/panel-v0.1.2.html';
+const server = new McpServer({ name: 'token-monitor-embedded', version: '0.1.2' });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 let revision = 0;
 

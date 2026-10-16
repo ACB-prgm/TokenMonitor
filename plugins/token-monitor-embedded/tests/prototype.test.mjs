@@ -20,13 +20,13 @@ async function connectedClient() {
   return { client, transport };
 }
 
-test('local server advertises only app-visible tools and one thread panel', async () => {
+test('launcher is callable by the model; refresh tools remain app-only', async () => {
   const { client } = await connectedClient();
   try {
     const { tools } = await client.listTools();
     assert.deepEqual(tools.map(tool => tool.name), ['open_monitor', 'get_monitor_state', 'list_tasks']);
     for (const tool of tools) {
-      assert.deepEqual(tool._meta.ui.visibility, ['app']);
+      assert.deepEqual(tool._meta.ui.visibility, tool.name === 'open_monitor' ? ['model', 'app'] : ['app']);
       assert.equal(tool.annotations.readOnlyHint, true);
       assert.equal(tool.annotations.openWorldHint, false);
     }

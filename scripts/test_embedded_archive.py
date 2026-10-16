@@ -13,7 +13,8 @@ repo = Path(__file__).resolve().parents[1]
 
 class EmbeddedArchiveTests(unittest.TestCase):
     def test_archive_runs_offline_with_bundled_runtime(self):
-        archive = repo / 'dist/token-monitor-embedded-0.1.0-prototype.zip'
+        manifest = json.loads((repo / 'plugins/token-monitor-embedded/.codex-plugin/plugin.json').read_text())
+        archive = repo / 'dist' / ('token-monitor-embedded-' + manifest['version'] + '-prototype.zip')
         if not archive.exists():
             self.skipTest('Build the independent embedded prototype archive first')
         with tempfile.TemporaryDirectory(prefix='TokenMonitor Embedded ') as directory:
@@ -53,7 +54,9 @@ class EmbeddedArchiveTests(unittest.TestCase):
                 process.stdin.write(json.dumps(requests[1]) + '\n'); process.stdin.flush()
                 tools = call(requests[2])['result']['tools']
                 self.assertEqual(len(tools), 3)
-                self.assertTrue(all(tool['_meta']['ui']['visibility'] == ['app'] for tool in tools))
+                for tool in tools:
+                    self.assertEqual(tool['_meta']['ui']['visibility'],
+                                     ['model', 'app'] if tool['name'] == 'open_monitor' else ['app'])
                 state = call(requests[3])['result']
                 self.assertTrue(state['_meta']['monitor']['prototype'])
                 self.assertEqual(state['content'], [])

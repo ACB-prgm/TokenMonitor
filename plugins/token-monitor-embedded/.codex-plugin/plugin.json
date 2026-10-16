@@ -1,6 +1,6 @@
 {
   "name": "token-monitor-embedded",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local embedded Codex token monitor; panel feasibility prototype.",
   "mcpServers": "./.mcp.json",
   "requires_local_executor": true,

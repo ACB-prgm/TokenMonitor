@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 0.1.0 — feasibility prototype
+# TokenMonitor Embedded 0.1.1 — feasibility prototype
 
 This independent local plugin tests opening an MCP App inside a Codex conversation
 panel and refreshing it without a model turn. **It is not the full token monitor
@@ -10,13 +10,22 @@ prototype has no lifecycle hooks and changes no monitor state or registrations.
 
 ## Try the installed prototype
 
-Fully quit and reopen ChatGPT/Codex after installing the local plugin. Open an
-existing local conversation, then use its **⋯ → Plugins → TokenMonitor Embedded**
-menu. The installed app labels this control **Plugins**, although the extension
-documentation calls it an app entrypoint. The empty new-chat screen does not have
-the conversation menu. The panel should
-show an increasing successful-refresh count approximately every two seconds.
-The Refresh button should update the same count. No prompt is sent.
+Attaching the plugin through `@`, the composer's `+` menu, or its directory
+listing does **not** execute a tool or open its UI. The previously documented
+conversation-menu route was not verified on the user's Codex surface and must
+not be treated as a working launch path.
+
+The prototype now exposes **only `open_monitor`** to the model so the user can
+attach the plugin and send: **Open the TokenMonitor Embedded prototype panel.**
+Codex must actually call `open_monitor`; a text acknowledgement is not a launch.
+This is one model-driven launch call, a diagnostic fallback from the original
+manual-opening plan. The registered thread entrypoint remains available for
+hosts that expose it, but it has not been confirmed in this Codex surface.
+
+Once open, the panel should show an increasing successful-refresh count
+approximately every two seconds. The Refresh button should update the same
+count. These refreshes call the app-only `get_monitor_state` tool directly,
+without sending prompts or requiring further model turns.
 
 Expand **Host metadata fields** to inspect field names and types. Values such as
 task IDs and other host metadata are not exposed by these diagnostics. This

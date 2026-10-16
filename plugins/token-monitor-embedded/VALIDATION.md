@@ -5,8 +5,8 @@ Status: **prototype ready; actual Codex panel check pending**.
 Executed on Apple silicon macOS with the bundled Node 24.21.0 runtime:
 
 - MCP initialization, tool discovery, and UI resource reads.
-- All three tools are app-visible only; only the launcher declares a UI resource
-  and a thread entrypoint.
+- Only `open_monitor` is model- and app-visible; refresh and listing remain
+  app-only. Only the launcher declares a UI resource and a thread entrypoint.
 - MCP Apps UI-to-host-to-server tool calls return private result metadata without
   sending conversation messages or updating model context.
 - Diagnostics report metadata field names and types without recording values.
@@ -31,3 +31,11 @@ No lifecycle hooks or full telemetry interface have been added before that gate.
 The prototype does not read transcripts, query the Codex database, or change
 native monitor state. The future full-port acceptance scenarios remain in the
 approved implementation plan.
+
+User feedback confirmed that selecting the plugin in the composer only attaches
+it, equivalent to an @ mention, and that the proposed manual launch route has
+not worked in their Codex surface. That does not constitute a rendered-panel
+test. The initial all-app-only tool visibility left no verified usable launcher.
+The prototype now exposes `open_monitor` for an explicit model-driven diagnostic
+launch, keeping ongoing refresh tools app-only. Manual, zero-model-turn opening
+remains unverified; it is not a completed acceptance criterion.

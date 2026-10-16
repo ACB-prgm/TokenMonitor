@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@modelcontextprotocol/ext-apps';
 
-const app = new App({ name: 'TokenMonitor Embedded', version: '0.1.0' });
+const app = new App({ name: 'TokenMonitor Embedded', version: '0.1.1' });
 function Panel() {
   const [state, setState] = useState<any>(null);
   const [error, setError] = useState('');

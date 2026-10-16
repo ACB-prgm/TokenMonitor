@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const resourceUri = 'ui://token-monitor-embedded/panel.html';
-const server = new McpServer({ name: 'token-monitor-embedded', version: '0.1.0' });
+const server = new McpServer({ name: 'token-monitor-embedded', version: '0.1.1' });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 let revision = 0;
 
@@ -29,9 +29,10 @@ server.registerResource('monitor-panel', resourceUri, {}, async () => ({ content
   _meta: { ui: { csp: { connectDomains: [], resourceDomains: [] } } },
 }] }));
 server.registerTool('open_monitor', {
-  title: 'TokenMonitor Embedded', description: 'Open the local token monitor panel.',
+  title: 'TokenMonitor Embedded',
+  description: 'Open the TokenMonitor Embedded connection-test panel when the user asks to open or launch TokenMonitor. This prototype tests embedded UI and does not yet show token usage. Call this tool to launch it; attaching or mentioning the plugin does not open the panel. After opening, the panel refreshes directly without further model calls.',
   inputSchema: {}, annotations,
-  _meta: { ui: { resourceUri, visibility: ['app'] },
+  _meta: { ui: { resourceUri, visibility: ['model', 'app'] },
     'openai/ui': { entrypoints: [{ type: 'thread' }] } },
 }, async (_args, extra) => ({ content: [], _meta: { monitor: state(extra) } }));
 server.registerTool('get_monitor_state', {

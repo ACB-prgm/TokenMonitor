@@ -53,7 +53,7 @@ class EmbeddedArchiveTests(unittest.TestCase):
                 self.assertIn('result', call(requests[0]))
                 process.stdin.write(json.dumps(requests[1]) + '\n'); process.stdin.flush()
                 tools = call(requests[2])['result']['tools']
-                self.assertEqual(len(tools), 3)
+                self.assertEqual(len(tools), 4)
                 for tool in tools:
                     self.assertEqual(tool['_meta']['ui']['visibility'],
                                      ['model', 'app'] if tool['name'] == 'open_monitor' else ['app'])

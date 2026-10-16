@@ -12,3 +12,5 @@ details { margin-top: 20px; } summary { cursor: pointer; } pre { overflow: auto;
 .display-test h2 { font-size: 13px; margin: 0; }
 .display-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
 button:disabled { cursor: default; opacity: .5; }
+.turn-summary { padding: 10px 14px; }
+.turn-summary p { margin: 5px 0 0; }

@@ -2,7 +2,27 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App, type McpUiDisplayMode } from '@modelcontextprotocol/ext-apps';
 
-const app = new App({ name: 'TokenMonitor Embedded', version: '0.1.2' });
+const app = new App({ name: 'TokenMonitor Embedded', version: '0.1.3' });
+const presentation = document.documentElement.dataset.monitorView;
+function TurnSummary() {
+  const [summary, setSummary] = useState<any>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let alive = true;
+    app.ontoolresult = result => {
+      const value = (result._meta as any)?.monitor;
+      if (alive && value?.presentation === 'turn-summary') setSummary(value);
+    };
+    app.connect().catch(() => { if (alive) setError('Unable to connect the turn-end summary.'); });
+    return () => { alive = false; app.close(); };
+  }, []);
+  return <main className="turn-summary">
+    <strong>TokenMonitor · Turn completed</strong>
+    <p>{summary?.completedAt ? new Date(summary.completedAt).toLocaleTimeString() : 'Waiting for the turn-end snapshot…'}</p>
+    <p className="hint">Connection-test summary only. The expanded panel is independent; token telemetry is not connected yet.</p>
+    {error && <p role="alert">{error}</p>}
+  </main>;
+}
 function Panel() {
   const [state, setState] = useState<any>(null);
   const [error, setError] = useState('');
@@ -53,7 +73,7 @@ function Panel() {
     return () => clearInterval(timer);
   }, [ready, visible]);
   return <main>
-    <header><h1>TokenMonitor Embedded</h1><span>Prototype</span></header>
+    <header><h1>TokenMonitor Embedded</h1><span>Prototype 0.1.3</span></header>
     <p>{state?.status ?? 'Connecting to the Codex panel bridge…'}</p>
     <dl><dt>Successful refreshes</dt><dd>{state?.revision ?? '—'}</dd>
       <dt>Last refresh</dt><dd>{state?.refreshedAt ? new Date(state.refreshedAt).toLocaleTimeString() : '—'}</dd></dl>
@@ -77,7 +97,13 @@ function Panel() {
       <p className="hint">These controls request host-managed display modes. They cannot attach a widget to Codex’s native composer or status area.</p>
     </section>
     <details><summary>Host metadata fields</summary><pre>{JSON.stringify(state?.metadataShape ?? {}, null, 2)}</pre></details>
+    <details><summary>Automatic opening diagnostics</summary>
+      <p>Hook open requests: {state?.hookOpenRequests ?? 0}<br />
+        Hook turn-end requests: {state?.hookSummaryRequests ?? 0}<br />
+        Last hook: {state?.lastHookEvent ?? 'None observed'}</p>
+      <p className="hint">A recorded hook call confirms execution, not UI rendering. New hook definitions must be reviewed and trusted in Codex.</p>
+    </details>
     <p className="hint">This panel tests local opening and refresh every two seconds. It does not send prompts or display token telemetry yet.</p>
   </main>;
 }
-createRoot(document.getElementById('root')!).render(<Panel />);
+createRoot(document.getElementById('root')!).render(presentation === 'summary' ? <TurnSummary /> : <Panel />);

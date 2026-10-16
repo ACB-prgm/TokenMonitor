@@ -24,20 +24,71 @@ test('launcher is callable by the model; refresh tools remain app-only', async (
   const { client } = await connectedClient();
   try {
     const { tools } = await client.listTools();
-    assert.deepEqual(tools.map(tool => tool.name), ['open_monitor', 'get_monitor_state', 'list_tasks']);
+    assert.deepEqual(tools.map(tool => tool.name), ['open_monitor', 'get_monitor_state', 'list_tasks', 'show_turn_summary']);
     for (const tool of tools) {
       assert.deepEqual(tool._meta.ui.visibility, tool.name === 'open_monitor' ? ['model', 'app'] : ['app']);
       assert.equal(tool.annotations.readOnlyHint, true);
       assert.equal(tool.annotations.openWorldHint, false);
     }
     assert.deepEqual(tools[0]._meta['openai/ui'].entrypoints, [{ type: 'thread' }]);
-    assert.equal(tools.filter(tool => tool._meta.ui.resourceUri).length, 1);
+    assert.equal(tools.filter(tool => tool._meta.ui.resourceUri).length, 2);
+    assert.equal(tools[0]._meta['openai/ui'].preferredModelDisplayMode, 'fullscreen');
     const resource = await client.readResource({ uri: tools[0]._meta.ui.resourceUri });
     assert.equal(resource.contents[0].mimeType, 'text/html;profile=mcp-app');
     assert.match(resource.contents[0].text, /TokenMonitor Embedded/);
     assert.deepEqual(resource.contents[0]._meta.ui.csp, { connectDomains: [], resourceDomains: [] });
+    assert.deepEqual(resource.contents[0]._meta['openai/ui'], {
+      availableDisplayModes: ['inline', 'fullscreen'], preferredDisplayMode: 'fullscreen',
+    });
     assert.doesNotMatch(resource.contents[0].text, /<script[^>]+src=|<link[^>]+href=/);
   } finally { await client.close(); }
+});
+
+test('Stop has its own inline snapshot without changing the live panel placement', async () => {
+  const { client } = await connectedClient();
+  try {
+    const { tools } = await client.listTools();
+    const panel = tools.find(tool => tool.name === 'open_monitor');
+    const summary = tools.find(tool => tool.name === 'show_turn_summary');
+    assert.notEqual(panel._meta.ui.resourceUri, summary._meta.ui.resourceUri);
+    const resource = await client.readResource({ uri: summary._meta.ui.resourceUri });
+    assert.deepEqual(resource.contents[0]._meta['openai/ui'], {
+      availableDisplayModes: ['inline'], preferredDisplayMode: 'inline',
+    });
+    assert.match(resource.contents[0].text, /data-monitor-view="summary"/);
+    const started = await client.callTool({ name: 'open_monitor', arguments: { source: 'hook', sessionId: 'test-chat', turnId: 'test-turn' } });
+    assert.equal(started._meta.monitor.hookOpenRequests, 1);
+    assert.equal(started._meta.monitor.presentation, 'panel');
+    const stopped = await client.callTool({ name: 'show_turn_summary', arguments: { source: 'hook', sessionId: 'test-chat', turnId: 'test-turn' } });
+    const frozen = JSON.stringify(stopped);
+    assert.equal(stopped._meta.monitor.presentation, 'turn-summary');
+    assert.equal(stopped._meta.monitor.lastHookEvent, 'Stop');
+    assert.equal(stopped._meta.monitor.hookSummaryRequests, 1);
+    assert.ok(Number.isFinite(Date.parse(stopped._meta.monitor.completedAt)));
+    assert.deepEqual(stopped.content, []);
+    assert.equal(stopped.structuredContent, undefined);
+    const current = await client.callTool({ name: 'get_monitor_state', arguments: {} });
+    assert.equal(current._meta.monitor.hookSummaryRequests, 1);
+    assert.equal(JSON.stringify(stopped), frozen);
+    const again = await client.callTool({ name: 'open_monitor', arguments: {} });
+    assert.equal(again._meta.monitor.presentation, 'panel');
+    assert.equal(panel._meta['openai/ui'].preferredModelDisplayMode, 'fullscreen');
+  } finally { await client.close(); }
+});
+
+test('automatic display hooks use existing MCP connection and never request another turn', async () => {
+  const manifest = JSON.parse(await readFile(root + '/.codex-plugin/plugin.json', 'utf8'));
+  const hooks = JSON.parse(await readFile(path.resolve(root, manifest.hooks), 'utf8')).hooks;
+  assert.deepEqual(Object.keys(hooks), ['UserPromptSubmit', 'Stop']);
+  for (const [event, tool] of [['UserPromptSubmit', 'open_monitor'], ['Stop', 'show_turn_summary']]) {
+    const handler = hooks[event][0].hooks[0];
+    assert.equal(handler.type, 'mcp_tool');
+    assert.equal(handler.server, 'token-monitor-embedded');
+    assert.equal(handler.tool, tool);
+    assert.deepEqual(handler.input, { source: 'hook', sessionId: '${session_id}', turnId: '${turn_id}' });
+    assert.equal(handler.timeout, 3);
+    assert.equal(handler.command, undefined);
+  }
 });
 
 test('MCP Apps bridge refreshes directly without sending messages or model context', async () => {

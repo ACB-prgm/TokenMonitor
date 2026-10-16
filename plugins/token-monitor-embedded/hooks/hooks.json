@@ -1,0 +1,31 @@
+{
+  "description": "Experimental TokenMonitor UI hooks. Opening/rendering from a hook is not yet verified; no prompts or turn-control decisions are returned.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "mcp_tool",
+            "server": "token-monitor-embedded",
+            "tool": "open_monitor",
+            "input": {"source": "hook", "sessionId": "${session_id}", "turnId": "${turn_id}"},
+            "timeout": 3
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "mcp_tool",
+            "server": "token-monitor-embedded",
+            "tool": "show_turn_summary",
+            "input": {"source": "hook", "sessionId": "${session_id}", "turnId": "${turn_id}"},
+            "timeout": 3
+          }
+        ]
+      }
+    ]
+  }
+}

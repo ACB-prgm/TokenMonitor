@@ -1,12 +1,13 @@
-# TokenMonitor Embedded 0.1.2 — feasibility prototype
+# TokenMonitor Embedded 0.1.3 — feasibility prototype
 
 This independent local plugin tests opening an MCP App inside a Codex conversation
 panel and refreshing it without a model turn. **It is not the full token monitor
 yet.** Its refresh count is synthetic connection-test data, not token telemetry.
 
-The full port is gated on successful rendering and independent refresh in the
-installed Codex host. The existing native TokenMonitor is unaffected: this
-prototype has no lifecycle hooks and changes no monitor state or registrations.
+Inline rendering, independent refresh, and expanded view have been confirmed by
+the user in Codex. Automatic hook-triggered rendering remains experimental. The
+existing native TokenMonitor is unaffected: this prototype bundles its own two
+hooks and changes no native-monitor state or user hook registrations.
 
 ## Try the installed prototype
 
@@ -46,6 +47,39 @@ prototype does not claim that the host supplies the open chat's identity.
 Report whether the panel opens and its counter updates. The current automation
 environment refuses Computer Use access to Codex, so this host check needs a user
 action. Protocol tests and a browser harness do not replace that check.
+
+## Expanded-first and turn-end behavior
+
+Version 0.1.3 requests **fullscreen** by default, which the user confirmed appears
+as Codex's expanded side-panel view. Its live panel and compact turn-end summary
+are separate UI resources. The summary is a frozen result and does not poll or
+switch the live panel back to inline.
+
+Two plugin-bundled MCP hooks request the automatic behavior:
+
+- **UserPromptSubmit → open_monitor:** request the expanded monitor for the chat
+  whenever a user prompt is submitted. This also provides a retry when a chat's
+  server was not ready at session startup.
+- **Stop → show_turn_summary:** request a compact inline completion snapshot.
+
+After updating the plugin, review and trust these exact two definitions in
+Codex Settings → Hooks (or `/hooks`). Installation does not grant hook trust.
+The plugin does not bypass trust, send prompts, return turn-control decisions,
+or change unrelated hooks. It uses an existing MCP connection with a three-second
+timeout. Cloud-orchestrated chats are outside the supported local-hook scope.
+
+**Tool execution is not proof of rendering.** The expanded panel's Automatic
+opening diagnostics count hook calls separately from ordinary refreshes. If the
+counts increase but no automatic panel/summary appears, Codex is executing the
+hooks without presenting their MCP UI results; this route cannot then be claimed
+to satisfy automatic opening. Check for duplicate panels across multiple prompts
+as part of the host test. These behaviors remain unverified.
+
+Opening or switching to a chat without sending a prompt is not a
+UserPromptSubmit event. There is no demonstrated hook for merely viewing a chat.
+The panel remains manually launchable if hook rendering is unavailable. All
+displayed data is still clearly labeled connection-test data; the full Swift
+telemetry port is pending the automatic-presentation result.
 
 ## Developer build and tests
 

@@ -12,10 +12,12 @@ const ui = await build({
   define: { 'process.env.NODE_ENV': '"production"' }, minify: true,
 });
 const script = ui.outputFiles[0].text.replaceAll('</script', '<\\/script');
-await writeFile(path.join(root, 'ui/dist/panel.html'), `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+for (const view of ['panel', 'summary']) {
+await writeFile(path.join(root, `ui/dist/${view}.html`), `<!doctype html>
+<html lang="en" data-monitor-view="${view}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TokenMonitor Embedded</title><style>${await readFile(path.join(root, 'ui/src/style.css'), 'utf8')}</style></head>
 <body><div id="root"></div><script>${script}</script></body></html>`);
+}
 await build({
   entryPoints: [path.join(root, 'server/src/index.ts')], bundle: true,
   platform: 'node', format: 'esm', target: 'node24',

@@ -1,3 +1,19 @@
+# 0.3.1 standard private package — 2026-10-19
+
+- Added portable Agent Plugins 1.0 root manifests; retained synchronized legacy
+  compatibility manifests and all six telemetry/startup hooks.
+- Reused the native TokenMonitor icon byte-for-byte for listing logo and composer icon.
+- Release ZIP contains one plugin, no marketplace, bundled Node/Swift runtimes,
+  and no developer installation path. Existing telemetry behavior is unchanged.
+- Production build and TypeScript type check passed; all **22 Node tests passed**.
+- Extracted archive regression passed using root mcp.json with PLUGIN_ROOT
+  resolution, a temporary Codex home and bundled runtimes only. Verified manifest
+  parity, logo parity, hook behavior, MCP tools, real metrics, and inventory hashes.
+- Account ingestion and installation on the Mac Studio must be verified separately;
+  these package tests do not establish remote-chat execution or sharing availability.
+
+---
+
 # 0.3.0 dashboard and API-equivalent pricing — 2026-10-19
 
 ## Executed checks

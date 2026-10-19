@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 0.3.0
+# TokenMonitor Embedded 0.3.1
 
 Local Swift telemetry inside Codex's expanded conversation panel. Opens once per
 chat through the working first-prompt model instruction, then refreshes directly
@@ -159,7 +159,21 @@ checksum is verified. Run `swift test` and the Python suites at repository root
 for native compatibility. The ZIP contains only bundled runtime, built server/UI,
 manifest, hooks, notices and release documentation/inventory.
 
-Install/update through the local `token-monitor-development` marketplace:
+## Private account installation
+
+The release ZIP is a standalone Agent Plugins package with root `plugin.json`,
+`mcp.json`, bundled runtimes, all six metadata hooks, and the original TokenMonitor
+logo. Upload the ZIP through Plugin Creator to create a private account/workspace
+plugin. Install that plugin on each supported Mac using the same account/workspace;
+review and trust its hooks there, then start a fresh local chat. Account upload does
+not verify availability or execution on a connected remote Mac.
+
+When switching from the development installation, disable its copy before enabling
+the uploaded copy so hooks do not run twice. Existing telemetry state is retained.
+The compatibility manifests remain bundled for older local clients. The ZIP does
+not contain a marketplace or depend on this repository's installation path.
+
+For development only, install/update through the local `token-monitor-development` marketplace:
 
 ```sh
 codex plugin add token-monitor-embedded@token-monitor-development

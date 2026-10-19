@@ -1,3 +1,67 @@
+# 0.3.0 dashboard and API-equivalent pricing — 2026-10-19
+
+## Executed checks
+
+- Swift regression suite: **73 passed**, including six new pricing/accounting tests.
+  Exclusive cache/read/write/output categories, reasoning inclusion, cache savings
+  and write premiums, missing/unknown pricing, tiers/region, >272k full-request
+  thresholds, mixed models, cumulative-only events, non-adjacent replay, repeated
+  quota usage at new timestamps, compaction and 120-sample retention were checked.
+- TypeScript type check passed. Node protocol/integration/UI suite: **22 passed**.
+  Five new UI tests cover percentage formatting, scale migration, composition,
+  compact dashboard order/defaults, and unavailable/partial data. Existing task
+  following, locks, simultaneous panels, host fallback, stale replies, collector
+  restart, hooks and direct UI-only refresh tests remain passing.
+- Existing Python hook tests: **6 passed**. Existing remote runtime regression:
+  **1 passed**. Native HUD layout/hooks and unrelated remote source changes were
+  not modified by this release.
+- Actual bundled UI tested in a localhost SDK AppBridge fixture at 600px and 320px:
+  compact/expanded, light/dark, 100% and 135%, layout restored after reload,
+  Cost/Tokens/Context switching, keyboard call inspection, compaction marker,
+  disconnect snapshot retention and recovery. Refresh counter advanced while
+  prompt and model-context-update counters remained **zero**.
+- Browser fixture uses synthetic anonymous usage, not copies of user transcripts.
+  Narrow testing found and fixed a wrapping currency value and tiny chart axes.
+  Screenshot: local build diagnostics `dashboard-0.3.0.png` (not packaged).
+- Extracted 0.3.0 release archive passed offline startup, six-hook, inventory,
+  UI-only metric and actual per-call pricing checks using bundled runtimes only.
+- Official pricing page and GPT-6.1 Sol model page fetched on 2026-10-19.
+  Rate sources and configuration date are in the shared Swift pricing engine;
+  no live API or pricing network requests are needed at runtime.
+
+## Coverage and limits
+
+Per-call telemetry was inspected locally for field names/model IDs only. Recent
+logs contain input, cache-read, cache-write, output and reasoning counts. Model
+comes from turn_context or explicit usage info. Service tier, region and a stable
+request ID were absent in the inspected sample. Missing tier assumes Standard;
+unknown models/tiers and missing token categories stay unpriced. Identical
+cumulative counters identify repeated last-call reports, including quota updates
+at new timestamps. Cumulative counters are not additional spend. Full-file totals
+are independent of the last 120 chart samples and survive compaction.
+
+Historical completeness cannot be proven: cumulative discrepancies flag partial
+coverage. Current verified rates are applied to historical calls; actual past
+rates and separate tool/compute charges are unavailable. Reasoning stays part of
+output; unsplit output is identified. Cache savings include write premiums.
+Allowances are account-level values last observed in the selected thread and can
+lag other activity. No optional All Threads aggregate was added because it would
+require cross-thread transcript scanning/caching beyond the existing collector.
+
+The Compact button has always collapsed UI details, not compacted a Codex thread.
+Native recommendations remain unchanged, with a separate model-priced API
+break-even estimate. Old scale settings migrate to preserve visual size while
+old 85% becomes the actual new 100% base. Existing native parser benefits from
+replayed/quota-usage deduplication; its interface otherwise remains unchanged.
+
+Actual Codex UI automation remains unavailable. Browser fixtures and MCP protocol
+checks do not verify rendering inside Codex itself. Startup, host routing and hook
+commands are unchanged from the user-verified prior release. Reopen the panel in
+a fresh chat after updating; host widget-state support still uses feature detection
+with frame session-storage fallback. No new hook trust or permissions requested.
+
+---
+
 # Embedded monitor validation
 
 ## Version 0.2.0 — local telemetry release (2026-10-19)

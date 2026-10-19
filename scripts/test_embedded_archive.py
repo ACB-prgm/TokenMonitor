@@ -53,7 +53,7 @@ class EmbeddedArchiveTests(unittest.TestCase):
             transcript = codex_home / 'archive.jsonl'
             transcript.write_text(json.dumps({'type':'session_meta','payload':{'id':'archive-chat','source':'cli'}}) + '\n' +
                 json.dumps({'type':'event_msg','timestamp':'2026-10-19T12:00:00Z','payload':{'type':'token_count','info':{
-                    'model_context_window':200000, 'last_token_usage':{'input_tokens':100000,'cached_input_tokens':80000,'output_tokens':100,'reasoning_output_tokens':40},
+                    'model':'gpt-6.1-sol', 'model_context_window':200000, 'last_token_usage':{'input_tokens':100000,'cached_input_tokens':80000,'cache_write_input_tokens':0,'output_tokens':100,'reasoning_output_tokens':40},
                     'total_token_usage':{'output_tokens':1000,'reasoning_output_tokens':400}}}}) + '\n')
             event = json.dumps({'hook_event_name': 'UserPromptSubmit', 'session_id': 'archive-chat',
                                 'transcript_path': str(transcript), 'prompt': 'PRIVATE_PROMPT'})
@@ -86,6 +86,12 @@ class EmbeddedArchiveTests(unittest.TestCase):
                 self.assertEqual(state['_meta']['monitor']['outputTotals']['total'], 1000)
                 self.assertEqual(state['_meta']['monitor']['outputTotals']['reasoning'], 400)
                 self.assertEqual(state['_meta']['monitor']['followingMode'], 'latest-hook')
+                usage = state['_meta']['monitor']['usage']
+                self.assertEqual(usage['input'], 100000)
+                self.assertEqual(usage['pricedCalls'], 1)
+                self.assertAlmostEqual(usage['cost'], 0.049)
+                self.assertTrue(usage['cumulativeMismatch'])
+                self.assertEqual(usage['unpricedCalls'], 0)
                 self.assertNotIn(str(codex_home), json.dumps(state))
                 self.assertEqual(state['content'], [])
             finally:

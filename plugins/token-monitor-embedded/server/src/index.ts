@@ -10,9 +10,9 @@ import { Panels } from './panels.js';
 import { CollectorBridge } from './collector.js';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const resourceUri = 'ui://token-monitor-embedded/panel-v0.2.0.html';
-const summaryUri = 'ui://token-monitor-embedded/turn-summary-v0.2.0.html';
-const server = new McpServer({ name: 'token-monitor-embedded', version: '0.2.0' });
+const resourceUri = 'ui://token-monitor-embedded/panel-v0.3.0.html';
+const summaryUri = 'ui://token-monitor-embedded/turn-summary-v0.3.0.html';
+const server = new McpServer({ name: 'token-monitor-embedded', version: '0.3.0' });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 const collector = new CollectorBridge();
 const panels = new Panels(collector);

@@ -1,16 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@modelcontextprotocol/ext-apps';
+import {migrateLayout, type Layout} from './analytics.js';
 import { MonitorView, type Monitor } from './view.js';
 
-const app = new App({ name: 'TokenMonitor Embedded', version: '0.2.0' });
+const app = new App({ name: 'TokenMonitor Embedded', version: '0.3.0' });
 const summary = document.documentElement.dataset.monitorView === 'summary';
-type Layout = {expanded: boolean; scale: number};
 const legacy = () => (window as any).openai as {widgetState?: Layout; setWidgetState?: (s: Layout)=>void} | undefined;
 function savedLayout(): Layout {
   try {
     const saved = legacy()?.widgetState ?? JSON.parse(sessionStorage.getItem('token-monitor-layout') ?? '{}');
-    return {expanded: saved.expanded === true, scale: [.85,1,1.15].includes(saved.scale) ? saved.scale : 1};
+    return migrateLayout(saved);
   } catch { return {expanded:false,scale:1}; }
 }
 function Panel() {
@@ -44,7 +44,7 @@ function Panel() {
     } finally { if (request === serial.current && active.current) { fetching.current=false; setBusy(false); } }
   }
   function changeLayout(expanded: boolean, scale: number) {
-    const next = {expanded,scale}; setLayout(next);
+    const next = {expanded,scale,layoutVersion:2}; setLayout(next);
     try { if (legacy()?.setWidgetState) legacy()!.setWidgetState!(next); else sessionStorage.setItem('token-monitor-layout',JSON.stringify(next)); } catch { /* Layout remains usable without host persistence. */ }
   }
   useEffect(()=>{

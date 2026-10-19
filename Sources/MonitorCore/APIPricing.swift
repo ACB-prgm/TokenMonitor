@@ -5,6 +5,7 @@ import Foundation
 public enum APIPricing {
     public static let source = "https://developers.openai.com/api/docs/pricing"
     public static let verifiedAt = "2026-10-19"
+    public static let configurationEffectiveDate = "2026-10-19"
     public struct Rates: Codable, Equatable {
         public var input: Double
         public var cached: Double
@@ -63,7 +64,8 @@ public enum APIPricing {
         guard let r = rates(model: s.model, tier: s.serviceTier, input: s.input, regional: s.regionalProcessing == true) else {
             return CallPrice(assumedTier: assumed, issue: "No verified rate for model/tier")
         }
-        guard s.cachedRecorded != false, s.cacheWriteRecorded != false,
+        guard s.input >= 0, s.cached >= 0, s.cached <= s.input,
+              s.cachedRecorded != false, s.cacheWriteRecorded != false,
               s.cacheWrite >= 0, s.cacheWrite <= s.input - s.cached,
               s.outputRecorded != false, s.output >= 0,
               s.cacheWrite == 0 || r.write != nil else {
@@ -122,6 +124,7 @@ public struct ThreadUsage: Codable {
     public var issues: [String] = []
     public var source = APIPricing.source
     public var verifiedAt = APIPricing.verifiedAt
+    public var configurationEffectiveDate = APIPricing.configurationEffectiveDate
     public var coverage = "Recorded unique calls; historical completeness cannot be guaranteed"
     public var cumulativeMismatch = false
     mutating func add(_ s: TokenUsageSample) {

@@ -34,6 +34,7 @@ test('real Swift metrics bind exactly to the host, stay UI-only, and return only
  const f=await fixture();try{
   const s=await f.open('a');assert.equal(s.followingMode,'host-chat');assert.equal(s.selectedId,'a');
   assert.equal(s.input,100000);assert.equal(s.cached,80000);assert.equal(s.fresh,20000);assert.equal(s.model,'gpt-test');assert.equal(s.contextPercent,50);assert.equal(s.fiveHour.used,25);
+  assert.equal(s.usage.unpricedCalls,1);assert.equal(s.usage.pricedCalls,0);assert.equal(s.usage.input,100000);assert.equal(s.usage.cumulativeMismatch,true);assert.equal(s.samples[0].price.total,undefined);
   assert.equal(s.outputTotals.total,1000000);assert.equal(s.outputTotals.reasoning,400000);assert.equal(s.callCount,1);assert.match(s.samples[0].timestamp,/Z$/);
   assert.doesNotMatch(JSON.stringify(s),/SECRET|transcriptPath|transcript_path|\.jsonl/);
   assert.equal((await f.refresh(s.panelId,{revision:s.revision},'a')).unchanged,true);

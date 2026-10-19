@@ -1,6 +1,6 @@
 {
   "name": "token-monitor-embedded",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Local Codex token telemetry in an automatically opened embedded panel.",
   "mcpServers": "./.mcp.json",
   "hooks": "./hooks/hooks.json",
@@ -8,7 +8,7 @@
   "interface": {
     "displayName": "TokenMonitor Embedded",
     "shortDescription": "Local token monitor inside a conversation panel",
-    "longDescription": "Local token usage, thread output and reasoning totals, cache status, allowances, compaction, history, and tool attribution. Opens once per local chat through a first-prompt instruction; refreshes directly without model turns.",
+    "longDescription": "Local token usage, per-call API-equivalent cost, thread input/output and reasoning totals, cache status, allowances, compaction, history, and tool attribution. Opens once per local chat through a first-prompt instruction; refreshes directly without model turns.",
     "developerName": "TokenMonitor contributors",
     "category": "Productivity"
   }

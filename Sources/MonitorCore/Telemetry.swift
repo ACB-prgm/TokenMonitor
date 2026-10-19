@@ -225,7 +225,7 @@ public final class CodexTelemetryParser {
             if let totalInput = cumulative["input_tokens"] as? Int { usage.cumulativeMismatch = totalInput != usage.input }
             if let totalOutput = cumulative["output_tokens"] as? Int, totalOutput != usage.output { usage.cumulativeMismatch = true }
         }
-        lastCallModel = model; lastCallEffort = effort
+        lastCallModel = s.model; lastCallEffort = effort
         callCount += 1
         if !reportedThisRecord, let prior = reportedOutput {
             if let output = u["output_tokens"] as? Int, output >= 0, !prior.addingReportingOverflow(output).overflow {

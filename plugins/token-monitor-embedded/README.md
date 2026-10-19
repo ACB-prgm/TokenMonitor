@@ -75,12 +75,12 @@ counts increase but no automatic panel/summary appears, Codex is executing the
 hooks without presenting their MCP UI results; this route cannot then be claimed
 to satisfy automatic opening. Check for duplicate panels across multiple prompts
 as part of the host test. The user has now reported that no turn-end inline
-summaries appear in any tested chat. Saved trust entries and successful MCP
-startup were found, but logs did not establish whether the summary tool ran.
+summaries appear in any tested chat. The user subsequently reported **3 hook open
+requests, 2 hook turn-end requests, and Last hook: Stop**. These counters confirm
+the tools ran through the hook route without producing visible summaries.
 Codex's hook-completion handler records hook status and text output; it does not
 present an MCP App result. Do not treat these hooks as a supported automatic
-opening or summary mechanism. See [VALIDATION.md](VALIDATION.md) for the evidence
-and remaining execution diagnostic.
+opening or summary mechanism. See [VALIDATION.md](VALIDATION.md) for the evidence.
 
 Opening or switching to a chat without sending a prompt is not a
 UserPromptSubmit event. There is no demonstrated hook for merely viewing a chat.

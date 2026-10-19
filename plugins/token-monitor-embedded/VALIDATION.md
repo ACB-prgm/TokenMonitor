@@ -12,16 +12,25 @@ Do not advertise the Stop hook as a working automatic-summary feature. Automatic
 expanded opening is also not established by a successful model-driven launch.
 
 Read-only diagnosis found persisted trust hashes for both embedded hook
-definitions and successful MCP startup in multiple local chats. These establish
-configuration and connectivity, not successful execution of either hook. The
-available logs did not establish whether `show_turn_summary` was reached.
+definitions and successful MCP startup in multiple local chats. The user then
+reported these live-panel diagnostics:
+
+- Hook open requests: **3**
+- Hook turn-end requests: **2**
+- Last hook: **Stop**
+
+These counters increment only inside the corresponding server tool handlers
+when `source` is `hook`. They confirm both hook calls reached the MCP server,
+including two calls to `show_turn_summary`. Combined with the user's report of
+no inline summaries, this establishes execution without visible presentation.
 
 The installed desktop's `hook/started` and `hook/completed` notification handler
 updates a turn's hook-run records; it does not create an MCP tool-call item or
 present a UI resource. The generated `HookRunSummary` protocol contains text
-output entries, with no MCP result or UI metadata field. This supports a host
-presentation limitation, but does not by itself prove that the summary tool ran.
-The live panel's hook counters are the remaining execution diagnostic.
+output entries, with no MCP result or UI metadata field. This matches the observed
+host presentation limitation. The live panel's hook counters independently
+confirm execution; further trust review or an @ mention is not the missing step
+in this tested chat.
 
 Official MCP hook documentation specifies an existing-connection tool call and
 the command-hook output contract, not presentation of an MCP App result:
@@ -57,8 +66,8 @@ including an extracted package directory containing spaces.
 The separate local plugin was installed through the Codex CLI. The user later
 confirmed the explicit-launch inline widget test worked. Computer Use refused
 access to the Codex app, so automated native UI verification remains unavailable.
-Automatic turn-end rendering failed the user's test. Hook execution,
-hiding/reopening behavior, and host-chat identity remain unverified.
+Automatic turn-end rendering failed the user's test despite confirmed hook
+execution. Hiding/reopening behavior and host-chat identity remain unverified.
 
 Version 0.1.3 adds two experimental MCP display hooks, but no full telemetry interface.
 The prototype does not read transcripts, query the Codex database, or change

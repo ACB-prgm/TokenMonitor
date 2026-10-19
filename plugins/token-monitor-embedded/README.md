@@ -210,6 +210,16 @@ installed Codex CLI and an already-built plugin), run from the repository root:
 python3 scripts/probe_embedded_host.py
 ```
 
+To compare the basic RPC with captured routing metadata:
+
+```sh
+python3 scripts/probe_embedded_host.py --capture TRACE.jsonl --output REPORT.json
+```
+
+This tests routing fields, turn context, and captured identifiers in the isolated
+server. It audits delivered metadata and reports rewrites. It does not attach to
+the desktop or establish that the fields register a widget in the live UI.
+
 This uses a disposable Codex home and test thread, verifies delivered thread
 metadata, and reports conversation-item notifications. It does not request a
 model turn, attach to the desktop, or change user configuration. It is a developer

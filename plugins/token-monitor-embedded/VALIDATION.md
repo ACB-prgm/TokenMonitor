@@ -189,6 +189,34 @@ Sources: [app-server API](https://learn.chatgpt.com/docs/app-server#api-overview
 [plugin extensions](https://developers.openai.com/plugins/build/extensions), and
 read-only inspection of the installed desktop and generated protocol.
 
+### Captured-context replay (2026-10-19)
+
+The Python probe now accepts `--capture` and `--output`. A subsequent run called
+both tools through four variants: the basic wrapper, captured routing fields,
+captured routing plus turn context, and the captured original identifiers. All
+eight calls succeeded. A stdio audit compares canonical metadata fingerprints,
+excluding SDK progress tokens, and reports changed field paths without retaining
+raw identity values in the report.
+
+For the first three variants, the supplied metadata reached MCP unchanged. When
+the captured original IDs were supplied to the isolated thread, the API changed
+the top-level `threadId` to the RPC-selected test thread. Every other compared
+metadata field was preserved. None of these calls emitted conversation item or
+turn notifications. The run did not request model generation.
+
+These are isolated API results, not proof about live desktop rendering: the
+test server has no desktop UI and no registered live items for the captured IDs.
+The fixture variants remap identity values to the disposable test context. The
+over-redacted workspace entries are omitted rather than invented. History
+listing remains unavailable in the bundled host.
+
+A separate attempt to use the supported `codex app-server proxy` connection
+failed with ENOENT: the desktop has no app-server control socket at its standard
+location. No working supported live connection was found, so the captured
+context has not been replayed into this chat's actual desktop connection.
+Neither copying the fields nor this isolated result establishes a working
+automatic-presentation route. The recorder remains stopped.
+
 Executed on Apple silicon macOS with the bundled Node 24.21.0 runtime:
 
 - MCP initialization, tool discovery, and UI resource reads.

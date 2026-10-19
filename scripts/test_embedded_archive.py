@@ -56,7 +56,7 @@ class EmbeddedArchiveTests(unittest.TestCase):
                 self.assertEqual(len(tools), 4)
                 for tool in tools:
                     self.assertEqual(tool['_meta']['ui']['visibility'],
-                                     ['model', 'app'] if tool['name'] == 'open_monitor' else ['app'])
+                                     ['model', 'app'] if tool['name'] in ['open_monitor', 'show_turn_summary'] else ['app'])
                 state = call(requests[3])['result']
                 self.assertTrue(state['_meta']['monitor']['prototype'])
                 self.assertEqual(state['content'], [])

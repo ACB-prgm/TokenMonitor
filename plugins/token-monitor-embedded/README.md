@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 0.1.3 — feasibility prototype
+# TokenMonitor Embedded 0.1.4 — feasibility prototype
 
 This independent local plugin tests opening an MCP App inside a Codex conversation
 panel and refreshing it without a model turn. **It is not the full token monitor
@@ -17,12 +17,17 @@ listing does **not** execute a tool or open its UI. The previously documented
 conversation-menu route was not verified on the user's Codex surface and must
 not be treated as a working launch path.
 
-The prototype now exposes **only `open_monitor`** to the model so the user can
+The prototype exposes **`open_monitor`** to the model so the user can
 attach the plugin and send: **Open the TokenMonitor Embedded prototype panel.**
 Codex must actually call `open_monitor`; a text acknowledgement is not a launch.
 This is one model-driven launch call, a diagnostic fallback from the original
 manual-opening plan. The registered thread entrypoint remains available for
 hosts that expose it, but it has not been confirmed in this Codex surface.
+
+Version 0.1.4 also exposes **`show_turn_summary`** for an explicit model-driven
+inline test. It uses the separate inline-only resource and does not request
+expanded view. Ask Codex to call that exact tool to compare the same summary
+resource with the hook path. Refresh and task-list tools remain app-only.
 
 Once open, the panel should show an increasing successful-refresh count
 approximately every two seconds. The Refresh button should update the same
@@ -114,8 +119,8 @@ instruction is:
 > turns unless requested. If unavailable or unsuccessful, continue the user's task.
 
 This is model guidance, not an application startup callback or a guarantee of
-panel presentation. It does not make the app-only `show_turn_summary` tool
-available to the model and does not solve automatic inline summaries. A plugin
+panel presentation. It does not request `show_turn_summary` after each response
+and does not solve automatic inline summaries. A plugin
 description alone is not a scheduling mechanism. This prototype does not modify
 global AGENTS.md or hook trust settings.
 

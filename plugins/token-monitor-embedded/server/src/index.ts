@@ -6,9 +6,9 @@ import path from 'node:path';
 import { z } from 'zod';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const resourceUri = 'ui://token-monitor-embedded/panel-v0.1.3.html';
-const summaryUri = 'ui://token-monitor-embedded/turn-summary-v0.1.3.html';
-const server = new McpServer({ name: 'token-monitor-embedded', version: '0.1.3' });
+const resourceUri = 'ui://token-monitor-embedded/panel-v0.1.4.html';
+const summaryUri = 'ui://token-monitor-embedded/turn-summary-v0.1.4.html';
+const server = new McpServer({ name: 'token-monitor-embedded', version: '0.1.4' });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 let revision = 0;
 let lastHookEvent: string | null = null;
@@ -68,9 +68,9 @@ server.registerTool('list_tasks', {
 // display mode or replace its session. Hook results may not render in all hosts.
 server.registerTool('show_turn_summary', {
   title: 'Turn-end monitor summary',
-  description: 'Show a compact inline connection-test summary after a Codex turn ends. Intended for the Stop hook. This is not token telemetry.',
+  description: 'Show the separate inline TokenMonitor connection-test summary when the user requests the inline widget or an inline rendering test. This uses an inline-only resource and does not request expanded view. Also used by the experimental Stop hook. This is not token telemetry.',
   inputSchema: hookInput, annotations,
-  _meta: { ui: { resourceUri: summaryUri, visibility: ['app'] },
+  _meta: { ui: { resourceUri: summaryUri, visibility: ['model', 'app'] },
     'openai/ui': { preferredModelDisplayMode: 'inline' } },
 }, async (args, extra) => {
   if (args.source === 'hook') { lastHookEvent = 'Stop'; hookSummaryRequests++; }

@@ -1,5 +1,15 @@
 # Embedded prototype validation
 
+Version 0.1.4 exposes the existing `show_turn_summary` tool to the model for an
+explicit inline-only test requested by the user. It retains its separate
+resource and inline preference; only `open_monitor` has a thread entrypoint.
+Manual summary calls do not increment hook counters. Refresh and task-list tools
+remain app-only. The hook definitions are unchanged. Build, type checking, five
+protocol tests, packaging, and the extracted archive test passed. Version 0.1.4
+was installed through the CLI. The active model tool inventory still exposed
+only the previous launcher during that turn, so the direct inline model call
+has not yet been made; live rendering remains a separate host check.
+
 Status: **inline rendering, refresh, and expanded view confirmed by the user;
 automatic turn-end inline rendering did not appear in the reported test;
 closing the expanded panel did not restore automatic summaries**.
@@ -31,7 +41,7 @@ The user clarified that an explicit model launch worked in another chat but did
 not produce the expected result while the monitor was expanded. Expanded
 placement is therefore a variable to isolate. In this prototype, `open_monitor`
 requests the fullscreen panel resource, while `show_turn_summary` requests a
-different, inline-only resource and is app-only. A successful model launcher call
+different, inline-only resource (app-only in 0.1.3). A successful model launcher call
 is not a successful test of the Stop summary resource. Do not conflate these
 tools or infer a cause from the absence of a new inline card alone.
 
@@ -130,8 +140,9 @@ read-only inspection of the installed desktop and generated protocol.
 Executed on Apple silicon macOS with the bundled Node 24.21.0 runtime:
 
 - MCP initialization, tool discovery, and UI resource reads.
-- Only `open_monitor` is model- and app-visible; refresh, listing, and the new
-  `show_turn_summary` remain app-only. The launcher and summary use separate UI
+- In 0.1.3 only `open_monitor` was model- and app-visible; 0.1.4 also exposes
+  `show_turn_summary` for explicit testing. Refresh and listing remain app-only.
+  The launcher and summary use separate UI
   resources; only the launcher declares a thread entrypoint.
 - MCP Apps UI-to-host-to-server tool calls return private result metadata without
   sending conversation messages or updating model context.

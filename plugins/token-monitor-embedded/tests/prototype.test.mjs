@@ -20,13 +20,13 @@ async function connectedClient() {
   return { client, transport };
 }
 
-test('launcher is callable by the model; refresh tools remain app-only', async () => {
+test('panel and inline summary are callable by the model; refresh tools remain app-only', async () => {
   const { client } = await connectedClient();
   try {
     const { tools } = await client.listTools();
     assert.deepEqual(tools.map(tool => tool.name), ['open_monitor', 'get_monitor_state', 'list_tasks', 'show_turn_summary']);
     for (const tool of tools) {
-      assert.deepEqual(tool._meta.ui.visibility, tool.name === 'open_monitor' ? ['model', 'app'] : ['app']);
+      assert.deepEqual(tool._meta.ui.visibility, ['open_monitor', 'show_turn_summary'].includes(tool.name) ? ['model', 'app'] : ['app']);
       assert.equal(tool.annotations.readOnlyHint, true);
       assert.equal(tool.annotations.openWorldHint, false);
     }
@@ -50,6 +50,8 @@ test('Stop has its own inline snapshot without changing the live panel placement
     const { tools } = await client.listTools();
     const panel = tools.find(tool => tool.name === 'open_monitor');
     const summary = tools.find(tool => tool.name === 'show_turn_summary');
+    assert.equal(summary._meta['openai/ui'].entrypoints, undefined);
+    assert.equal(summary._meta['openai/ui'].preferredModelDisplayMode, 'inline');
     assert.notEqual(panel._meta.ui.resourceUri, summary._meta.ui.resourceUri);
     const resource = await client.readResource({ uri: summary._meta.ui.resourceUri });
     assert.deepEqual(resource.contents[0]._meta['openai/ui'], {
@@ -73,6 +75,9 @@ test('Stop has its own inline snapshot without changing the live panel placement
     const again = await client.callTool({ name: 'open_monitor', arguments: {} });
     assert.equal(again._meta.monitor.presentation, 'panel');
     assert.equal(panel._meta['openai/ui'].preferredModelDisplayMode, 'fullscreen');
+    const manual = await client.callTool({ name: 'show_turn_summary', arguments: { source: 'manual' } });
+    assert.equal(manual._meta.monitor.presentation, 'turn-summary');
+    assert.equal(manual._meta.monitor.hookSummaryRequests, 1);
   } finally { await client.close(); }
 });
 

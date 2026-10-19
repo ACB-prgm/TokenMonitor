@@ -16,5 +16,8 @@
     "capabilities": [
       "Interactive"
     ]
+  },
+  "author": {
+    "name": "TokenMonitor contributors"
   }
 }

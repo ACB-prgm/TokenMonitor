@@ -43,6 +43,7 @@ class EmbeddedArchiveTests(unittest.TestCase):
             self.assertFalse((package / 'plugin.json').exists())
             self.assertFalse((package / 'mcp.json').exists())
             manifest = json.loads((package / '.codex-plugin/plugin.json').read_text())
+            self.assertTrue(manifest['author']['name'].strip())
             self.assertTrue(manifest['requires_local_executor'])
             self.assertEqual(manifest['hooks'], './hooks/hooks.json')
             interface = manifest['interface']

@@ -5,11 +5,12 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { z } from 'zod';
 import { recordRouting } from './routing-trace.js';
+import { acknowledgeStartup, startupState } from './startup.js';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const resourceUri = 'ui://token-monitor-embedded/panel-v0.1.5.html';
-const summaryUri = 'ui://token-monitor-embedded/turn-summary-v0.1.5.html';
-const server = new McpServer({ name: 'token-monitor-embedded', version: '0.1.5' });
+const resourceUri = 'ui://token-monitor-embedded/panel-v0.1.6.html';
+const summaryUri = 'ui://token-monitor-embedded/turn-summary-v0.1.6.html';
+const server = new McpServer({ name: 'token-monitor-embedded', version: '0.1.6' });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 let revision = 0;
 let lastHookEvent: string | null = null;
@@ -23,10 +24,11 @@ function metadataShape(value: unknown, depth = 0): unknown {
   if (Array.isArray(value)) return 'array';
   return Object.fromEntries(Object.entries(value).slice(0, 40).map(([key, item]) => [key, metadataShape(item, depth + 1)]));
 }
-function state(extra: { _meta?: unknown }) {
+async function state(extra: { _meta?: Record<string, unknown> }) {
   return { version: 1, prototype: true, revision: String(++revision),
     refreshedAt: new Date().toISOString(), metadataShape: metadataShape(extra._meta ?? {}),
     lastHookEvent, hookOpenRequests, hookSummaryRequests,
+    startup: await startupState(extra._meta?.threadId),
     status: 'UI-only refresh connected. This is a feasibility prototype, not token telemetry.' };
 }
 
@@ -48,20 +50,21 @@ const hookInput = {
 };
 server.registerTool('open_monitor', {
   title: 'TokenMonitor Embedded',
-  description: 'Open the TokenMonitor Embedded connection-test panel when the user asks to open or launch TokenMonitor. This prototype tests embedded UI and does not yet show token usage. Call this tool to launch it; attaching or mentioning the plugin does not open the panel. After opening, the panel refreshes directly without further model calls.',
+  description: 'Open the expanded TokenMonitor Embedded panel when requested by the user or by the enabled first-prompt startup instruction. Call once per chat for automatic startup; do not reopen on subsequent turns unless the user requests it. This prototype tests embedded UI and does not yet show token usage. Attaching or mentioning the plugin alone does not open it. After opening, the panel refreshes directly without further model calls.',
   inputSchema: hookInput, annotations,
   _meta: { ui: { resourceUri, visibility: ['model', 'app'] },
     'openai/ui': { entrypoints: [{ type: 'thread' }], preferredModelDisplayMode: 'fullscreen' } },
 }, async (args, extra) => {
   await recordRouting('open_monitor', args, extra);
+  await acknowledgeStartup(extra._meta?.threadId).catch(() => {});
   if (args.source === 'hook') { lastHookEvent = 'UserPromptSubmit'; hookOpenRequests++; }
-  return { content: [], _meta: { monitor: { ...state(extra), presentation: 'panel' } } };
+  return { content: [], _meta: { monitor: { ...await state(extra), presentation: 'panel' } } };
 });
 server.registerTool('get_monitor_state', {
   title: 'Refresh monitor', description: 'Refresh panel data without a model turn.',
   inputSchema: { taskId: z.string().max(200).optional(), revision: z.string().max(100).optional() },
   annotations, _meta: { ui: { visibility: ['app'] } },
-}, async (_args, extra) => ({ content: [], _meta: { monitor: state(extra) } }));
+}, async (_args, extra) => ({ content: [], _meta: { monitor: await state(extra) } }));
 server.registerTool('list_tasks', {
   title: 'List monitored tasks', description: 'List recent local tasks for the panel picker.',
   inputSchema: {}, annotations, _meta: { ui: { visibility: ['app'] } },
@@ -71,14 +74,14 @@ server.registerTool('list_tasks', {
 // display mode or replace its session. Hook results may not render in all hosts.
 server.registerTool('show_turn_summary', {
   title: 'Turn-end monitor summary',
-  description: 'Show the separate inline TokenMonitor connection-test summary when the user requests the inline widget or an inline rendering test. This uses an inline-only resource and does not request expanded view. Also used by the experimental Stop hook. This is not token telemetry.',
+  description: 'Show the separate inline TokenMonitor connection-test summary when the user requests the inline widget or an inline rendering test. This uses an inline-only resource and does not request expanded view. Do not call automatically at turn end. This is not token telemetry.',
   inputSchema: hookInput, annotations,
   _meta: { ui: { resourceUri: summaryUri, visibility: ['model', 'app'] },
     'openai/ui': { preferredModelDisplayMode: 'inline' } },
 }, async (args, extra) => {
   await recordRouting('show_turn_summary', args, extra);
   if (args.source === 'hook') { lastHookEvent = 'Stop'; hookSummaryRequests++; }
-  return { content: [], _meta: { monitor: { ...state(extra), presentation: 'turn-summary',
+  return { content: [], _meta: { monitor: { ...await state(extra), presentation: 'turn-summary',
     completedAt: new Date().toISOString() } } };
 });
 

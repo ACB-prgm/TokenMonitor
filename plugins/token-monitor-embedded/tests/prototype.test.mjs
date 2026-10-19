@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { readFile, mkdtemp, mkdir, writeFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -50,7 +50,7 @@ test('panel and inline summary are callable by the model; refresh tools remain a
   } finally { await client.close(); }
 });
 
-test('Stop has its own inline snapshot without changing the live panel placement', async () => {
+test('explicit inline requests have their own snapshot without changing the live panel placement', async () => {
   const { client } = await connectedClient();
   try {
     const { tools } = await client.listTools();
@@ -87,19 +87,106 @@ test('Stop has its own inline snapshot without changing the live panel placement
   } finally { await client.close(); }
 });
 
-test('automatic display hooks use existing MCP connection and never request another turn', async () => {
+test('only the first-prompt command hook is bundled, without Stop continuations', async () => {
   const manifest = JSON.parse(await readFile(root + '/.codex-plugin/plugin.json', 'utf8'));
   const hooks = JSON.parse(await readFile(path.resolve(root, manifest.hooks), 'utf8')).hooks;
-  assert.deepEqual(Object.keys(hooks), ['UserPromptSubmit', 'Stop']);
-  for (const [event, tool] of [['UserPromptSubmit', 'open_monitor'], ['Stop', 'show_turn_summary']]) {
-    const handler = hooks[event][0].hooks[0];
-    assert.equal(handler.type, 'mcp_tool');
-    assert.equal(handler.server, 'token-monitor-embedded');
-    assert.equal(handler.tool, tool);
-    assert.deepEqual(handler.input, { source: 'hook', sessionId: '${session_id}', turnId: '${turn_id}' });
-    assert.equal(handler.timeout, 3);
-    assert.equal(handler.command, undefined);
+  assert.deepEqual(Object.keys(hooks), ['UserPromptSubmit']);
+  assert.equal(hooks.UserPromptSubmit.length, 1);
+  const handler = hooks.UserPromptSubmit[0].hooks[0];
+  assert.equal(handler.type, 'command');
+  assert.equal(handler.timeout, 3);
+  assert.equal(handler.async, undefined);
+  const { client } = await connectedClient();
+  try {
+    const { tools } = await client.listTools();
+    assert.match(tools.find(tool => tool.name === 'open_monitor').description, /first-prompt startup instruction/);
+  } finally { await client.close(); }
+});
+
+async function startupHook(home, event) {
+  const hooks = JSON.parse(await readFile(root + '/hooks/hooks.json', 'utf8')).hooks;
+  const command = hooks.UserPromptSubmit[0].hooks[0].command;
+  return new Promise((resolve, reject) => {
+    const child = spawn('/bin/sh', ['-c', command], { cwd: tmpdir(),
+      env: { PATH: '/usr/bin:/bin', PLUGIN_ROOT: root, CODEX_HOME: home } });
+    let stdout = '', stderr = '';
+    child.stdout.on('data', data => { stdout += data; });
+    child.stderr.on('data', data => { stderr += data; });
+    child.on('error', reject);
+    child.on('close', code => resolve({ code, stdout, stderr }));
+    child.stdin.end(typeof event === 'string' ? event : JSON.stringify(event));
+  });
+}
+
+test('first-prompt instructions are atomic, once per chat, isolated, and omit prompt data', async () => {
+  const home = await mkdtemp(path.join(testHome, 'startup-'));
+  const id = randomUUID();
+  const event = { hook_event_name: 'UserPromptSubmit', session_id: id, turn_id: 'first',
+    prompt: 'PRIVATE_PROMPT', transcript_path: '/PRIVATE_TRANSCRIPT' };
+  const attempts = await Promise.all(Array.from({ length: 8 }, () => startupHook(home, event)));
+  assert.ok(attempts.every(result => result.code === 0 && result.stderr === ''));
+  const emitted = attempts.filter(result => result.stdout);
+  assert.equal(emitted.length, 1);
+  const output = JSON.parse(emitted[0].stdout);
+  assert.equal(output.hookSpecificOutput.hookEventName, 'UserPromptSubmit');
+  assert.match(output.hookSpecificOutput.additionalContext, /open_monitor/);
+  assert.match(output.hookSpecificOutput.additionalContext, /Discover or load/);
+  assert.doesNotMatch(emitted[0].stdout, /PRIVATE_PROMPT|PRIVATE_TRANSCRIPT/);
+  assert.equal(output.decision, undefined);
+  const file = path.join(home, 'token-monitor-embedded/startup', `${id}.json`);
+  const record = JSON.parse(await readFile(file, 'utf8'));
+  assert.equal(record.sessionId, id);
+  assert.ok(record.requestedAt);
+  assert.equal(record.launcherCalledAt, undefined);
+  assert.deepEqual(Object.keys(record).sort(), ['requestedAt', 'sessionId', 'version']);
+  assert.equal((await stat(file)).mode & 0o777, 0o600);
+  assert.equal((await stat(path.dirname(file))).mode & 0o777, 0o700);
+  assert.equal((await startupHook(home, { ...event, turn_id: 'second' })).stdout, '');
+  assert.ok((await startupHook(home, { ...event, session_id: randomUUID() })).stdout);
+});
+
+test('launcher acknowledgement uses host identity and suppresses later requests after manual opening', async () => {
+  const home = await mkdtemp(path.join(testHome, 'startup-ack-'));
+  const id = randomUUID(), other = randomUUID();
+  const event = { hook_event_name: 'UserPromptSubmit', session_id: id };
+  await startupHook(home, event);
+  const { client } = await connectedClient({ CODEX_HOME: home });
+  try {
+    const result = await client.callTool({ name: 'open_monitor', arguments: { source: 'manual', sessionId: other }, _meta: { threadId: id } });
+    assert.ok(result._meta.monitor.startup.requestedAt);
+    assert.ok(result._meta.monitor.startup.launcherCalledAt);
+    await assert.rejects(stat(path.join(home, 'token-monitor-embedded/startup', `${other}.json`)), { code: 'ENOENT' });
+    assert.equal((await startupHook(home, event)).stdout, '');
+    await client.callTool({ name: 'open_monitor', arguments: {}, _meta: { threadId: other } });
+    assert.equal((await startupHook(home, { ...event, session_id: other })).stdout, '');
+  } finally { await client.close(); }
+});
+
+test('startup ignores malformed events, subagents, unsafe IDs, and oversized input', async () => {
+  const home = await mkdtemp(path.join(testHome, 'startup-invalid-'));
+  for (const event of ['{', null, {}, { hook_event_name: 'Stop', session_id: 'valid' },
+    { hook_event_name: 'UserPromptSubmit', session_id: '../escape' },
+    { hook_event_name: 'UserPromptSubmit', session_id: 'valid', agent_id: 'subagent' },
+    JSON.stringify({ hook_event_name: 'UserPromptSubmit', session_id: 'valid', prompt: 'x'.repeat(1024 * 1024) })]) {
+    const result = await startupHook(home, event);
+    assert.equal(result.code, 0);
+    assert.equal(result.stdout, '');
   }
+  await assert.rejects(stat(path.join(home, 'token-monitor-embedded')), { code: 'ENOENT' });
+});
+
+test('startup storage failures never block the prompt or break the launcher', async () => {
+  const home = await mkdtemp(path.join(testHome, 'startup-blocked-'));
+  await writeFile(path.join(home, 'token-monitor-embedded'), 'not a directory');
+  const result = await startupHook(home, { hook_event_name: 'UserPromptSubmit', session_id: randomUUID() });
+  assert.equal(result.code, 0);
+  assert.equal(result.stdout, '');
+  const { client } = await connectedClient({ CODEX_HOME: home });
+  try {
+    const opened = await client.callTool({ name: 'open_monitor', arguments: {}, _meta: { threadId: randomUUID() } });
+    assert.equal(opened._meta.monitor.presentation, 'panel');
+    assert.equal(opened._meta.monitor.startup, null);
+  } finally { await client.close(); }
 });
 
 test('MCP Apps bridge refreshes directly without sending messages or model context', async () => {

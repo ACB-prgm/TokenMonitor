@@ -1,5 +1,45 @@
 # Embedded prototype validation
 
+## Version 0.1.6 — first-prompt model instruction (2026-10-19)
+
+Replaces both experimental direct MCP hooks with one synchronous UserPromptSubmit
+command hook. It uses the bundled Node runtime and the documented
+`hookSpecificOutput.additionalContext` contract to request a normal model call to
+`open_monitor`. There is no Stop hook or continuation prompt. The launcher remains
+model-visible and explicitly allows the enabled startup instruction.
+
+Each chat atomically claims one private startup record. Concurrent submissions
+emit one instruction; later prompts emit none, including when the panel is closed.
+Manual launches with a host-supplied thread ID also suppress later startup requests.
+Instruction issuance and launcher execution have separate timestamps and neither
+claims successful rendering. Caller-provided session arguments cannot acknowledge
+a different chat. No prompt text or transcript content/path is stored. State
+failures, malformed/oversized events, unsafe IDs, and subagent events fail open.
+A skipped/failed model call is not retried automatically. No global AGENTS.md,
+other plugin registrations, native-monitor source, or hook trust entries change.
+
+Executed checks: build, TypeScript checking, all **11** protocol/integration tests,
+packaging, and the extracted archive test. The archive test executes the exact
+hook command from a package path containing spaces with no developer Node on PATH,
+verifies first-prompt output and subsequent suppression, then initializes the
+packaged MCP server. The four additional integration scenarios cover concurrent
+submissions/chat isolation/privacy, host-identity acknowledgement/manual opening,
+malformed/subagent/oversized events, and unavailable storage.
+
+Installed 0.1.6 through `codex plugin add`. A smoke check against the installed
+cache verified its server version, updated launcher description, fullscreen
+resource, app-only refresh, exact bundled hook execution, and once-per-chat
+suppression using a temporary CODEX_HOME. No model generation or user-chat
+mutation was requested for that check. Hook trust remains under Codex review.
+
+Live first-prompt instruction delivery and automatic expanded rendering in a new
+Codex chat remain **pending the user's test**. The changed command hook must be
+reviewed and trusted in Codex before it runs. Installing the update does not trust
+it. Look for Prototype 0.1.6 and the two startup timestamps in the panel. Historical
+routing captures below concern the removed direct MCP hooks, not this new route.
+
+Reference: https://learn.chatgpt.com/docs/hooks#userpromptsubmit
+
 Version 0.1.5 adds explicitly armed, exact-thread routing capture. Tests cover
 capture-off behavior, exclusion of refreshes and other chats, preservation of
 routing values, redaction of credentials/prompt fields, private file modes,

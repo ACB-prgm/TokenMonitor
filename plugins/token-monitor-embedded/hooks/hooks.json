@@ -1,27 +1,13 @@
 {
-  "description": "Experimental TokenMonitor UI hooks. Opening/rendering from a hook is not yet verified; no prompts or turn-control decisions are returned.",
+  "description": "Ask Codex to open TokenMonitor once on the first prompt in each local chat. Adds a short model instruction; later panel refreshes are UI-only.",
   "hooks": {
     "UserPromptSubmit": [
       {
         "hooks": [
           {
-            "type": "mcp_tool",
-            "server": "token-monitor-embedded",
-            "tool": "open_monitor",
-            "input": {"source": "hook", "sessionId": "${session_id}", "turnId": "${turn_id}"},
-            "timeout": 3
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "mcp_tool",
-            "server": "token-monitor-embedded",
-            "tool": "show_turn_summary",
-            "input": {"source": "hook", "sessionId": "${session_id}", "turnId": "${turn_id}"},
+            "type": "command",
+            "command": "\"$PLUGIN_ROOT/runtime/node\" \"$PLUGIN_ROOT/server/dist/startup-hook.mjs\"",
+            "statusMessage": "Preparing TokenMonitor",
             "timeout": 3
           }
         ]

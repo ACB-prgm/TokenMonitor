@@ -1,14 +1,13 @@
-# TokenMonitor Embedded 0.1.5 — feasibility prototype
+# TokenMonitor Embedded 0.1.6 — feasibility prototype
 
 This independent local plugin tests opening an MCP App inside a Codex conversation
 panel and refreshing it without a model turn. **It is not the full token monitor
 yet.** Its refresh count is synthetic connection-test data, not token telemetry.
 
 Inline rendering, independent refresh, and expanded view have been confirmed by
-the user in Codex. **Automatic turn-end inline summaries did not appear in the
-user's host test.** Hook-triggered presentation has not passed acceptance. The
-existing native TokenMonitor is unaffected: this prototype bundles its own two
-hooks and changes no native-monitor state or user hook registrations.
+the user in Codex. Version 0.1.6 asks the model to open the expanded panel once
+on the first prompt in each chat. This new automatic startup path awaits a live
+new-chat test. The existing native TokenMonitor is unaffected.
 
 ## Try the installed prototype
 
@@ -94,75 +93,48 @@ Report whether the panel opens and its counter updates. The current automation
 environment refuses Computer Use access to Codex, so this host check needs a user
 action. Protocol tests and a browser harness do not replace that check.
 
-## Expanded-first and turn-end behavior
+## First-prompt automatic opening (0.1.6)
 
-Version 0.1.3 requests **fullscreen** by default, which the user confirmed appears
-as Codex's expanded side-panel view. Its live panel and compact turn-end summary
-are separate UI resources. The summary is a frozen result and does not poll or
-switch the live panel back to inline.
+Review and trust the updated **UserPromptSubmit command hook** in Codex's Hooks
+settings (or `/hooks` in the CLI), then create a new local chat and send a normal
+prompt without mentioning the plugin. The hook returns a short `additionalContext`
+instruction asking Codex to call `open_monitor` once before handling the request.
+This uses the normal model-driven tool path that has rendered successfully.
+It adds no separate user turn or Stop continuation. The first launch requires a
+model tool call; subsequent two-second refreshes remain direct UI calls.
 
-Two experimental plugin-bundled MCP hooks attempt the automatic behavior:
+The bundled Node runtime runs the command hook; recipients need no Python or
+system Node. Plugin hooks load for enabled local plugins without an explicit
+@ mention, subject to host configuration and trust. Cloud orchestration is outside
+this local-hook scope. Tool availability and model compliance still matter;
+automatic rendering has not yet been verified in a fresh chat.
 
-- **UserPromptSubmit → open_monitor:** request the expanded monitor for the chat
-  whenever a user prompt is submitted. This also provides a retry when a chat's
-  server was not ready at session startup.
-- **Stop → show_turn_summary:** request a compact inline completion snapshot.
+The hook atomically records **instruction requested** once per chat under
+`${CODEX_HOME:-~/.codex}/token-monitor-embedded/startup`. Concurrent prompts cannot
+issue duplicate instructions. A host-identified `open_monitor` call records
+**launcher called** separately; neither status claims that the host rendered the
+widget. Only the session ID and timestamps are stored, never prompt text or
+transcript paths/content. Other chats have independent records. Existing chats
+also receive the instruction on their next prompt if they have no startup record.
+Malformed input or unavailable state storage never blocks the user's request.
+The instruction is not retried if the model skips it or the tool is unavailable;
+manual opening remains available. Closing and reopening a chat does not reset it.
+Closing the panel does not request another launch on the next prompt.
 
-After updating the plugin, review and trust these exact two definitions in
-Codex Settings → Hooks (or `/hooks`). Installation does not grant hook trust.
-The plugin does not bypass trust, send prompts, return turn-control decisions,
-or change unrelated hooks. It uses an existing MCP connection with a three-second
-timeout. Cloud-orchestrated chats are outside the supported local-hook scope.
+The old direct MCP startup and Stop hooks have been removed because their tools
+executed without presenting widgets. `show_turn_summary` remains available for
+explicit inline requests, but there is no automatic end-of-turn summary in this
+version. No global AGENTS.md or other plugin/native-monitor hooks are changed.
+Uninstalling disables the bundled hook and retains this independent state folder.
 
-**Tool execution is not proof of rendering.** The expanded panel's Automatic
-opening diagnostics count hook calls separately from ordinary refreshes. If the
-counts increase but no automatic panel/summary appears, Codex is executing the
-hooks without presenting their MCP UI results; this route cannot then be claimed
-to satisfy automatic opening. Check for duplicate panels across multiple prompts
-as part of the host test. The user has now reported that no turn-end inline
-summaries appear in any tested chat. The user subsequently reported **3 hook open
-requests, 2 hook turn-end requests, and Last hook: Stop**. These counters confirm
-the tools ran through the hook route without producing visible summaries.
-Codex's hook-completion handler records hook status and text output; it does not
-present an MCP App result through that event. The user also reports that an
-explicit model launch worked in another chat but did not behave as expected with
-the monitor expanded. Placement is therefore a variable to isolate; these
-observations do not establish that hook rendering is impossible in every mode.
-The launcher requests fullscreen, whereas the Stop tool uses a separate
-inline-only summary resource. Neither a successful launcher nor its expanded
-behavior tests that summary resource. Do not treat the hooks as a supported
-automatic opening or summary mechanism until that path is verified. See
-[VALIDATION.md](VALIDATION.md) for the evidence and remaining comparison.
+Expected test: the panel opens expanded during the first response and shows
+**Prototype 0.1.6**; its counter updates about every two seconds. A second prompt
+should not call the launcher again. Automatic opening diagnostics distinguishes
+the instruction timestamp from the actual launcher call. Opening an empty chat
+or merely switching to it does not trigger this hook.
 
-The subsequent closed-panel test also produced no automatic summary. Closing
-expanded view merely returns the existing launcher widget inline. A Python probe
-replayed Codex's thread-scoped MCP call, including both thread-ID metadata keys;
-both tools returned their widget data without emitting conversation tool-call
-events. No externally callable presentation endpoint has been verified. The
-current hooks already pass session/turn arguments, but this connection-test
-server does not use them to bind a widget or select a task.
-
-Opening or switching to a chat without sending a prompt is not a
-UserPromptSubmit event. There is no demonstrated hook for merely viewing a chat.
-The panel remains manually launchable if hook rendering is unavailable. All
-displayed data is still clearly labeled connection-test data; the full Swift
-telemetry port has not been implemented.
-
-### Model-driven startup fallback
-
-Global `~/.codex/AGENTS.md` can request a model-driven launch without a manual
-@ mention in each chat, provided the plugin's tool is available. A suitable
-instruction is:
-
-> At the beginning of each new local chat, call TokenMonitor Embedded's
-> `open_monitor` tool once, if available. Do not repeat the launch on subsequent
-> turns unless requested. If unavailable or unsuccessful, continue the user's task.
-
-This is model guidance, not an application startup callback or a guarantee of
-panel presentation. It does not request `show_turn_summary` after each response
-and does not solve automatic inline summaries. A plugin
-description alone is not a scheduling mechanism. This prototype does not modify
-global AGENTS.md or hook trust settings.
+This implements the documented command-hook context contract:
+https://learn.chatgpt.com/docs/hooks#userpromptsubmit
 
 ## Developer build and tests
 
@@ -236,4 +208,4 @@ Removing the development marketplace is a separate optional action.
 Reuse MonitorCore through a headless Swift helper, add independently stored
 silent lifecycle hooks, and carry all local metrics into a compact/expanded web
 panel. Prefer verified host-chat identity; otherwise follow the last valid hook
-event. Remotes, Windows, and automatic panel opening are deferred.
+event. Remotes and Windows are deferred. Automatic opening now uses the first-prompt model instruction described above.

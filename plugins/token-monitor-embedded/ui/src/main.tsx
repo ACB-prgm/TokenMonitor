@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App, type McpUiDisplayMode } from '@modelcontextprotocol/ext-apps';
 
-const app = new App({ name: 'TokenMonitor Embedded', version: '0.1.5' });
+const app = new App({ name: 'TokenMonitor Embedded', version: '0.1.6' });
 const presentation = document.documentElement.dataset.monitorView;
 function TurnSummary() {
   const [summary, setSummary] = useState<any>(null);
@@ -73,7 +73,7 @@ function Panel() {
     return () => clearInterval(timer);
   }, [ready, visible]);
   return <main>
-    <header><h1>TokenMonitor Embedded</h1><span>Prototype 0.1.5</span></header>
+    <header><h1>TokenMonitor Embedded</h1><span>Prototype 0.1.6</span></header>
     <p>{state?.status ?? 'Connecting to the Codex panel bridge…'}</p>
     <dl><dt>Successful refreshes</dt><dd>{state?.revision ?? '—'}</dd>
       <dt>Last refresh</dt><dd>{state?.refreshedAt ? new Date(state.refreshedAt).toLocaleTimeString() : '—'}</dd></dl>
@@ -98,12 +98,11 @@ function Panel() {
     </section>
     <details><summary>Host metadata fields</summary><pre>{JSON.stringify(state?.metadataShape ?? {}, null, 2)}</pre></details>
     <details><summary>Automatic opening diagnostics</summary>
-      <p>Hook open requests: {state?.hookOpenRequests ?? 0}<br />
-        Hook turn-end requests: {state?.hookSummaryRequests ?? 0}<br />
-        Last hook: {state?.lastHookEvent ?? 'None observed'}</p>
-      <p className="hint">A recorded hook call confirms execution, not UI rendering. New hook definitions must be reviewed and trusted in Codex.</p>
+      <p>Startup instruction: {state?.startup?.requestedAt ? new Date(state.startup.requestedAt).toLocaleTimeString() : 'Not recorded'}<br />
+        Launcher called: {state?.startup?.launcherCalledAt ? new Date(state.startup.launcherCalledAt).toLocaleTimeString() : 'Not recorded'}</p>
+      <p className="hint">The first-prompt hook asks Codex to call the launcher once per chat. These timestamps record instruction issuance and tool execution, not rendering. Review and trust the updated command hook in Codex.</p>
     </details>
-    <p className="hint">This panel tests local opening and refresh every two seconds. It does not send prompts or display token telemetry yet.</p>
+    <p className="hint">This panel tests local opening and refresh every two seconds. Refreshes do not send prompts; the first-prompt hook adds one startup instruction per chat. Token telemetry is not connected yet.</p>
   </main>;
 }
 createRoot(document.getElementById('root')!).render(presentation === 'summary' ? <TurnSummary /> : <Panel />);

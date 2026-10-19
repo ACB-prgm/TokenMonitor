@@ -40,6 +40,22 @@ class EmbeddedArchiveTests(unittest.TestCase):
             ]
             config = json.loads((package / '.mcp.json').read_text())['mcpServers']['token-monitor-embedded']
             self.assertNotIn('${PLUGIN_ROOT}', json.dumps(config))
+            # Run the actual packaged hook from an unrelated cwd with no
+            # developer Node/Python on PATH. Package paths contain spaces.
+            hooks = json.loads((package / 'hooks/hooks.json').read_text())['hooks']
+            self.assertEqual(list(hooks), ['UserPromptSubmit'])
+            command = hooks['UserPromptSubmit'][0]['hooks'][0]['command']
+            hook_env = {'PATH': '/usr/bin:/bin', 'PLUGIN_ROOT': str(package),
+                        'CODEX_HOME': str(Path(directory) / 'codex-home')}
+            event = json.dumps({'hook_event_name': 'UserPromptSubmit', 'session_id': 'archive-chat',
+                                'prompt': 'PRIVATE_PROMPT'})
+            first = subprocess.run(['/bin/sh', '-c', command], cwd=directory,
+                                   env=hook_env, input=event, text=True, capture_output=True, timeout=5, check=True)
+            self.assertIn('open_monitor', json.loads(first.stdout)['hookSpecificOutput']['additionalContext'])
+            self.assertNotIn('PRIVATE_PROMPT', first.stdout)
+            second = subprocess.run(['/bin/sh', '-c', command], cwd=directory,
+                                    env=hook_env, input=event, text=True, capture_output=True, timeout=5, check=True)
+            self.assertEqual(second.stdout, '')
             process = subprocess.Popen([config['command'], *config['args']],
                 cwd=package / config['cwd'], env={'PATH': '/usr/bin:/bin', 'NODE_PATH': ''},
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

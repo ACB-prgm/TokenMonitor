@@ -18,10 +18,10 @@ await writeFile(path.join(root, `ui/dist/${view}.html`), `<!doctype html>
 <title>TokenMonitor Embedded</title><style>${await readFile(path.join(root, 'ui/src/style.css'), 'utf8')}</style></head>
 <body><div id="root"></div><script>${script}</script></body></html>`);
 }
-await build({
-  entryPoints: [path.join(root, 'server/src/index.ts')], bundle: true,
+for (const entry of ['index', 'startup-hook']) await build({
+  entryPoints: [path.join(root, `server/src/${entry}.ts`)], bundle: true,
   platform: 'node', format: 'esm', target: 'node24',
-  outfile: path.join(root, 'server/dist/index.mjs'),
+  outfile: path.join(root, `server/dist/${entry}.mjs`),
   banner: { js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url);' },
 });
 console.log('Built embedded panel prototype and local MCP server.');

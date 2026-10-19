@@ -4,7 +4,7 @@ import { App } from '@modelcontextprotocol/ext-apps';
 import {migrateLayout, type Layout} from './analytics.js';
 import { MonitorView, type Monitor } from './view.js';
 
-const app = new App({ name: 'TokenMonitor Embedded', version: '0.3.1' });
+const app = new App({ name: 'TokenMonitor Embedded', version: '0.3.2' });
 const summary = document.documentElement.dataset.monitorView === 'summary';
 const legacy = () => (window as any).openai as {widgetState?: Layout; setWidgetState?: (s: Layout)=>void} | undefined;
 function savedLayout(): Layout {

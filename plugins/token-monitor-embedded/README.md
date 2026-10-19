@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 0.3.1
+# TokenMonitor Embedded 0.3.2
 
 Local Swift telemetry inside Codex's expanded conversation panel. Opens once per
 chat through the working first-prompt model instruction, then refreshes directly
@@ -150,6 +150,7 @@ npm run typecheck
 npm test
 python3 ../../scripts/package-embedded.py
 python3 ../../scripts/test_embedded_archive.py
+python3 ../../scripts/test_embedded_hook_discovery.py
 ```
 
 Building requires Swift/Xcode and Node on the development machine. The build
@@ -161,16 +162,18 @@ manifest, hooks, notices and release documentation/inventory.
 
 ## Private account installation
 
-The release ZIP is a standalone Agent Plugins package with root `plugin.json`,
-`mcp.json`, bundled runtimes, all six metadata hooks, and the original TokenMonitor
-logo. Upload the ZIP through Plugin Creator to create a private account/workspace
+The release ZIP is a standalone private desktop plugin with `.codex-plugin/plugin.json`,
+`.mcp.json`, bundled runtimes, all six metadata hooks, and the original TokenMonitor
+logo. This compatibility manifest format is required for command-hook discovery in
+Codex 0.163.0-alpha.10.2; a root Agent Plugins manifest silently suppresses those
+hooks in that runtime. The account installation does not require a marketplace. Upload the ZIP through Plugin Creator to create a private account/workspace
 plugin. Install that plugin on each supported Mac using the same account/workspace;
 review and trust its hooks there, then start a fresh local chat. Account upload does
 not verify availability or execution on a connected remote Mac.
 
 When switching from the development installation, disable its copy before enabling
 the uploaded copy so hooks do not run twice. Existing telemetry state is retained.
-The compatibility manifests remain bundled for older local clients. The ZIP does
+The ZIP does
 not contain a marketplace or depend on this repository's installation path.
 
 For development only, install/update through the local `token-monitor-development` marketplace:

@@ -13,7 +13,7 @@ repo = Path(__file__).resolve().parents[1]
 
 class EmbeddedArchiveTests(unittest.TestCase):
     def test_archive_runs_offline_with_bundled_runtime(self):
-        manifest = json.loads((repo / 'plugins/token-monitor-embedded/plugin.json').read_text())
+        manifest = json.loads((repo / 'plugins/token-monitor-embedded/.codex-plugin/plugin.json').read_text())
         archive = repo / 'dist' / ('token-monitor-embedded-' + manifest['version'] + '.zip')
         if not archive.exists():
             self.skipTest('Build the independent embedded prototype archive first')
@@ -39,25 +39,21 @@ class EmbeddedArchiveTests(unittest.TestCase):
                 {'jsonrpc': '2.0', 'id': 2, 'method': 'tools/list'},
                 {'jsonrpc': '2.0', 'id': 3, 'method': 'tools/call', 'params': {'name': 'open_monitor', 'arguments': {}}},
             ]
-            portable = json.loads((package / 'plugin.json').read_text())
-            self.assertEqual(portable['$schema'], 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json')
-            legacy = json.loads((package / '.codex-plugin/plugin.json').read_text())
-            self.assertEqual((portable['name'], portable['version']), (legacy['name'], legacy['version']))
-            extension = portable['extensions']['com.openai']
-            self.assertEqual(extension['interface'], legacy['interface'])
-            self.assertTrue(extension['requires_local_executor'])
-            self.assertEqual(extension['hooks'], './hooks/hooks.json')
-            self.assertLessEqual(len(extension['interface']['shortDescription']), 30)
-            icon = (package / extension['interface']['logo']).read_bytes()
-            self.assertEqual(icon, (repo / 'plugins/token-monitor/assets/icon.png').read_bytes())
-            self.assertEqual(extension['interface']['logo'], extension['interface']['composerIcon'])
+            # Root Agent Plugins manifests currently suppress command hooks in Codex.
+            self.assertFalse((package / 'plugin.json').exists())
+            self.assertFalse((package / 'mcp.json').exists())
+            manifest = json.loads((package / '.codex-plugin/plugin.json').read_text())
+            self.assertTrue(manifest['requires_local_executor'])
+            self.assertEqual(manifest['hooks'], './hooks/hooks.json')
+            interface = manifest['interface']
+            self.assertLessEqual(len(interface['shortDescription']), 30)
+            self.assertEqual((package / interface['logo']).read_bytes(),
+                             (repo / 'plugins/token-monitor/assets/icon.png').read_bytes())
+            self.assertEqual(interface['logo'], interface['composerIcon'])
             self.assertFalse(any(package.rglob('marketplace.json')))
-            mcp = json.loads((package / 'mcp.json').read_text())
-            self.assertEqual(mcp['$schema'], 'https://agent-plugins.org/schemas/1.0.0/mcp.schema.json')
-            config = mcp['mcpServers']['token-monitor-embedded']
-            self.assertEqual(config['type'], 'stdio')
+            config = json.loads((package / '.mcp.json').read_text())['mcpServers']['token-monitor-embedded']
             config = {**config, 'args': [arg.replace('${PLUGIN_ROOT}', str(package)) for arg in config['args']],
-                      'cwd': config['cwd'].replace('${PLUGIN_ROOT}', str(package))}
+                      'cwd': str(package / config['cwd'])}
             # Run the actual packaged hook from an unrelated cwd with no
             # developer Node/Python on PATH. Package paths contain spaces.
             hooks = json.loads((package / 'hooks/hooks.json').read_text())['hooks']

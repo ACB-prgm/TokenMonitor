@@ -10,13 +10,13 @@ import zipfile
 
 repo = Path(__file__).resolve().parents[1]
 source = repo / 'plugins/token-monitor-embedded'
-manifest = json.loads((source / 'plugin.json').read_text())
+manifest = json.loads((source / '.codex-plugin/plugin.json').read_text())
 version = manifest['version']
 output = repo / 'dist/token-monitor-embedded'
 if output.exists():
     shutil.rmtree(output)
 output.mkdir(parents=True)
-for name in ['plugin.json', 'mcp.json', 'assets', '.codex-plugin', '.mcp.json', 'hooks', 'scripts/launch.sh', 'server/dist', 'ui/dist', 'runtime', 'README.md', 'VALIDATION.md']:
+for name in ['assets', '.codex-plugin', '.mcp.json', 'hooks', 'scripts/launch.sh', 'server/dist', 'ui/dist', 'runtime', 'README.md', 'VALIDATION.md']:
     src, dest = source / name, output / name
     if src.is_dir():
         shutil.copytree(src, dest)

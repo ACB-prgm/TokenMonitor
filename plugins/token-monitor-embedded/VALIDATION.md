@@ -1,3 +1,24 @@
+# 0.3.2 hook discovery fix — 2026-10-19
+
+The 0.3.1 root Agent Plugins manifest caused Codex 0.163.0-alpha.10.2 to skip
+all plugin hooks. A controlled comparison using that runtime discovered six
+hooks from the legacy manifest and zero from the identical portable package.
+
+- Removed root plugin.json and mcp.json; the standalone account package uses
+  .codex-plugin/plugin.json and .mcp.json without requiring a marketplace.
+- Added a regression against the installed Codex app-server hooks/list API,
+  using the actual release manifest/hooks in an isolated temporary Codex home.
+  All six events are discovered with source=plugin and trustStatus=untrusted;
+  no hooks are executed or trusted by the test.
+- Production build, type checking, all 22 Node tests, extracted offline archive
+  test, and real Codex hook discovery test passed.
+- Account update must explicitly delete the two previous root files because
+  account uploads overlay retained files. Read back after saving to verify.
+- This establishes runtime discovery; live account installation and user hook
+  trust remain separate checks. Logo rendering remains unverified after this fix.
+
+---
+
 # 0.3.1 standard private package — 2026-10-19
 
 - Added portable Agent Plugins 1.0 root manifests; retained synchronized legacy

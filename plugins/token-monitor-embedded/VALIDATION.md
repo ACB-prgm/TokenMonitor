@@ -14,6 +14,33 @@ refresh. A bounded watcher can compare the next manual summary with its real
 Stop-hook summary and automatically disarm; no manually simulated hook calls
 are used for the live comparison. Tests verify this watcher's stop behavior.
 
+The subsequent live capture succeeded: it contains a real UserPromptSubmit
+launcher call, a model-driven `show_turn_summary`, the real Stop call to
+`show_turn_summary`, and the next UserPromptSubmit call. The manual and Stop
+summary calls have matching thread and turn IDs. Their delivered metadata differs:
+
+- Both contain the same `threadId`; their `progressToken` values differ.
+- Only the model call contains `callId`, `itemId`, `windowId`, `sessionId`,
+  `plugin_id`, and `x-codex-turn-metadata` (including the session/thread/turn IDs,
+  model, client, workspace, sandbox, review, and turn-start context).
+- Both have null HTTP headers, as expected for the stdio transport.
+- The hook explicitly passes session and turn IDs as tool arguments; the manual
+  call has only `source: manual` in its arguments.
+
+The background exec watcher did not survive the conversation turn. Its report
+remained at its initial waiting state even though the raw trace contained both
+calls. The comparison was therefore generated manually and the recorder was
+explicitly stopped. Do not promise that a watcher started in this tool runtime
+will survive a turn; the standalone watcher integration test does not verify
+that host lifecycle behavior.
+
+The capture's credential-name filter also redacted the workspace-path entry
+because its name contains TokenMonitor. Routing IDs remain intact, but this is
+not an unmodified complete request capture. Trace and comparison files remain
+private in the independent diagnostics directory and are not committed or
+packaged. The richer metadata is an observed difference, not proof that adding
+it to a hook or Python request is sufficient to register or display a widget.
+
 Version 0.1.4 exposes the existing `show_turn_summary` tool to the model for an
 explicit inline-only test requested by the user. It retains its separate
 resource and inline preference; only `open_monitor` has a thread entrypoint.

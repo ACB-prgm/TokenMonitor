@@ -75,6 +75,9 @@ events. `clear` stops the current capture and removes its trace and comparison.
 `watch` waits for both summary calls, prefers a matching turn, saves the
 comparison, and stops the capture automatically. It exits at its deadline or
 capture expiry even if the pair never arrives. It requests no model turns.
+Run it in a persistent developer terminal: a watcher started in this chat's tool
+runtime did not survive the turn. The live test was completed with `compare` and
+`stop` manually after the real Stop hook had been captured.
 The helper is a developer diagnostic; recipients do not need Python.
 
 Captures live in the independent state directory's `diagnostics/` folder under

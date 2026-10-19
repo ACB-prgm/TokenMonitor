@@ -1,7 +1,37 @@
 # Embedded prototype validation
 
 Status: **inline rendering, refresh, and expanded view confirmed by the user;
-automatic hook-triggered rendering unverified**.
+automatic turn-end inline rendering failed the user's host test**.
+
+## Automatic-presentation result (2026-10-18)
+
+Host: Codex desktop 26.1013.40934 (build 20770), embedded prototype 0.1.3.
+
+The user reports no inline summary after Codex responses in any tested chats.
+Do not advertise the Stop hook as a working automatic-summary feature. Automatic
+expanded opening is also not established by a successful model-driven launch.
+
+Read-only diagnosis found persisted trust hashes for both embedded hook
+definitions and successful MCP startup in multiple local chats. These establish
+configuration and connectivity, not successful execution of either hook. The
+available logs did not establish whether `show_turn_summary` was reached.
+
+The installed desktop's `hook/started` and `hook/completed` notification handler
+updates a turn's hook-run records; it does not create an MCP tool-call item or
+present a UI resource. The generated `HookRunSummary` protocol contains text
+output entries, with no MCP result or UI metadata field. This supports a host
+presentation limitation, but does not by itself prove that the summary tool ran.
+The live panel's hook counters are the remaining execution diagnostic.
+
+Official MCP hook documentation specifies an existing-connection tool call and
+the command-hook output contract, not presentation of an MCP App result:
+https://learn.chatgpt.com/docs/hooks#mcp-tool-hooks
+
+The supported presentation path demonstrated here remains a model call to
+`open_monitor`, followed by independent UI refresh. Global AGENTS.md can request
+that launch once per new local chat when the tool is available; this is a model
+instruction, not a native automatic panel attachment. No global instructions,
+hook trust settings, or installed runtime were changed by this diagnosis.
 
 Executed on Apple silicon macOS with the bundled Node 24.21.0 runtime:
 
@@ -27,8 +57,8 @@ including an extracted package directory containing spaces.
 The separate local plugin was installed through the Codex CLI. The user later
 confirmed the explicit-launch inline widget test worked. Computer Use refused
 access to the Codex app, so automated native UI verification remains unavailable.
-Hook-triggered rendering, hiding/reopening behavior, and
-host-chat identity remain unverified.
+Automatic turn-end rendering failed the user's test. Hook execution,
+hiding/reopening behavior, and host-chat identity remain unverified.
 
 Version 0.1.3 adds two experimental MCP display hooks, but no full telemetry interface.
 The prototype does not read transcripts, query the Codex database, or change
@@ -63,8 +93,8 @@ continue the turn. They use the existing MCP connection with a three-second time
 
 Execution is not proof of rendering: the generated host hook-completion protocol
 carries text output entries, not an MCP UI result. Whether this host separately
-presents the called resource is unverified. Hook invocation counts in the live
-panel distinguish execution from presentation. Check two successive prompts for
-automatic opening, duplicate panels, turn-end summary rendering, and continued
-live-panel visibility before claiming automatic behavior. Merely switching to an
-existing chat does not trigger UserPromptSubmit.
+presents the called resource was not established, and the user's turn-end test
+produced no visible summary. Hook invocation counts in the live panel distinguish
+execution from presentation. Do not claim automatic opening or summaries from
+these experimental hooks. Merely switching to an existing chat does not trigger
+UserPromptSubmit.

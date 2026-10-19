@@ -5,7 +5,8 @@ panel and refreshing it without a model turn. **It is not the full token monitor
 yet.** Its refresh count is synthetic connection-test data, not token telemetry.
 
 Inline rendering, independent refresh, and expanded view have been confirmed by
-the user in Codex. Automatic hook-triggered rendering remains experimental. The
+the user in Codex. **Automatic turn-end inline summaries did not appear in the
+user's host test.** Hook-triggered presentation is not a working feature. The
 existing native TokenMonitor is unaffected: this prototype bundles its own two
 hooks and changes no native-monitor state or user hook registrations.
 
@@ -55,7 +56,7 @@ as Codex's expanded side-panel view. Its live panel and compact turn-end summary
 are separate UI resources. The summary is a frozen result and does not poll or
 switch the live panel back to inline.
 
-Two plugin-bundled MCP hooks request the automatic behavior:
+Two experimental plugin-bundled MCP hooks attempt the automatic behavior:
 
 - **UserPromptSubmit → open_monitor:** request the expanded monitor for the chat
   whenever a user prompt is submitted. This also provides a retry when a chat's
@@ -73,13 +74,35 @@ opening diagnostics count hook calls separately from ordinary refreshes. If the
 counts increase but no automatic panel/summary appears, Codex is executing the
 hooks without presenting their MCP UI results; this route cannot then be claimed
 to satisfy automatic opening. Check for duplicate panels across multiple prompts
-as part of the host test. These behaviors remain unverified.
+as part of the host test. The user has now reported that no turn-end inline
+summaries appear in any tested chat. Saved trust entries and successful MCP
+startup were found, but logs did not establish whether the summary tool ran.
+Codex's hook-completion handler records hook status and text output; it does not
+present an MCP App result. Do not treat these hooks as a supported automatic
+opening or summary mechanism. See [VALIDATION.md](VALIDATION.md) for the evidence
+and remaining execution diagnostic.
 
 Opening or switching to a chat without sending a prompt is not a
 UserPromptSubmit event. There is no demonstrated hook for merely viewing a chat.
 The panel remains manually launchable if hook rendering is unavailable. All
 displayed data is still clearly labeled connection-test data; the full Swift
-telemetry port is pending the automatic-presentation result.
+telemetry port has not been implemented.
+
+### Model-driven startup fallback
+
+Global `~/.codex/AGENTS.md` can request a model-driven launch without a manual
+@ mention in each chat, provided the plugin's tool is available. A suitable
+instruction is:
+
+> At the beginning of each new local chat, call TokenMonitor Embedded's
+> `open_monitor` tool once, if available. Do not repeat the launch on subsequent
+> turns unless requested. If unavailable or unsuccessful, continue the user's task.
+
+This is model guidance, not an application startup callback or a guarantee of
+panel presentation. It does not make the app-only `show_turn_summary` tool
+available to the model and does not solve automatic inline summaries. A plugin
+description alone is not a scheduling mechanism. This prototype does not modify
+global AGENTS.md or hook trust settings.
 
 ## Developer build and tests
 

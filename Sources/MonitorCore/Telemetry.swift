@@ -1,5 +1,15 @@
 import Foundation
 
+public struct ThreadOutputTotals: Codable, Equatable {
+    public var total: Int?
+    public var reasoning: Int?
+    public var source: String
+    public var nonReasoning: Int? {
+        guard let total, let reasoning, reasoning <= total else { return nil }
+        return total - reasoning
+    }
+}
+
 public struct TokenUsageSample: Codable, Equatable {
     public let timestamp: Date
     public let input: Int
@@ -56,6 +66,18 @@ public final class CodexTelemetryParser {
     public private(set) var lastCallEffort: String?
     public private(set) var lastEvent: Date?
     public private(set) var callCount = 0
+    private var reportedOutput: Int?
+    private var reportedReasoning: Int?
+    private var summedOutput = 0
+    private var summedReasoning = 0
+    private var outputComplete = true
+    private var reasoningComplete = true
+    public var outputTotals: ThreadOutputTotals {
+        if let reportedOutput { return ThreadOutputTotals(total: reportedOutput, reasoning: reportedReasoning, source: "reported-cumulative") }
+        return ThreadOutputTotals(total: callCount > 0 && outputComplete ? summedOutput : nil,
+                                  reasoning: callCount > 0 && reasoningComplete ? summedReasoning : nil,
+                                  source: "recorded-calls")
+    }
     public let attribution = ContextAttributionEstimator()
     public private(set) var contextAttribution = ContextAttribution()
     private var pendingAttribution: ContextAttribution?
@@ -120,6 +142,15 @@ public final class CodexTelemetryParser {
             }
         }
         guard let info = p["info"] as? [String: Any] else { return }
+        // Cumulative counters survive the chart's 120-sample cap and compaction.
+        // Reasoning is part of output, never an additional charge on top of it.
+        var reportedThisRecord = false
+        if let cumulative = info["total_token_usage"] as? [String: Any],
+           let output = cumulative["output_tokens"] as? Int, output >= 0 {
+            reportedThisRecord = true
+            reportedOutput = output
+            reportedReasoning = (cumulative["reasoning_output_tokens"] as? Int).flatMap { $0 >= 0 && $0 <= output ? $0 : nil }
+        }
         if let limit = info["model_context_window"] as? Int, limit > 0 { contextLimit = limit }
         guard let u = info["last_token_usage"] as? [String: Any], let input = u["input_tokens"] as? Int, let time else { return }
         // Compaction bookkeeping reports the reduced context in total_tokens, with
@@ -147,6 +178,21 @@ public final class CodexTelemetryParser {
         lastIdentity = identity
         lastCallModel = model; lastCallEffort = effort
         callCount += 1
+        if !reportedThisRecord, let prior = reportedOutput {
+            if let output = u["output_tokens"] as? Int, output >= 0, !prior.addingReportingOverflow(output).overflow {
+                reportedOutput = prior + output
+            } else { reportedOutput = nil }
+            if let priorReasoning = reportedReasoning, let reasoning = u["reasoning_output_tokens"] as? Int,
+               reasoning >= 0, reasoning <= s.output, !priorReasoning.addingReportingOverflow(reasoning).overflow {
+                reportedReasoning = priorReasoning + reasoning
+            } else { reportedReasoning = nil }
+        }
+        if let output = u["output_tokens"] as? Int, output >= 0, !summedOutput.addingReportingOverflow(output).overflow {
+            summedOutput += output
+        } else { outputComplete = false }
+        if let reasoning = u["reasoning_output_tokens"] as? Int, reasoning >= 0, reasoning <= s.output,
+           !summedReasoning.addingReportingOverflow(reasoning).overflow { summedReasoning += reasoning }
+        else { reasoningComplete = false }
         samples.append(s)
         if samples.count > 120 { samples.removeFirst(samples.count - 120) }
     }

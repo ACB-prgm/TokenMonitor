@@ -29,6 +29,7 @@ public struct Snapshot: Codable {
     public var cached: Int? { awaitingPostCompactionCall ? nil : last?.cached }
     public var fresh: Int? { awaitingPostCompactionCall ? nil : last?.fresh }
     public var callCount = 0
+    public var outputTotals: ThreadOutputTotals?
     public var attribution = ContextAttribution()
     public var contextLimit: Int?
     public var fiveHour: Allowance?
@@ -144,7 +145,7 @@ public final class TelemetryCollector {
             completed: parser.compactions.last?.timestamp,
             latestCall: parser.samples.last?.timestamp)
 
-        s.samples = parser.samples; s.callCount = parser.callCount; s.contextLimit = parser.contextLimit
+        s.samples = parser.samples; s.callCount = parser.callCount; s.outputTotals = parser.outputTotals; s.contextLimit = parser.contextLimit
         s.fiveHour = parser.fiveHour; s.weekly = parser.weekly; s.lastEvent = parser.lastEvent; s.status = s.isCompacting ? "Compacting…" : status
         onSnapshot?(s)
     }

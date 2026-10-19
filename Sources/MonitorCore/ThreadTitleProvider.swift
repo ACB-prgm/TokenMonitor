@@ -51,7 +51,7 @@ public struct RecentThread: Codable, Identifiable, Equatable {
 
 extension ThreadTitleProvider {
     /// Read only local, unarchived tasks with accessible transcripts. No Codex state is modified.
-    public func recent(home: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex"), limit: Int = 30) -> [RecentThread] {
+    public func recent(home: URL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex"), limit: Int = 30, matchingID: String? = nil) -> [RecentThread] {
         let paths = ((try? FileManager.default.contentsOfDirectory(at: home, includingPropertiesForKeys: nil)) ?? [])
             .filter { $0.lastPathComponent.hasPrefix("state_") && $0.pathExtension == "sqlite" }
             .sorted { $0.lastPathComponent.compare($1.lastPathComponent, options: .numeric) == .orderedDescending }
@@ -71,11 +71,12 @@ extension ThreadTitleProvider {
             guard Set(["id", "title", "rollout_path"]).isSubset(of: columns) else { continue }
             let title = columns.contains("name") ? "COALESCE(NULLIF(name, ''), title)" : "title"
             let cwd = columns.contains("cwd") ? "cwd" : "NULL"
-            let filter = columns.contains("archived") ? "WHERE archived = 0" : ""
+            let filter = matchingID != nil ? "WHERE id = ?" : (columns.contains("archived") ? "WHERE archived = 0" : "")
             let order = columns.contains("updated_at") ? "updated_at DESC, id" : "id"
             var stmt: OpaquePointer?
             guard sqlite3_prepare_v2(db, "SELECT id, \(title), rollout_path, \(cwd) FROM threads \(filter) ORDER BY \(order)", -1, &stmt, nil) == SQLITE_OK else { continue }
             defer { sqlite3_finalize(stmt) }
+            if let matchingID { sqlite3_bind_text(stmt, 1, matchingID, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self)) }
             var result: [RecentThread] = []
             while result.count < max(0, min(limit, 100)), sqlite3_step(stmt) == SQLITE_ROW {
                 func field(_ i: Int32) -> String? { sqlite3_column_text(stmt, i).map { String(cString: $0) } }

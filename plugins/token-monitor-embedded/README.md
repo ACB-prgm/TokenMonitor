@@ -6,7 +6,7 @@ yet.** Its refresh count is synthetic connection-test data, not token telemetry.
 
 Inline rendering, independent refresh, and expanded view have been confirmed by
 the user in Codex. **Automatic turn-end inline summaries did not appear in the
-user's host test.** Hook-triggered presentation is not a working feature. The
+user's host test.** Hook-triggered presentation has not passed acceptance. The
 existing native TokenMonitor is unaffected: this prototype bundles its own two
 hooks and changes no native-monitor state or user hook registrations.
 
@@ -79,8 +79,15 @@ summaries appear in any tested chat. The user subsequently reported **3 hook ope
 requests, 2 hook turn-end requests, and Last hook: Stop**. These counters confirm
 the tools ran through the hook route without producing visible summaries.
 Codex's hook-completion handler records hook status and text output; it does not
-present an MCP App result. Do not treat these hooks as a supported automatic
-opening or summary mechanism. See [VALIDATION.md](VALIDATION.md) for the evidence.
+present an MCP App result through that event. The user also reports that an
+explicit model launch worked in another chat but did not behave as expected with
+the monitor expanded. Placement is therefore a variable to isolate; these
+observations do not establish that hook rendering is impossible in every mode.
+The launcher requests fullscreen, whereas the Stop tool uses a separate
+inline-only summary resource. Neither a successful launcher nor its expanded
+behavior tests that summary resource. Do not treat the hooks as a supported
+automatic opening or summary mechanism until that path is verified. See
+[VALIDATION.md](VALIDATION.md) for the evidence and remaining comparison.
 
 Opening or switching to a chat without sending a prompt is not a
 UserPromptSubmit event. There is no demonstrated hook for merely viewing a chat.

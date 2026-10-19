@@ -1,7 +1,8 @@
 # Embedded prototype validation
 
 Status: **inline rendering, refresh, and expanded view confirmed by the user;
-automatic turn-end inline rendering failed the user's host test**.
+automatic turn-end inline rendering did not appear in the reported test;
+the effect of expanded placement remains unresolved**.
 
 ## Automatic-presentation result (2026-10-18)
 
@@ -22,13 +23,30 @@ reported these live-panel diagnostics:
 These counters increment only inside the corresponding server tool handlers
 when `source` is `hook`. They confirm both hook calls reached the MCP server,
 including two calls to `show_turn_summary`. Combined with the user's report of
-no inline summaries, this establishes execution without visible presentation.
+no inline summaries, this establishes execution without a visible new summary
+in the reported state. It does not establish that hook presentation is impossible
+in every display mode.
+
+The user clarified that an explicit model launch worked in another chat but did
+not produce the expected result while the monitor was expanded. Expanded
+placement is therefore a variable to isolate. In this prototype, `open_monitor`
+requests the fullscreen panel resource, while `show_turn_summary` requests a
+different, inline-only resource and is app-only. A successful model launcher call
+is not a successful test of the Stop summary resource. Do not conflate these
+tools or infer a cause from the absence of a new inline card alone.
+
+The next host check is a normal response with the expanded monitor closed and
+no explicit model launch request. Automatic summary appearance in that condition
+has not been established. A controlled comparison of the same resource/call path
+with expanded placement open and closed is still needed before claiming a
+placement-specific cause.
 
 The installed desktop's `hook/started` and `hook/completed` notification handler
 updates a turn's hook-run records; it does not create an MCP tool-call item or
 present a UI resource. The generated `HookRunSummary` protocol contains text
-output entries, with no MCP result or UI metadata field. This matches the observed
-host presentation limitation. The live panel's hook counters independently
+output entries, with no MCP result or UI metadata field. That handler is evidence
+against presentation through the hook-completion event itself, not proof that
+there is no other host presentation path. The live panel's hook counters independently
 confirm execution; further trust review or an @ mention is not the missing step
 in this tested chat.
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Package the independently versioned embedded monitor without developer dependencies."""
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -22,6 +23,14 @@ for name in ['plugin.json', 'mcp.json', 'assets', '.codex-plugin', '.mcp.json', 
     else:
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest)
+
+# Compress the verified Node binary to fit the account upload's per-member
+# limit. The launcher checks its digest before executing a private cached copy.
+node = output / 'runtime/node'
+node_data = node.read_bytes()
+(output / 'runtime/node.gz').write_bytes(gzip.compress(node_data, mtime=0))
+(output / 'runtime/node.sha256').write_text(hashlib.sha256(node_data).hexdigest() + '\n')
+node.unlink()
 
 # Include licenses for the bundled SDK/UI dependency graph. No dependency code
 # or package-manager paths are included in this notice file.
@@ -47,7 +56,7 @@ for path in sorted(output.rglob('*')):
 pin = json.loads((source / 'scripts/runtime.json').read_text())
 (output / 'release.json').write_text(json.dumps({'version': version, 'stage': 'private-desktop-plugin',
     'architecture': 'arm64', 'minimumOS': '13.5', 'nodeVersion': pin['version'], 'files': files}, indent=2) + '\n')
-subprocess.run([str(output / 'runtime/node'), '--version'], check=True)
+subprocess.run([str(source / 'runtime/node'), '--version'], check=True)
 archive = repo / 'dist' / f'token-monitor-embedded-{version}.zip'
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as bundle:
     for path in sorted(output.rglob('*')):

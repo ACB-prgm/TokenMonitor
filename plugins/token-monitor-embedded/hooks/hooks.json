@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$PLUGIN_ROOT/runtime/node\" \"$PLUGIN_ROOT/server/dist/startup-hook.mjs\"",
+            "command": "/bin/sh \"$PLUGIN_ROOT/scripts/launch.sh\" --startup-hook",
             "statusMessage": "Preparing TokenMonitor",
             "timeout": 3
           }

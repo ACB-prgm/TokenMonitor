@@ -25,8 +25,8 @@ class EmbeddedArchiveTests(unittest.TestCase):
                     self.assertNotIn('node_modules', Path(entry.filename).parts)
                 bundle.extractall(directory)
             package = Path(directory) / 'token-monitor-embedded'
-            node = package / 'runtime/node'
-            node.chmod(0o755)
+            self.assertFalse((package / 'runtime/node').exists())
+            self.assertTrue((package / 'runtime/node.gz').is_file())
             (package / 'runtime/TokenMonitorCollector').chmod(0o755)
             release = json.loads((package / 'release.json').read_text())
             for entry in release['files']:
@@ -74,13 +74,30 @@ class EmbeddedArchiveTests(unittest.TestCase):
                     'total_token_usage':{'output_tokens':1000,'reasoning_output_tokens':400}}}}) + '\n')
             event = json.dumps({'hook_event_name': 'UserPromptSubmit', 'session_id': 'archive-chat',
                                 'transcript_path': str(transcript), 'prompt': 'PRIVATE_PROMPT'})
+            # A fresh cache is expanded and verified by the first hook invocation.
             first = subprocess.run(['/bin/sh', '-c', command], cwd=directory,
                                    env=hook_env, input=event, text=True, capture_output=True, timeout=5, check=True)
+            expected = (package / 'runtime/node.sha256').read_text().strip()
+            cached_node = codex_home / 'token-monitor-embedded/runtime' / expected / 'node'
+            self.assertEqual(hashlib.sha256(cached_node.read_bytes()).hexdigest(), expected)
+            self.assertEqual(cached_node.stat().st_mode & 0o777, 0o700)
             self.assertIn('open_monitor', json.loads(first.stdout)['hookSpecificOutput']['additionalContext'])
             self.assertNotIn('PRIVATE_PROMPT', first.stdout)
             second = subprocess.run(['/bin/sh', '-c', command], cwd=directory,
                                     env=hook_env, input=event, text=True, capture_output=True, timeout=5, check=True)
             self.assertEqual(second.stdout, '')
+            launcher = ['/bin/sh', str(package / 'scripts/launch.sh'), '--node-version']
+            # A damaged writable cache is rebuilt from the bundled archive.
+            cached_node.write_bytes(b'not an executable')
+            repaired = subprocess.run(launcher, cwd=directory, env=hook_env,
+                                      capture_output=True, text=True, timeout=5, check=True)
+            self.assertTrue(repaired.stdout.startswith('v24.'))
+            self.assertEqual(hashlib.sha256(cached_node.read_bytes()).hexdigest(), expected)
+            # Host-provided plugin storage takes precedence over CODEX_HOME.
+            private_data = Path(directory) / 'plugin data'
+            subprocess.run(launcher, cwd=directory, env={**hook_env, 'PLUGIN_DATA': str(private_data)},
+                           capture_output=True, text=True, timeout=5, check=True)
+            self.assertTrue((private_data / 'runtime' / expected / 'node').is_file())
             process = subprocess.Popen([config['command'], *config['args']],
                 cwd=config['cwd'], env={'PATH': '/usr/bin:/bin', 'NODE_PATH': '', 'CODEX_HOME': str(codex_home)},
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

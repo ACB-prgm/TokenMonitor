@@ -9,6 +9,12 @@
 - Extracted archive regression passed using root mcp.json with PLUGIN_ROOT
   resolution, a temporary Codex home and bundled runtimes only. Verified manifest
   parity, logo parity, hook behavior, MCP tools, real metrics, and inventory hashes.
+- Initial account upload rejected the uncompressed 116 MiB Node member. The
+  release now bundles node.gz and its SHA-256; the shell launcher expands and
+  verifies the executable in private plugin storage without network access.
+  Cold/warm hook startup, cache corruption recovery and PLUGIN_DATA precedence
+  are covered by the extracted archive regression. The portable server uses
+  bare `sh`, as required by account ingestion, rather than `/bin/sh`.
 - Account ingestion and installation on the Mac Studio must be verified separately;
   these package tests do not establish remote-chat execution or sharing availability.
 

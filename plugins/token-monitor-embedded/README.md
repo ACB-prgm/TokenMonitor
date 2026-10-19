@@ -89,6 +89,14 @@ behavior tests that summary resource. Do not treat the hooks as a supported
 automatic opening or summary mechanism until that path is verified. See
 [VALIDATION.md](VALIDATION.md) for the evidence and remaining comparison.
 
+The subsequent closed-panel test also produced no automatic summary. Closing
+expanded view merely returns the existing launcher widget inline. A Python probe
+replayed Codex's thread-scoped MCP call, including both thread-ID metadata keys;
+both tools returned their widget data without emitting conversation tool-call
+events. No externally callable presentation endpoint has been verified. The
+current hooks already pass session/turn arguments, but this connection-test
+server does not use them to bind a widget or select a task.
+
 Opening or switching to a chat without sending a prompt is not a
 UserPromptSubmit event. There is no demonstrated hook for merely viewing a chat.
 The panel remains manually launchable if hook rendering is unavailable. All
@@ -149,6 +157,18 @@ After changing the source, rebuild and reinstall the local plugin. For sharing,
 use the ZIP under the repository's `dist/` directory. It contains the bundled
 runtime, server, UI, notices, and verification inventory; no `node_modules`,
 transcripts, user configurations, or build caches are distributed.
+
+For the isolated Python host-API diagnostic (requires the development machine's
+installed Codex CLI and an already-built plugin), run from the repository root:
+
+```sh
+python3 scripts/probe_embedded_host.py
+```
+
+This uses a disposable Codex home and test thread, verifies delivered thread
+metadata, and reports conversation-item notifications. It does not request a
+model turn, attach to the desktop, or change user configuration. It is a developer
+diagnostic, not a recipient runtime dependency or automatic widget launcher.
 
 ## Removing it
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App, type McpUiDisplayMode } from '@modelcontextprotocol/ext-apps';
 
-const app = new App({ name: 'TokenMonitor Embedded', version: '0.1.4' });
+const app = new App({ name: 'TokenMonitor Embedded', version: '0.1.5' });
 const presentation = document.documentElement.dataset.monitorView;
 function TurnSummary() {
   const [summary, setSummary] = useState<any>(null);
@@ -73,7 +73,7 @@ function Panel() {
     return () => clearInterval(timer);
   }, [ready, visible]);
   return <main>
-    <header><h1>TokenMonitor Embedded</h1><span>Prototype 0.1.4</span></header>
+    <header><h1>TokenMonitor Embedded</h1><span>Prototype 0.1.5</span></header>
     <p>{state?.status ?? 'Connecting to the Codex panel bridge…'}</p>
     <dl><dt>Successful refreshes</dt><dd>{state?.revision ?? '—'}</dd>
       <dt>Last refresh</dt><dd>{state?.refreshedAt ? new Date(state.refreshedAt).toLocaleTimeString() : '—'}</dd></dl>

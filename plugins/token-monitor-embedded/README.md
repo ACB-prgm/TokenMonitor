@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 0.1.4 — feasibility prototype
+# TokenMonitor Embedded 0.1.5 — feasibility prototype
 
 This independent local plugin tests opening an MCP App inside a Codex conversation
 panel and refreshing it without a model turn. **It is not the full token monitor
@@ -49,6 +49,43 @@ there is no documented plugin extension point for that specific location.
 Expand **Host metadata fields** to inspect field names and types. Values such as
 task IDs and other host metadata are not exposed by these diagnostics. This
 prototype does not claim that the host supplies the open chat's identity.
+
+## Temporary routing capture
+
+Version 0.1.5 adds an opt-in recorder for comparing a successful model call with
+a native hook call. It records delivered request IDs, routing `_meta`, the three
+known tool arguments, and HTTP headers if the transport provides them (stdio
+normally provides none). It excludes authInfo, redacts credential- and
+prompt-named fields, and never returns raw captures in tool results or stdout.
+
+From the repository root, arm it for one exact thread ID:
+
+```sh
+python3 scripts/routing_capture.py arm --thread THREAD_ID --minutes 15
+python3 scripts/routing_capture.py status
+python3 scripts/routing_capture.py compare
+python3 scripts/routing_capture.py watch --seconds 900
+python3 scripts/routing_capture.py stop
+```
+
+`compare` pairs the latest manual and hook `show_turn_summary` calls and saves
+the differences beside the raw trace. Origin labels are the tool's source hint;
+test or manually simulated hook calls must not be presented as genuine lifecycle
+events. `clear` stops the current capture and removes its trace and comparison.
+`watch` waits for both summary calls, prefers a matching turn, saves the
+comparison, and stops the capture automatically. It exits at its deadline or
+capture expiry even if the pair never arrives. It requests no model turns.
+The helper is a developer diagnostic; recipients do not need Python.
+
+Captures live in the independent state directory's `diagnostics/` folder under
+CODEX_HOME (normally `~/.codex/token-monitor-embedded/diagnostics`). Files use mode
+0600 and the diagnostics directory uses 0700. A capture expires automatically;
+the default limit is 24 records, with a 64-record ceiling and 256 KiB file cap.
+Only launcher/summary calls for the exact thread are recorded; refreshes are
+excluded. Strings, arrays, nesting, and object fields also have diagnostic
+limits. Oversized records are skipped, and capture errors never fail a tool.
+Trace/control files stay outside the plugin and release archives. Stored traces
+remain available after capture expiry until explicitly removed.
 
 Report whether the panel opens and its counter updates. The current automation
 environment refuses Computer Use access to Codex, so this host check needs a user

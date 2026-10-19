@@ -4,18 +4,20 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { z } from 'zod';
+import { recordRouting } from './routing-trace.js';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const resourceUri = 'ui://token-monitor-embedded/panel-v0.1.4.html';
-const summaryUri = 'ui://token-monitor-embedded/turn-summary-v0.1.4.html';
-const server = new McpServer({ name: 'token-monitor-embedded', version: '0.1.4' });
+const resourceUri = 'ui://token-monitor-embedded/panel-v0.1.5.html';
+const summaryUri = 'ui://token-monitor-embedded/turn-summary-v0.1.5.html';
+const server = new McpServer({ name: 'token-monitor-embedded', version: '0.1.5' });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 let revision = 0;
 let lastHookEvent: string | null = null;
 let hookOpenRequests = 0;
 let hookSummaryRequests = 0;
 
-// Record field names only. Never log host IDs, prompts, arguments, or metadata values.
+// Normal UI results expose field shapes only. An explicitly armed local
+// diagnostic can capture scoped routing values in recordRouting.
 function metadataShape(value: unknown, depth = 0): unknown {
   if (depth > 3 || value === null || typeof value !== 'object') return typeof value;
   if (Array.isArray(value)) return 'array';
@@ -51,6 +53,7 @@ server.registerTool('open_monitor', {
   _meta: { ui: { resourceUri, visibility: ['model', 'app'] },
     'openai/ui': { entrypoints: [{ type: 'thread' }], preferredModelDisplayMode: 'fullscreen' } },
 }, async (args, extra) => {
+  await recordRouting('open_monitor', args, extra);
   if (args.source === 'hook') { lastHookEvent = 'UserPromptSubmit'; hookOpenRequests++; }
   return { content: [], _meta: { monitor: { ...state(extra), presentation: 'panel' } } };
 });
@@ -73,6 +76,7 @@ server.registerTool('show_turn_summary', {
   _meta: { ui: { resourceUri: summaryUri, visibility: ['model', 'app'] },
     'openai/ui': { preferredModelDisplayMode: 'inline' } },
 }, async (args, extra) => {
+  await recordRouting('show_turn_summary', args, extra);
   if (args.source === 'hook') { lastHookEvent = 'Stop'; hookSummaryRequests++; }
   return { content: [], _meta: { monitor: { ...state(extra), presentation: 'turn-summary',
     completedAt: new Date().toISOString() } } };

@@ -1,14 +1,39 @@
 # Embedded prototype validation
 
+Version 0.1.5 adds explicitly armed, exact-thread routing capture. Tests cover
+capture-off behavior, exclusion of refreshes and other chats, preservation of
+routing values, redaction of credentials/prompt fields, private file modes,
+record and size caps, expiry, explicit stopping, comparison output, and graceful
+handling of malformed capture control. Type checking and all seven protocol
+tests pass. Live model/hook capture is a separate installation check.
+
+Version 0.1.5 was installed and a temporary capture was armed for the current
+chat. The first post-install model call still registered the 0.1.4 summary
+resource and produced no trace, so live capture remains pending connection
+refresh. A bounded watcher can compare the next manual summary with its real
+Stop-hook summary and automatically disarm; no manually simulated hook calls
+are used for the live comparison. Tests verify this watcher's stop behavior.
+
 Version 0.1.4 exposes the existing `show_turn_summary` tool to the model for an
 explicit inline-only test requested by the user. It retains its separate
 resource and inline preference; only `open_monitor` has a thread entrypoint.
 Manual summary calls do not increment hook counters. Refresh and task-list tools
 remain app-only. The hook definitions are unchanged. Build, type checking, five
 protocol tests, packaging, and the extracted archive test passed. Version 0.1.4
-was installed through the CLI. The active model tool inventory still exposed
-only the previous launcher during that turn, so the direct inline model call
-has not yet been made; live rendering remains a separate host check.
+was installed through the CLI. After the user re-mentioned the plugin, the model
+called the inline tool and the user confirmed it rendered. This establishes
+model-driven presentation of the same summary resource used by Stop.
+
+Inspection of that successful call's saved event found incoming metadata fields
+not included in the earlier Python wrapper probe: `callId`, `plugin_id`,
+`windowId`, `itemId`, `sessionId`, and `x-codex-turn-metadata`, including thread,
+session, turn, workspace, model, client, and sandbox fields. The saved prototype
+diagnostic contains their shapes rather than their original values. The event
+also contains `mcpAppResourceUri` and `mcpAppUi.preferredModelDisplayMode=inline`.
+The desktop log ties that item to an inline sandbox session. The Python probe
+therefore did not reproduce the full successful model-call context. The new
+recorder is intended to compare actual delivered values; it does not assume
+that replaying those values is sufficient to recreate presentation.
 
 Status: **inline rendering, refresh, and expanded view confirmed by the user;
 automatic turn-end inline rendering did not appear in the reported test;

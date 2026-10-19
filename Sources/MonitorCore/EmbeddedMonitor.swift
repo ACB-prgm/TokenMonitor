@@ -136,6 +136,10 @@ public final class EmbeddedTelemetryStore {
         if let latest = hooks.latest?.session, !sessions.contains(where: { $0.session_id == latest.session_id }) { sessions.insert(latest, at: 0) }
         return sessions.map { task($0, title: $0.title) }
     }
+    public func taskMetadata(id: String) -> EmbeddedTask? {
+        guard let session = resolve(id) else { return nil }
+        return task(session, title: session.title ?? ThreadTitleProvider().lookup(id: id, home: home).title)
+    }
     private func task(_ session: ActiveSession, title: String?) -> EmbeddedTask {
         let folder = session.cwd.map { URL(fileURLWithPath: $0).lastPathComponent }
         return EmbeddedTask(id: session.session_id, title: CodexTelemetryParser.cleanTitle(title) ?? "\(folder ?? "Task") · \(session.session_id.suffix(8))", workspace: folder)

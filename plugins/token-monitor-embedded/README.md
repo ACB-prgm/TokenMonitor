@@ -1,142 +1,88 @@
-# TokenMonitor Embedded 0.1.6 — feasibility prototype
+# TokenMonitor Embedded 0.2.0
 
-This independent local plugin tests opening an MCP App inside a Codex conversation
-panel and refreshing it without a model turn. **It is not the full token monitor
-yet.** Its refresh count is synthetic connection-test data, not token telemetry.
+Local Swift telemetry inside Codex's expanded conversation panel. Opens once per
+chat through the working first-prompt model instruction, then refreshes directly
+every two seconds while visible. No remote connections or floating-window controls.
 
-Inline rendering, independent refresh, and expanded view have been confirmed by
-the user in Codex. Version 0.1.6 asks the model to open the expanded panel once
-on the first prompt in each chat. This new automatic startup path awaits a live
-new-chat test. The existing native TokenMonitor is unaffected.
+## Included
 
-## Try the installed prototype
+- Cached → Fresh → Input with percentages, exact-value tooltips and native health colors.
+- Model/effort; five-hour and weekly allowance remaining and reset times.
+- Context use, cache temperature, Compaction Value and its break-even estimate.
+- Skills/tool attribution with the native approximation and compaction disclosure.
+- Recent 120 calls, Input/Fresh SVG history, compaction markers and exact call table.
+- Thread-total output, thinking, and non-reasoning output, plus latest-call output.
+- Local task picker, explicit lock, compact/details layouts, 85/100/115% scaling,
+  light/dark themes, help and diagnostics, manual refresh, unavailable/disconnected states.
 
-Attaching the plugin through `@`, the composer's `+` menu, or its directory
-listing does **not** execute a tool or open its UI. The previously documented
-conversation-menu route was not verified on the user's Codex surface and must
-not be treated as a working launch path.
+The bundled headless Swift helper uses MonitorCore's parser, file tail, SQLite task
+discovery, health thresholds, attribution, cache boundaries and compaction estimates.
+Native monitor hook registrations, settings, installation and HUD remain independent.
 
-The prototype exposes **`open_monitor`** to the model so the user can
-attach the plugin and send: **Open the TokenMonitor Embedded prototype panel.**
-Codex must actually call `open_monitor`; a text acknowledgement is not a launch.
-This is one model-driven launch call, a diagnostic fallback from the original
-manual-opening plan. The registered thread entrypoint remains available for
-hosts that expose it, but it has not been confirmed in this Codex surface.
+## Open and follow
 
-Version 0.1.4 also exposes **`show_turn_summary`** for an explicit model-driven
-inline test. It uses the separate inline-only resource and does not request
-expanded view. Ask Codex to call that exact tool to compare the same summary
-resource with the hook path. Refresh and task-list tools remain app-only.
+Enable the plugin and review/trust its bundled hooks in Codex. The unchanged
+UserPromptSubmit command emits a model instruction once per chat; it now also
+records silent telemetry metadata. Five additional command hooks record SessionStart,
+Stop, SessionEnd, PreCompact and PostCompact metadata. **Review/trust the new hook
+definitions before relying on fallback following or live compaction status.**
+No metadata hook opens a window, renders a widget, or requests a continuation turn.
 
-Once open, the panel should show an increasing successful-refresh count
-approximately every two seconds. The Refresh button should update the same
-count. These refreshes call the app-only `get_monitor_state` tool directly,
-without sending prompts or requiring further model turns.
+Send a normal prompt in a new local chat, without an @ mention. Codex calls
+`open_monitor` once and opens expanded view. Explicitly asking to open TokenMonitor
+also works. Attaching/mentioning the plugin alone does not execute a tool.
+`show_turn_summary` remains available for explicit inline snapshots; it is not
+called automatically at the end of responses.
 
-### Test a persistent display mode
+The panel prefers the host-supplied thread ID **only after exact matching to a
+validated local session**. It never infers identity from titles or workspaces.
+Otherwise it follows the latest valid hook, including background completions, and
+labels that mode. The task picker inspects other local tasks. Selecting does not
+change lock state; selecting while locked moves the lock. Unlocking leaves the
+current task until the next relevant automatic selection event. A fresh panel
+starts unlocked. Different panels keep independent selections and locks.
 
-The inline launcher test worked according to user feedback. It does not establish
-that the widget persists as the conversation scrolls. Version 0.1.2 reports the
-host's `displayMode` and `availableDisplayModes`, and enables **Keep visible (PiP)**
-only when the host advertises picture-in-picture. Check both the returned mode
-and actual placement while scrolling. **Open expanded view** tests the host's
-fullscreen presentation separately; its name does not guarantee a side panel.
-Unsupported modes remain disabled, and rejected/fallback requests do not report
-success. Neither control can attach to Codex's native composer/status area;
-there is no documented plugin extension point for that specific location.
+Compact/details and scale preferences use host widget state when exposed, with
+frame session storage as fallback. Diagnostics reports the active storage. Locks
+are not persisted. Returning to a visible panel triggers an immediate refresh.
+Collector failure retains the last snapshot and retries with bounded backoff.
 
-Expand **Host metadata fields** to inspect field names and types. Values such as
-task IDs and other host metadata are not exposed by these diagnostics. This
-prototype does not claim that the host supplies the open chat's identity.
+## Output totals and unknowns
 
-## Temporary routing capture
+**Thinking is included in total output.** Non-reasoning = total output − thinking;
+it also includes generated tool calls and other output, not only visible prose.
+Reported cumulative counters cover the thread and survive chart-history trimming
+and compaction. If cumulative counters are unavailable, the helper sums all
+recorded calls. Missing reasoning stays unknown, never an invented zero. A fork
+or incomplete transcript can only report counters/history actually available in
+that session; descendants' usage is not aggregated into the parent.
 
-Version 0.1.5 adds an opt-in recorder for comparing a successful model call with
-a native hook call. It records delivered request IDs, routing `_meta`, the three
-known tool arguments, and HTTP headers if the transport provides them (stdio
-normally provides none). It excludes authInfo, redacts credential- and
-prompt-named fields, and never returns raw captures in tool results or stdout.
+Input is the latest call's input, not cumulative session input. Immediately after
+compaction, reduced context is approximate and cached/fresh remain unknown until
+the next model call. Em dashes represent unknown values. Cache temperature and
+Compaction Value retain the native assumptions and explanations; neither is a
+provider guarantee. Attribution estimates text at about four characters/token,
+not a tokenizer, and excludes hidden schemas/images/skill catalogs.
 
-From the repository root, arm it for one exact thread ID:
+## Local privacy and packaging
 
-```sh
-python3 scripts/routing_capture.py arm --thread THREAD_ID --minutes 15
-python3 scripts/routing_capture.py status
-python3 scripts/routing_capture.py compare
-python3 scripts/routing_capture.py watch --seconds 900
-python3 scripts/routing_capture.py stop
-```
+Task IDs, titles, workspace basenames and parsed metrics go to the panel in
+UI-only `_meta` results. No refresh prompts or metric injection into model context.
+Transcript content and full source paths remain in the Swift helper. Requests
+accept discovered task IDs, never paths. All scripts, CSS, fonts (system), SDKs,
+Node and Swift helper are local; no runtime downloads or external services.
 
-`compare` pairs the latest manual and hook `show_turn_summary` calls and saves
-the differences beside the raw trace. Origin labels are the tool's source hint;
-test or manually simulated hook calls must not be presented as genuine lifecycle
-events. `clear` stops the current capture and removes its trace and comparison.
-`watch` waits for both summary calls, prefers a matching turn, saves the
-comparison, and stops the capture automatically. It exits at its deadline or
-capture expiry even if the pair never arrives. It requests no model turns.
-Run it in a persistent developer terminal: a watcher started in this chat's tool
-runtime did not survive the turn. The live test was completed with `compare` and
-`stop` manually after the real Stop hook had been captured.
-The helper is a developer diagnostic; recipients do not need Python.
+Independent state lives under `${CODEX_HOME:-~/.codex}/token-monitor-embedded`:
+private per-task hook metadata, latest valid hook, and once-per-chat startup records.
+Removing the plugin disables its hooks and retains that directory. It never
+changes the existing monitor's hooks. The optional, explicitly armed routing
+recorder remains off by default; see the repository's `scripts/routing_capture.py`
+for developer capture/compare/stop/clear commands. Captures are never packaged.
 
-Captures live in the independent state directory's `diagnostics/` folder under
-CODEX_HOME (normally `~/.codex/token-monitor-embedded/diagnostics`). Files use mode
-0600 and the diagnostics directory uses 0700. A capture expires automatically;
-the default limit is 24 records, with a 64-record ceiling and 256 KiB file cap.
-Only launcher/summary calls for the exact thread are recorded; refreshes are
-excluded. Strings, arrays, nesting, and object fields also have diagnostic
-limits. Oversized records are skipped, and capture errors never fail a tool.
-Trace/control files stay outside the plugin and release archives. Stored traces
-remain available after capture expiry until explicitly removed.
+Recipients need Apple silicon macOS 13.5+. No system Node, Python or Xcode required.
+Windows, remotes and public-directory submission remain deferred.
 
-Report whether the panel opens and its counter updates. The current automation
-environment refuses Computer Use access to Codex, so this host check needs a user
-action. Protocol tests and a browser harness do not replace that check.
-
-## First-prompt automatic opening (0.1.6)
-
-Review and trust the updated **UserPromptSubmit command hook** in Codex's Hooks
-settings (or `/hooks` in the CLI), then create a new local chat and send a normal
-prompt without mentioning the plugin. The hook returns a short `additionalContext`
-instruction asking Codex to call `open_monitor` once before handling the request.
-This uses the normal model-driven tool path that has rendered successfully.
-It adds no separate user turn or Stop continuation. The first launch requires a
-model tool call; subsequent two-second refreshes remain direct UI calls.
-
-The bundled Node runtime runs the command hook; recipients need no Python or
-system Node. Plugin hooks load for enabled local plugins without an explicit
-@ mention, subject to host configuration and trust. Cloud orchestration is outside
-this local-hook scope. Tool availability and model compliance still matter;
-automatic rendering has not yet been verified in a fresh chat.
-
-The hook atomically records **instruction requested** once per chat under
-`${CODEX_HOME:-~/.codex}/token-monitor-embedded/startup`. Concurrent prompts cannot
-issue duplicate instructions. A host-identified `open_monitor` call records
-**launcher called** separately; neither status claims that the host rendered the
-widget. Only the session ID and timestamps are stored, never prompt text or
-transcript paths/content. Other chats have independent records. Existing chats
-also receive the instruction on their next prompt if they have no startup record.
-Malformed input or unavailable state storage never blocks the user's request.
-The instruction is not retried if the model skips it or the tool is unavailable;
-manual opening remains available. Closing and reopening a chat does not reset it.
-Closing the panel does not request another launch on the next prompt.
-
-The old direct MCP startup and Stop hooks have been removed because their tools
-executed without presenting widgets. `show_turn_summary` remains available for
-explicit inline requests, but there is no automatic end-of-turn summary in this
-version. No global AGENTS.md or other plugin/native-monitor hooks are changed.
-Uninstalling disables the bundled hook and retains this independent state folder.
-
-Expected test: the panel opens expanded during the first response and shows
-**Prototype 0.1.6**; its counter updates about every two seconds. A second prompt
-should not call the launcher again. Automatic opening diagnostics distinguishes
-the instruction timestamp from the actual launcher call. Opening an empty chat
-or merely switching to it does not trigger this hook.
-
-This implements the documented command-hook context contract:
-https://learn.chatgpt.com/docs/hooks#userpromptsubmit
-
-## Developer build and tests
+## Development
 
 From this plugin directory:
 
@@ -144,68 +90,24 @@ From this plugin directory:
 npm ci --ignore-scripts
 npm run build
 npm run typecheck
-```
-
-The source manifest expects the bundled arm64 Node runtime. Download the exact
-official archive specified in `scripts/runtime.json` into the repository's
-`.build/embedded-runtime/` directory, then run:
-
-```sh
-python3 scripts/prepare-runtime.py
 npm test
 python3 ../../scripts/package-embedded.py
 python3 ../../scripts/test_embedded_archive.py
 ```
 
-The archive is verified against its pinned SHA-256 before extracting the Node
-binary and license. Recipients need macOS 13.5+ on Apple silicon; they do not need
-system Node, Python, Xcode, an API key, or a running companion HUD.
+Building requires Swift/Xcode and Node on the development machine. The build
+compiles and ad-hoc signs the standalone Swift helper; the pinned Node 24 runtime
+is prepared separately by `scripts/prepare-runtime.py` after its official archive
+checksum is verified. Run `swift test` and the Python suites at repository root
+for native compatibility. The ZIP contains only bundled runtime, built server/UI,
+manifest, hooks, notices and release documentation/inventory.
 
-## Local installation
-
-The repository has a separate `token-monitor-development` marketplace. Add the
-repository root with `codex plugin marketplace add`, then install with:
+Install/update through the local `token-monitor-development` marketplace:
 
 ```sh
 codex plugin add token-monitor-embedded@token-monitor-development
 ```
 
-After changing the source, rebuild and reinstall the local plugin. For sharing,
-use the ZIP under the repository's `dist/` directory. It contains the bundled
-runtime, server, UI, notices, and verification inventory; no `node_modules`,
-transcripts, user configurations, or build caches are distributed.
-
-For the isolated Python host-API diagnostic (requires the development machine's
-installed Codex CLI and an already-built plugin), run from the repository root:
-
-```sh
-python3 scripts/probe_embedded_host.py
-```
-
-To compare the basic RPC with captured routing metadata:
-
-```sh
-python3 scripts/probe_embedded_host.py --capture TRACE.jsonl --output REPORT.json
-```
-
-This tests routing fields, turn context, and captured identifiers in the isolated
-server. It audits delivered metadata and reports rewrites. It does not attach to
-the desktop or establish that the fields register a widget in the live UI.
-
-This uses a disposable Codex home and test thread, verifies delivered thread
-metadata, and reports conversation-item notifications. It does not request a
-model turn, attach to the desktop, or change user configuration. It is a developer
-diagnostic, not a recipient runtime dependency or automatic widget launcher.
-
-## Removing it
-
-Use `codex plugin remove token-monitor-embedded@token-monitor-development` or the
-plugin's remove control. The original native plugin and app remain installed.
-Removing the development marketplace is a separate optional action.
-
-## Intended full port after the host check
-
-Reuse MonitorCore through a headless Swift helper, add independently stored
-silent lifecycle hooks, and carry all local metrics into a compact/expanded web
-panel. Prefer verified host-chat identity; otherwise follow the last valid hook
-event. Remotes and Windows are deferred. Automatic opening now uses the first-prompt model instruction described above.
+The install copies the built source into a versioned cache. Start a fresh local
+chat to get the new connection/UI. Current validation and remaining host checks
+are recorded in [VALIDATION.md](VALIDATION.md).

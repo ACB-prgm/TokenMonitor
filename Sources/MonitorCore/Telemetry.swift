@@ -19,6 +19,8 @@ public struct TokenUsageSample: Codable, Equatable {
     public let reasoning: Int
     public let total: Int?
     public let ordinal: Int?
+    public var outputRecorded: Bool? = nil
+    public var reasoningRecorded: Bool? = nil
     public var fresh: Int { input - cached }
     public var cacheHit: Double { Double(cached) / Double(input) * 100 }
 }
@@ -167,7 +169,9 @@ public final class CodexTelemetryParser {
         guard input > 0 else { return }
         let cached = u["cached_input_tokens"] as? Int ?? 0
         guard cached >= 0, cached <= input else { return }
-        let s = TokenUsageSample(timestamp: time, input: input, cached: cached, cacheWrite: u["cache_write_input_tokens"] as? Int ?? 0, output: u["output_tokens"] as? Int ?? 0, reasoning: u["reasoning_output_tokens"] as? Int ?? 0, total: u["total_tokens"] as? Int, ordinal: r["ordinal"] as? Int)
+        var s = TokenUsageSample(timestamp: time, input: input, cached: cached, cacheWrite: u["cache_write_input_tokens"] as? Int ?? 0, output: u["output_tokens"] as? Int ?? 0, reasoning: u["reasoning_output_tokens"] as? Int ?? 0, total: u["total_tokens"] as? Int, ordinal: r["ordinal"] as? Int)
+        s.outputRecorded = (u["output_tokens"] as? Int).map { $0 >= 0 } ?? false
+        s.reasoningRecorded = (u["reasoning_output_tokens"] as? Int).map { $0 >= 0 && $0 <= s.output } ?? false
         // Replayed identical records are bookkeeping; equal usage at a new timestamp is a new call.
         let identity = "\(r["timestamp"] ?? "")|\(s.input)|\(s.cached)|\(s.output)|\(s.total ?? -1)"
         guard identity != lastIdentity else { return }

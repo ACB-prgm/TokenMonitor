@@ -1,4 +1,89 @@
-# Embedded prototype validation
+# Embedded monitor validation
+
+## Version 0.2.0 — local telemetry release (2026-10-19)
+
+The user confirmed the 0.1.6 first-prompt automatic opening works. This release
+retains that launch path and replaces synthetic prototype data with real local
+MonitorCore telemetry, through a standalone Swift executable and bounded JSONL
+child-process bridge. No remotes, snapping, floating-window placement/hide controls,
+HUD launch, native installation changes or automatic inline summaries are included.
+
+Ported: cached/fresh/input and percentages, model/effort, allowances/reset times,
+context use, health interpolation, cache temperature, Compaction Value, attribution,
+120-call SVG history and compaction markers, task selection/explicit locking,
+compact/details and scaling, theme/accessibility, refresh/help/diagnostics and
+unavailable/disconnected behavior. Added cumulative thread output with thinking
+and non-reasoning splits; reasoning is a subset of output. Missing reasoning is
+explicitly unknown. Cumulative counters are preferred; all-recorded-call sums are
+used when absent, independently of chart trimming. Optional sample-availability
+fields and snapshot totals preserve native/older snapshot decoding compatibility.
+
+Only host-supplied threadId is considered for chat binding, and the helper must
+match it exactly to an accessible, validated local session. A matching older or
+archived host task is selectable even outside the recent list. Otherwise the panel
+labels latest-hook following, including background completion. No title/workspace
+inference. Per-panel selection requests are serialized, so delayed prior task
+responses cannot be labeled as a newly selected task. Locks are independent and
+reset in a fresh panel or server session. Unlock consumes old hook events and
+waits for a new relevant event. Per-task parsers/tails expire after 60 idle seconds;
+the helper child also stops after 60 idle seconds. Snapshots survive a disconnect
+and reconnects use bounded backoff. Source paths/transcript content never leave
+the Swift helper; MCP state requests accept task IDs, not paths.
+
+Six bundled command hooks write private atomic per-task/latest metadata, with
+exact header-ID/path validation and serialized writes. UserPromptSubmit continues
+to emit the once-per-chat model instruction; Stop and the other lifecycle hooks
+only update metadata. New definitions need Codex trust review. Hook trust entries,
+global AGENTS.md and native registrations are untouched.
+
+Executed checks:
+
+- **67 Swift tests passed** (62 existing plus five collector/total scenarios).
+  Includes history-cap totals, compaction, missing/malformed counters, privacy,
+  independent collectors, partial writes, replacement/truncation, idle eviction,
+  per-task hooks and rejection of unsafe/mismatched/internal sessions. Existing
+  quota-only, unknown context, attribution and cache-boundary suites pass.
+- **17 Node protocol/integration tests passed**, including real Swift/database
+  fixtures, exact host matching and fallback, independent panels and locks,
+  background SessionEnd, compaction, private revision responses, unavailable IDs,
+  concurrent delayed switches, and killing/restarting the actual Swift child.
+  Existing startup/capture/privacy and zero-message/context-update checks pass.
+- TypeScript checking and release builds pass. Existing Python hook suite (six
+  tests) and remote runtime regression (one test) pass.
+- Distribution ZIP and extracted offline archive test pass. The extracted
+  package runs both its exact hook command and real telemetry server from paths
+  containing spaces, with only bundled Node/Swift and no developer runtime on PATH.
+  Payload inventories/checksums match; no personal home paths are packaged.
+- Live local helper read of this chat succeeds in about 1.2 seconds; exact host
+  identity resolves and cumulative output/reasoning totals are available while
+  the history is capped at 120. This is a collector check, not a host UI test.
+- A local browser harness exercised the actual bundled widget via the SDK
+  AppBridge: compact/expanded, 600/320px width, light/dark, 85/100/115% scale,
+  fallback preference restoration on reload, keyboard scale selection, lock,
+  simulated disconnect/retained metrics and recovery. Refresh calls increase
+  with **zero prompts and zero model-context updates**. Compaction markers and
+  exact-value chart/table accessibility are present. A neutral progress-bar
+  styling issue found in WebKit was corrected in the bundled CSS.
+
+Installed 0.2.0 through the supported CLI update flow. A smoke check of the
+installed cache verified the server version, six bundled hook definitions, exact
+live-chat binding, real input/cache metrics, cumulative output/reasoning counters,
+120 retained calls, and private direct refresh results. It used a direct MCP client
+and does not claim to have rendered the desktop widget. An initial installation
+attempt was not executed because approval review hit the workspace spending cap;
+the normal approval path succeeded after the user asked to continue.
+
+Host-specific limitations: full 0.2.0 rendering and live updates inside the actual
+Codex panel await the user's fresh-chat check. Computer Use access to Codex remains
+unavailable; the test harness is not represented as that host check. Layout
+preferences use the host widget-state API when present; the tested SDK harness
+exposes no such API and correctly uses frame session storage. Actual host widget
+state availability and hide/reopen behavior still require a host test. No change
+was made to Codex private renderer/IPC state or its application bundle.
+
+Developer preview: run `node scripts/preview.mjs` from the plugin, then serve
+`.build/embedded-preview` from repository root on localhost. Fixtures are synthetic,
+never copies of transcript content, and are not included in release packaging.
 
 ## Version 0.1.6 — first-prompt model instruction (2026-10-19)
 

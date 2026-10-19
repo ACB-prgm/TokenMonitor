@@ -65,32 +65,33 @@ test('explicit inline requests have their own snapshot without changing the live
     });
     assert.match(resource.contents[0].text, /data-monitor-view="summary"/);
     const started = await client.callTool({ name: 'open_monitor', arguments: { source: 'hook', sessionId: 'test-chat', turnId: 'test-turn' } });
-    assert.equal(started._meta.monitor.hookOpenRequests, 1);
     assert.equal(started._meta.monitor.presentation, 'panel');
     const stopped = await client.callTool({ name: 'show_turn_summary', arguments: { source: 'hook', sessionId: 'test-chat', turnId: 'test-turn' } });
     const frozen = JSON.stringify(stopped);
     assert.equal(stopped._meta.monitor.presentation, 'turn-summary');
-    assert.equal(stopped._meta.monitor.lastHookEvent, 'Stop');
-    assert.equal(stopped._meta.monitor.hookSummaryRequests, 1);
     assert.ok(Number.isFinite(Date.parse(stopped._meta.monitor.completedAt)));
     assert.deepEqual(stopped.content, []);
     assert.equal(stopped.structuredContent, undefined);
-    const current = await client.callTool({ name: 'get_monitor_state', arguments: {} });
-    assert.equal(current._meta.monitor.hookSummaryRequests, 1);
+    const current = await client.callTool({ name: 'get_monitor_state', arguments: {panelId: started._meta.monitor.panelId} });
+    assert.equal(current._meta.monitor.panelId, started._meta.monitor.panelId);
+    assert.notEqual(stopped._meta.monitor.panelId, started._meta.monitor.panelId);
     assert.equal(JSON.stringify(stopped), frozen);
     const again = await client.callTool({ name: 'open_monitor', arguments: {} });
     assert.equal(again._meta.monitor.presentation, 'panel');
     assert.equal(panel._meta['openai/ui'].preferredModelDisplayMode, 'fullscreen');
     const manual = await client.callTool({ name: 'show_turn_summary', arguments: { source: 'manual' } });
     assert.equal(manual._meta.monitor.presentation, 'turn-summary');
-    assert.equal(manual._meta.monitor.hookSummaryRequests, 1);
+    assert.ok(manual._meta.monitor.panelId);
   } finally { await client.close(); }
 });
 
-test('only the first-prompt command hook is bundled, without Stop continuations', async () => {
+test('six silent metadata command hooks include one first-prompt instruction, without Stop continuations', async () => {
   const manifest = JSON.parse(await readFile(root + '/.codex-plugin/plugin.json', 'utf8'));
   const hooks = JSON.parse(await readFile(path.resolve(root, manifest.hooks), 'utf8')).hooks;
-  assert.deepEqual(Object.keys(hooks), ['UserPromptSubmit']);
+  assert.deepEqual(Object.keys(hooks).sort(), ['PostCompact','PreCompact','SessionEnd','SessionStart','Stop','UserPromptSubmit']);
+  for (const groups of Object.values(hooks)) for (const group of groups) for (const handler of group.hooks) {
+    assert.equal(handler.type, 'command'); assert.equal(handler.timeout, 3); assert.equal(handler.async, undefined);
+  }
   assert.equal(hooks.UserPromptSubmit.length, 1);
   const handler = hooks.UserPromptSubmit[0].hooks[0];
   assert.equal(handler.type, 'command');
@@ -203,10 +204,12 @@ test('MCP Apps bridge refreshes directly without sending messages or model conte
   try {
     await bridge.connect(hostTransport);
     await app.connect(uiTransport);
-    const first = await app.callServerTool({ name: 'get_monitor_state', arguments: {} });
-    const next = await app.callServerTool({ name: 'get_monitor_state', arguments: {} });
-    assert.equal(first._meta.monitor.prototype, true);
-    assert.equal(Number(next._meta.monitor.revision), Number(first._meta.monitor.revision) + 1);
+    const opened = await client.callTool({name:'open_monitor',arguments:{}});
+    const panelId = opened._meta.monitor.panelId;
+    const first = await app.callServerTool({ name: 'get_monitor_state', arguments: {panelId} });
+    const next = await app.callServerTool({ name: 'get_monitor_state', arguments: {panelId,revision:first._meta.monitor.revision} });
+    assert.equal(first._meta.monitor.version, 1);
+    assert.equal(next._meta.monitor.unchanged, true);
     assert.deepEqual(first.content, []);
     assert.equal(messages, 0);
     assert.equal(contextUpdates, 0);
@@ -217,9 +220,9 @@ test('host metadata diagnostics expose field shapes only', async () => {
   const { client } = await connectedClient();
   try {
     const result = await client.callTool({ name: 'open_monitor', arguments: {},
-      _meta: { widget: { conversationId: 'PRIVATE_TASK_ID' }, secret: 'DO_NOT_EXPOSE' } });
-    assert.deepEqual(result._meta.monitor.metadataShape, { widget: { conversationId: 'string' }, secret: 'string' });
-    assert.doesNotMatch(JSON.stringify(result), /PRIVATE_TASK_ID|DO_NOT_EXPOSE/);
+      _meta: { widget: { conversationId: 'PRIVATE_TASK_ID' }, secret: 'DO_NOT_EXPOSE', workspaces: {'/PRIVATE/workspace': {kind: 'local'}} } });
+    assert.deepEqual(result._meta.monitor.metadataShape, { widget: { conversationId: 'string' }, secret: 'string', workspaces: {'[path]': {kind: 'string'}} });
+    assert.doesNotMatch(JSON.stringify(result), /PRIVATE_TASK_ID|DO_NOT_EXPOSE|\/PRIVATE/);
     assert.deepEqual(result.content, []);
     assert.equal(result.structuredContent, undefined);
   } finally { await client.close(); }
@@ -263,7 +266,7 @@ test('routing capture is opt-in, exact-thread scoped, private, and bounded', asy
     assert.doesNotMatch(text, /MUST_NOT_RECORD|PRIVATE_PROMPT/);
     assert.equal((await stat(file)).mode & 0o777, 0o600);
     assert.doesNotMatch(JSON.stringify(model), /model-call|window-1|model-item|MUST_NOT_RECORD|PRIVATE_PROMPT/);
-    assert.equal(hook._meta.monitor.hookSummaryRequests, 1);
+    assert.equal(hook._meta.monitor.presentation, 'turn-summary');
     const helper = path.resolve(root, '../../scripts/routing_capture.py');
     const result = JSON.parse(execFileSync('python3', [helper, '--state-root', path.dirname(directory), 'compare'], { encoding: 'utf8' }));
     assert.equal(result.status, 'captured');

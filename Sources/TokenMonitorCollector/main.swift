@@ -41,8 +41,11 @@ while let block = readBlock() {
         switch method {
         case "catalog":
             let hostID = request["hostId"] as? String
-            result["hostMatched"] = hostID.flatMap { store.resolve($0) } != nil
-            result["tasks"] = (try? JSONSerialization.jsonObject(with: encoder.encode(store.tasks()))) ?? []
+            let host = hostID.flatMap { store.taskMetadata(id: $0) }
+            result["hostMatched"] = host != nil
+            var tasks = store.tasks()
+            if let host, !tasks.contains(where: { $0.id == host.id }) { tasks.insert(host, at: 0) }
+            result["tasks"] = (try? JSONSerialization.jsonObject(with: encoder.encode(tasks))) ?? []
             if let hook = store.hooks.latest { result["latestHook"] = ["id": hook.session.session_id, "sequence": hook.sequence, "event": hook.session.hook_event_name ?? ""] }
         case "state":
             if let task = request["taskId"] as? String, let snapshot = store.snapshot(id: task), let data = try? encoder.encode(snapshot) {

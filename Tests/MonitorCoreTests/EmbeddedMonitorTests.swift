@@ -36,6 +36,7 @@ final class EmbeddedMonitorTests: XCTestCase {
     }
     func testMissingReasoningIsUnknownAndCumulativeOnlyEventsAreAccepted() throws {
         let p = CodexTelemetryParser(); p.consume(try usage(1, reasoning: false))
+        XCTAssertEqual(p.samples.last?.reasoningRecorded, false)
         XCTAssertNil(p.outputTotals.reasoning); XCTAssertNil(p.outputTotals.nonReasoning)
         p.consume(Data(#"{"type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"output_tokens":500,"reasoning_output_tokens":600}}}}"#.utf8))
         XCTAssertEqual(p.outputTotals.total, 500); XCTAssertNil(p.outputTotals.reasoning)

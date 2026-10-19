@@ -1,14 +1,14 @@
 {
   "name": "token-monitor-embedded",
-  "version": "0.1.6",
-  "description": "Local embedded Codex token monitor; panel feasibility prototype.",
+  "version": "0.2.0",
+  "description": "Local Codex token telemetry in an automatically opened embedded panel.",
   "mcpServers": "./.mcp.json",
   "hooks": "./hooks/hooks.json",
   "requires_local_executor": true,
   "interface": {
     "displayName": "TokenMonitor Embedded",
     "shortDescription": "Local token monitor inside a conversation panel",
-    "longDescription": "Independent local monitor panel. This initial package verifies embedded panel opening and UI-only refresh before the full telemetry port.",
+    "longDescription": "Local token usage, thread output and reasoning totals, cache status, allowances, compaction, history, and tool attribution. Opens once per local chat through a first-prompt instruction; refreshes directly without model turns.",
     "developerName": "TokenMonitor contributors",
     "category": "Productivity"
   }

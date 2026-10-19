@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package the independently versioned embedded prototype without developer dependencies."""
+"""Package the independently versioned embedded monitor without developer dependencies."""
 import hashlib
 import json
 from pathlib import Path
@@ -45,10 +45,10 @@ for path in sorted(output.rglob('*')):
             raise SystemExit('Personal home path found in package: ' + str(path.relative_to(output)))
         files.append({'path': path.relative_to(output).as_posix(), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()})
 pin = json.loads((source / 'scripts/runtime.json').read_text())
-(output / 'release.json').write_text(json.dumps({'version': version, 'stage': 'prototype',
+(output / 'release.json').write_text(json.dumps({'version': version, 'stage': 'local-telemetry',
     'architecture': 'arm64', 'minimumOS': '13.5', 'nodeVersion': pin['version'], 'files': files}, indent=2) + '\n')
 subprocess.run([str(output / 'runtime/node'), '--version'], check=True)
-archive = repo / 'dist' / f'token-monitor-embedded-{version}-prototype.zip'
+archive = repo / 'dist' / f'token-monitor-embedded-{version}.zip'
 with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as bundle:
     for path in sorted(output.rglob('*')):
         if path.is_file():

@@ -1,108 +1,68 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, type McpUiDisplayMode } from '@modelcontextprotocol/ext-apps';
+import { App } from '@modelcontextprotocol/ext-apps';
+import { MonitorView, type Monitor } from './view.js';
 
-const app = new App({ name: 'TokenMonitor Embedded', version: '0.1.6' });
-const presentation = document.documentElement.dataset.monitorView;
-function TurnSummary() {
-  const [summary, setSummary] = useState<any>(null);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    let alive = true;
-    app.ontoolresult = result => {
-      const value = (result._meta as any)?.monitor;
-      if (alive && value?.presentation === 'turn-summary') setSummary(value);
-    };
-    app.connect().catch(() => { if (alive) setError('Unable to connect the turn-end summary.'); });
-    return () => { alive = false; app.close(); };
-  }, []);
-  return <main className="turn-summary">
-    <strong>TokenMonitor · Turn completed</strong>
-    <p>{summary?.completedAt ? new Date(summary.completedAt).toLocaleTimeString() : 'Waiting for the turn-end snapshot…'}</p>
-    <p className="hint">Connection-test summary only. The expanded panel is independent; token telemetry is not connected yet.</p>
-    {error && <p role="alert">{error}</p>}
-  </main>;
+const app = new App({ name: 'TokenMonitor Embedded', version: '0.2.0' });
+const summary = document.documentElement.dataset.monitorView === 'summary';
+type Layout = {expanded: boolean; scale: number};
+const legacy = () => (window as any).openai as {widgetState?: Layout; setWidgetState?: (s: Layout)=>void} | undefined;
+function savedLayout(): Layout {
+  try {
+    const saved = legacy()?.widgetState ?? JSON.parse(sessionStorage.getItem('token-monitor-layout') ?? '{}');
+    return {expanded: saved.expanded === true, scale: [.85,1,1.15].includes(saved.scale) ? saved.scale : 1};
+  } catch { return {expanded:false,scale:1}; }
 }
 function Panel() {
-  const [state, setState] = useState<any>(null);
-  const [error, setError] = useState('');
-  const [ready, setReady] = useState(false);
-  const [displayMode, setDisplayMode] = useState<McpUiDisplayMode>('inline');
-  const [displayModes, setDisplayModes] = useState<McpUiDisplayMode[] | null>(null);
-  const [modeMessage, setModeMessage] = useState('');
-  const [changingMode, setChangingMode] = useState(false);
-  const [visible, setVisible] = useState(document.visibilityState === 'visible');
-  async function refresh() {
+  const [state,setState] = useState<Monitor>({panelId:'',status:'Connecting to local telemetry…'});
+  const [layout,setLayout] = useState(savedLayout);
+  const [busy,setBusy] = useState(false), [error,setError] = useState('');
+  const current = useRef(state), active = useRef(true), serial = useRef(0), fetching = useRef(false);
+  const retry = useRef({at:0,failures:0});
+  function apply(value: Monitor) {
+    if (!active.current) return;
+    if (value.unchanged) { setError(''); return; }
+    current.current = value; setState(value);
+  }
+  async function refresh(action?: 'select'|'lock'|'unlock', taskId?: string) {
+    const now = Date.now();
+    if (!active.current || !current.current.panelId || fetching.current || (!action && now < retry.current.at)) return;
+    const request = ++serial.current; fetching.current = true; setBusy(true);
     try {
-      const result = await app.callServerTool({ name: 'get_monitor_state', arguments: {} });
-      if (result.isError) throw new Error('The host rejected the panel refresh.');
-      const next = (result._meta as any)?.monitor;
-      if (!next) throw new Error('The host did not deliver UI-only result metadata.');
-      setState(next); setError('');
-    } catch (error) { setError(error instanceof Error ? error.message : 'Panel refresh failed.'); }
+      const result = await app.callServerTool({name:'get_monitor_state',arguments:{panelId:current.current.panelId,revision:current.current.revision,action,taskId}});
+      if (result.isError) throw new Error('Task unavailable. Refresh or choose another local task.');
+      const next = (result._meta as any)?.monitor as Monitor | undefined;
+      if (!next) throw new Error('The host did not return monitor data.');
+      if (request !== serial.current || !active.current) return;
+      apply(next); setError('');
+      retry.current = {at:0,failures:0};
+    } catch (error) {
+      if (request === serial.current && active.current) {
+        setError(error instanceof Error ? error.message : 'Disconnected · retaining last snapshot');
+        retry.current.at = Date.now()+Math.min(30000,1000*2**Math.min(retry.current.failures++,5));
+      }
+    } finally { if (request === serial.current && active.current) { fetching.current=false; setBusy(false); } }
   }
-  function readDisplayContext() {
-    const context = app.getHostContext();
-    if (context?.displayMode) setDisplayMode(context.displayMode);
-    if (context?.availableDisplayModes) setDisplayModes(context.availableDisplayModes);
+  function changeLayout(expanded: boolean, scale: number) {
+    const next = {expanded,scale}; setLayout(next);
+    try { if (legacy()?.setWidgetState) legacy()!.setWidgetState!(next); else sessionStorage.setItem('token-monitor-layout',JSON.stringify(next)); } catch { /* Layout remains usable without host persistence. */ }
   }
-  async function changeDisplayMode(mode: McpUiDisplayMode) {
-    setChangingMode(true); setModeMessage('');
-    try {
-      const result = await app.requestDisplayMode({ mode });
-      setDisplayMode(result.mode);
-      setModeMessage(result.mode === mode
-        ? `Host selected ${result.mode}. Check whether the widget stays visible as the chat scrolls.`
-        : `Requested ${mode}; the host kept ${result.mode}. Persistent placement is not confirmed.`);
-    } catch {
-      setModeMessage(`The host rejected ${mode}. Persistent placement is not confirmed.`);
-    } finally { setChangingMode(false); }
-  }
-  useEffect(() => {
-    let alive = true;
-    app.ontoolresult = result => { if (alive && (result._meta as any)?.monitor) setState((result._meta as any).monitor); };
-    app.onhostcontextchanged = () => { if (alive) readDisplayContext(); };
-    app.connect().then(() => { if (alive) { readDisplayContext(); setReady(true); } }).catch(error => setError(String(error)));
-    const visibility = () => setVisible(document.visibilityState === 'visible');
-    document.addEventListener('visibilitychange', visibility);
-    return () => { alive = false; document.removeEventListener('visibilitychange', visibility); app.close(); };
-  }, []);
-  useEffect(() => {
-    if (!ready || !visible) return;
-    refresh(); const timer = setInterval(refresh, 2000);
-    return () => clearInterval(timer);
-  }, [ready, visible]);
-  return <main>
-    <header><h1>TokenMonitor Embedded</h1><span>Prototype 0.1.6</span></header>
-    <p>{state?.status ?? 'Connecting to the Codex panel bridge…'}</p>
-    <dl><dt>Successful refreshes</dt><dd>{state?.revision ?? '—'}</dd>
-      <dt>Last refresh</dt><dd>{state?.refreshedAt ? new Date(state.refreshedAt).toLocaleTimeString() : '—'}</dd></dl>
-    <button disabled={!ready} onClick={refresh}>Refresh</button>
-    {error && <p role="alert">{error}</p>}
-    <section aria-labelledby="display-heading" className="display-test">
-      <h2 id="display-heading">Persistent display test</h2>
-      <p>Current mode: <strong>{displayMode}</strong><br />
-        Host-advertised modes: {displayModes?.join(', ') ?? 'Not reported'}</p>
-      <div className="display-buttons">
-        <button disabled={!ready || changingMode || !displayModes?.includes('pip')}
-          onClick={() => changeDisplayMode('pip')}>Keep visible (PiP)</button>
-        <button disabled={!ready || changingMode || !displayModes?.includes('fullscreen')}
-          onClick={() => changeDisplayMode('fullscreen')}>Open expanded view</button>
-        {displayMode !== 'inline' && <button disabled={changingMode || !displayModes?.includes('inline')}
-          onClick={() => changeDisplayMode('inline')}>Return inline</button>}
-      </div>
-      {ready && displayModes && !displayModes.includes('pip') &&
-        <p className="hint">This host does not advertise PiP. Expanded view, if available, is a separate placement test.</p>}
-      <p role="status">{modeMessage}</p>
-      <p className="hint">These controls request host-managed display modes. They cannot attach a widget to Codex’s native composer or status area.</p>
-    </section>
-    <details><summary>Host metadata fields</summary><pre>{JSON.stringify(state?.metadataShape ?? {}, null, 2)}</pre></details>
-    <details><summary>Automatic opening diagnostics</summary>
-      <p>Startup instruction: {state?.startup?.requestedAt ? new Date(state.startup.requestedAt).toLocaleTimeString() : 'Not recorded'}<br />
-        Launcher called: {state?.startup?.launcherCalledAt ? new Date(state.startup.launcherCalledAt).toLocaleTimeString() : 'Not recorded'}</p>
-      <p className="hint">The first-prompt hook asks Codex to call the launcher once per chat. These timestamps record instruction issuance and tool execution, not rendering. Review and trust the updated command hook in Codex.</p>
-    </details>
-    <p className="hint">This panel tests local opening and refresh every two seconds. Refreshes do not send prompts; the first-prompt hook adds one startup instruction per chat. Token telemetry is not connected yet.</p>
-  </main>;
+  useEffect(()=>{
+    active.current=true;
+    function theme() { const value=app.getHostContext()?.theme; if(value) document.documentElement.dataset.theme=value; }
+    app.onhostcontextchanged=()=>theme();
+    app.ontoolresult=result=>{
+      const value=(result._meta as any)?.monitor as Monitor | undefined;
+      if(value?.panelId) { serial.current++; fetching.current=false; apply(value); if(!summary) void refresh(); }
+    };
+    app.connect().then(()=>{theme(); setLayout(savedLayout());}).catch(()=>setError('Unable to connect to the Codex widget bridge.'));
+    const visible=()=>{if(document.visibilityState==='visible'){retry.current.at=0;void refresh();}};
+    document.addEventListener('visibilitychange',visible);
+    const interval=summary ? undefined : setInterval(()=>{if(document.visibilityState==='visible')void refresh();},2000);
+    return ()=>{active.current=false;serial.current++;clearInterval(interval);document.removeEventListener('visibilitychange',visible);app.close();};
+  },[]);
+  return <MonitorView s={state} expanded={layout.expanded} scale={layout.scale} busy={busy} error={error}
+    onAction={summary ? undefined : (action,id)=>{retry.current.at=0;void refresh(action,id);}} onLayout={changeLayout}
+    storage={legacy()?.setWidgetState ? 'host widget state' : 'frame session storage (host state API unavailable)'} />;
 }
-createRoot(document.getElementById('root')!).render(presentation === 'summary' ? <TurnSummary /> : <Panel />);
+createRoot(document.getElementById('root')!).render(<Panel />);

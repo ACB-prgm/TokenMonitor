@@ -1,5 +1,7 @@
 # TokenMonitor submission materials
 
+**Deprecated, 2026-10-19:** These native-app submission materials are historical. Use [TokenMonitor Embedded](https://chatgpt.com/plugins/Plugin_df57c7c0b9d08191936d851916050a02) and `EMBEDDED-PRIVATE-RELEASE.md` for the supported release. Do not submit or recommend this native package for new installations.
+
 This is a skills-only plugin for local Codex desktop, Apple silicon, macOS 13+. It includes an independent native app and explicit setup/maintenance skill. No MCP configuration is submitted.
 
 Publisher name in the local package is a non-verified development label until the owner supplies the exact verified publishing identity. Before portal submission, set manifest author.name and interface.developerName to that identity and rebuild. No publisher credentials, identity verification, attestations, submission, or publication are performed by packaging.

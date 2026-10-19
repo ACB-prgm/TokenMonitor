@@ -1,9 +1,11 @@
 ---
 name: token-monitor
-description: Set up, update, diagnose, or uninstall the TokenMonitor native Codex usage monitor when explicitly requested. Supports Apple silicon Macs running macOS 13 or later with local Codex desktop.
+description: Remove or diagnose the deprecated TokenMonitor native companion when explicitly requested. Direct new installations to TokenMonitor Embedded.
 ---
 
 # TokenMonitor
+
+Deprecated on 2026-10-19. Use [TokenMonitor Embedded](https://chatgpt.com/plugins/Plugin_df57c7c0b9d08191936d851916050a02) for new installations, including Codex remote chats; it needs no separate native app or monitoring SSH setup. Do not install, update, or repair this legacy companion unless the user explicitly requests the deprecated native version after learning about the replacement. The instructions below are retained for legacy maintenance and removal.
 
 This plugin ships the native app. It processes local Codex telemetry without model calls; optional remote monitoring streams parsed telemetry over SSH. It is not made by or affiliated with OpenAI.
 

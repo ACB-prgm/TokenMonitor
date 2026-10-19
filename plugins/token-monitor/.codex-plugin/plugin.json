@@ -1,23 +1,21 @@
 {
   "name": "token-monitor",
   "version": "1.2.0",
-  "description": "Native Codex usage monitor with optional SSH remotes and explicit setup.",
+  "description": "Deprecated native monitor. Replaced by TokenMonitor Embedded, including remote chats through Codex.",
   "author": {
     "name": "TokenMonitor contributors"
   },
   "skills": "./skills/",
   "interface": {
-    "displayName": "TokenMonitor",
-    "shortDescription": "Local and SSH Codex usage monitor",
-    "longDescription": "Set up, diagnose, update, and uninstall TokenMonitor, an independent native monitor for local and optional SSH remote Codex usage. Remote setup is managed in the app Settings and uses a dedicated SSH identity; it does not reuse OpenAI remote connections. Apple silicon and macOS 13 or later required. Includes a prebuilt companion app; no Python, Xcode, MCP server, or model calls are needed by the monitor. Setup installs six user hooks and a per-user launch helper. macOS first-open approval and Codex hook trust are required. Removing this plugin alone does not uninstall the companion.",
+    "displayName": "TokenMonitor (Deprecated)",
+    "shortDescription": "Deprecated: use embedded",
+    "longDescription": "This native monitor is deprecated. Install TokenMonitor Embedded instead: https://chatgpt.com/plugins/Plugin_df57c7c0b9d08191936d851916050a02 . The embedded plugin works in local and Codex remote chats without a separate app or SSH monitoring setup. This legacy plugin remains only for removing existing companion installations. Uninstalling the plugin alone does not remove the native app, launch helper, or personal hooks. Saved monitor data is retained unless explicitly purged.",
     "developerName": "TokenMonitor contributors",
     "category": "Productivity",
     "capabilities": [
-      "Local companion setup and maintenance"
+      "Legacy companion removal"
     ],
     "defaultPrompt": [
-      "Set up TokenMonitor.",
-      "Diagnose TokenMonitor.",
       "Uninstall TokenMonitor."
     ],
     "composerIcon": "./assets/icon.png",

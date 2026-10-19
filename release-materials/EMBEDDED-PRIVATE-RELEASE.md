@@ -47,3 +47,26 @@ commands execute and no user trust state is modified. Production build, type
 checking, all 22 Node tests, offline archive validation and host discovery pass.
 Users must receive version 0.3.2 and review/trust the plugin's hooks. Live account
 installation refresh and logo rendering remain separate from this validation.
+
+## Confirmed migration and native deprecation — 2026-10-19
+
+The owner confirmed successful plugin hook discovery after uninstall/reinstall,
+and embedded execution on remote machines without a separate monitoring SSH setup.
+Remote capability no longer needs a separate SSH implementation for this workflow.
+
+Uninstalled the local `token-monitor@personal` plugin using Codex's uninstall tool.
+The installed native app's own `--uninstall` removed the companion app, launch
+agent, launcher and six owned personal hooks. Verified all three installed paths
+are absent and the six user hook arrays are empty. State and preferences were
+retained. This cleanup is verified on the local Mac only; remote native installs
+and dedicated SSH credentials were not modified.
+
+Marked the older account plugin `Plugin_8278deeb4afc81918745eed8e7110074` deprecated
+in version 1.1.1, release `pluginrel_6ad6a9a535748191986cb76b3ea24410`. Its listing
+directs users to Embedded; its maintenance skill defaults to migration/removal.
+Existing native executable assets remain available for legacy maintenance.
+The source native listing and submission materials are also marked deprecated.
+
+The logo problem remains unresolved in host presentation. Both Embedded and
+JobHunter have correct installed assets but null catalog image URLs. See
+`LOGO-DIAGNOSIS.md` for reproducible evidence and the catalog repair point.

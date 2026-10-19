@@ -1,6 +1,6 @@
 interface:
-  display_name: "TokenMonitor"
-  short_description: "Set up and maintain TokenMonitor"
-  default_prompt: "Use $token-monitor to set up TokenMonitor."
+  display_name: "TokenMonitor (Deprecated)"
+  short_description: "Remove the legacy native monitor"
+  default_prompt: "Use $token-monitor to uninstall the deprecated native monitor, preserving saved data."
 policy:
   allow_implicit_invocation: false

@@ -73,6 +73,14 @@ final class APIPricingTests: XCTestCase {
         p.consume(try JSONSerialization.data(withJSONObject:r))
         XCTAssertEqual(p.callCount,1); XCTAssertEqual(p.usage.cost,cost)
         XCTAssertFalse(p.usage.cumulativeMismatch)
+        // An incomplete cumulative dictionary cannot identify distinct calls.
+        info["total_token_usage"] = ["output_tokens": 10000]
+        payload["info"] = info; r["payload"] = payload
+        r["timestamp"] = "2026-10-19T00:00:02Z"
+        p.consume(try JSONSerialization.data(withJSONObject:r))
+        r["timestamp"] = "2026-10-19T00:00:03Z"
+        p.consume(try JSONSerialization.data(withJSONObject:r))
+        XCTAssertEqual(p.callCount,3)
     }
     func testCumulativeIsCoverageCheckNotAdditionalCost() throws {
         let p = CodexTelemetryParser(); p.consume(model("gpt-6.1-sol"))

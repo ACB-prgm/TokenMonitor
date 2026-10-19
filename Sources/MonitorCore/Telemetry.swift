@@ -169,6 +169,8 @@ public final class CodexTelemetryParser {
         // Some quota refreshes repeat the previous last-usage at a new timestamp.
         // Identical cumulative counters identify the same call in that schema.
         if let cumulative = info["total_token_usage"] as? [String: Any],
+           let cumulativeInput = cumulative["input_tokens"] as? Int, cumulativeInput >= 0,
+           let cumulativeOutput = cumulative["output_tokens"] as? Int, cumulativeOutput >= 0,
            let last = info["last_token_usage"] as? [String: Any],
            let input = last["input_tokens"] as? Int, input > 0,
            let cached = last["cached_input_tokens"] as? Int, cached >= 0, cached <= input,

@@ -21,6 +21,12 @@ public struct TokenUsageSample: Codable, Equatable {
     public let ordinal: Int?
     public var outputRecorded: Bool? = nil
     public var reasoningRecorded: Bool? = nil
+    public var model: String? = nil
+    public var serviceTier: String? = nil
+    public var regionalProcessing: Bool? = nil
+    public var cachedRecorded: Bool? = nil
+    public var cacheWriteRecorded: Bool? = nil
+    public var price: CallPrice? = nil
     public var fresh: Int { input - cached }
     public var cacheHit: Double { Double(cached) / Double(input) * 100 }
 }
@@ -83,7 +89,12 @@ public final class CodexTelemetryParser {
     public let attribution = ContextAttributionEstimator()
     public private(set) var contextAttribution = ContextAttribution()
     private var pendingAttribution: ContextAttribution?
-    private var lastIdentity: String?
+    public private(set) var usage = ThreadUsage()
+    private var serviceTier: String?
+    private var regionalProcessing: Bool?
+    private var seenIdentities = Set<String>()
+    private var seenRecords = Set<String>()
+    private var seenCumulativeCalls = Set<String>()
     public init() {}
     public static func cleanTitle(_ text: String?) -> String? {
         guard let text else { return nil }
@@ -125,7 +136,11 @@ public final class CodexTelemetryParser {
             if compactions.count > 120 { compactions.removeFirst(compactions.count - 120) }
         }
         if r["type"] as? String == "turn_context" {
-            model = p["model"] as? String ?? model
+            let nextModel = p["model"] as? String ?? model
+            if nextModel != model { serviceTier = nil; regionalProcessing = nil }
+            model = nextModel
+            serviceTier = p["service_tier"] as? String
+            regionalProcessing = p["regional_processing"] as? Bool
             effort = p["effort"] as? String ?? p["reasoning_effort"] as? String ?? effort
         }
         if r["type"] as? String == "session_meta" { title = p["title"] as? String ?? title }
@@ -144,6 +159,22 @@ public final class CodexTelemetryParser {
             }
         }
         guard let info = p["info"] as? [String: Any] else { return }
+        // Deduplicate non-adjacent replayed usage, before cumulative updates.
+        if let stamp = r["timestamp"] as? String,
+           let data = try? JSONSerialization.data(withJSONObject: info, options: [.sortedKeys]) {
+            let key = stamp + String(decoding: data, as: UTF8.self)
+            guard seenRecords.insert(key).inserted else { return }
+        }
+        if let limit = info["model_context_window"] as? Int, limit > 0 { contextLimit = limit }
+        // Some quota refreshes repeat the previous last-usage at a new timestamp.
+        // Identical cumulative counters identify the same call in that schema.
+        if let cumulative = info["total_token_usage"] as? [String: Any],
+           let last = info["last_token_usage"] as? [String: Any],
+           let input = last["input_tokens"] as? Int, input > 0,
+           let cached = last["cached_input_tokens"] as? Int, cached >= 0, cached <= input,
+           let data = try? JSONSerialization.data(withJSONObject: cumulative, options: [.sortedKeys]), !cumulative.isEmpty {
+            guard seenCumulativeCalls.insert(String(decoding: data, as: UTF8.self)).inserted else { return }
+        }
         // Cumulative counters survive the chart's 120-sample cap and compaction.
         // Reasoning is part of output, never an additional charge on top of it.
         var reportedThisRecord = false
@@ -154,6 +185,10 @@ public final class CodexTelemetryParser {
             reportedReasoning = (cumulative["reasoning_output_tokens"] as? Int).flatMap { $0 >= 0 && $0 <= output ? $0 : nil }
         }
         if let limit = info["model_context_window"] as? Int, limit > 0 { contextLimit = limit }
+        if info["last_token_usage"] == nil, let cumulative = info["total_token_usage"] as? [String: Any] {
+            if let i = cumulative["input_tokens"] as? Int { usage.cumulativeMismatch = i != usage.input }
+            if let o = cumulative["output_tokens"] as? Int, o != usage.output { usage.cumulativeMismatch = true }
+        }
         guard let u = info["last_token_usage"] as? [String: Any], let input = u["input_tokens"] as? Int, let time else { return }
         // Compaction bookkeeping reports the reduced context in total_tokens, with
         // zero call usage. It is not a model call and has no cache-hit information.
@@ -172,14 +207,24 @@ public final class CodexTelemetryParser {
         var s = TokenUsageSample(timestamp: time, input: input, cached: cached, cacheWrite: u["cache_write_input_tokens"] as? Int ?? 0, output: u["output_tokens"] as? Int ?? 0, reasoning: u["reasoning_output_tokens"] as? Int ?? 0, total: u["total_tokens"] as? Int, ordinal: r["ordinal"] as? Int)
         s.outputRecorded = (u["output_tokens"] as? Int).map { $0 >= 0 } ?? false
         s.reasoningRecorded = (u["reasoning_output_tokens"] as? Int).map { $0 >= 0 && $0 <= s.output } ?? false
+        s.model = info["model"] as? String ?? model
+        s.serviceTier = p["service_tier"] as? String ?? info["service_tier"] as? String ?? serviceTier
+        s.regionalProcessing = regionalProcessing
+        s.cachedRecorded = u["cached_input_tokens"] != nil
+        s.cacheWriteRecorded = (u["cache_write_input_tokens"] as? Int).map { $0 >= 0 && $0 <= input - cached } ?? false
+        s.price = APIPricing.price(s)
         // Replayed identical records are bookkeeping; equal usage at a new timestamp is a new call.
         let identity = "\(r["timestamp"] ?? "")|\(s.input)|\(s.cached)|\(s.output)|\(s.total ?? -1)"
-        guard identity != lastIdentity else { return }
+        guard seenIdentities.insert(identity).inserted else { return }
         awaitingPostCompactionCall = false
         compactedContext = nil
         contextAttribution = (pendingAttribution ?? attribution.snapshot(input: nil)).bounded(to: input)
         pendingAttribution = nil
-        lastIdentity = identity
+        usage.add(s)
+        if let cumulative = info["total_token_usage"] as? [String: Any] {
+            if let totalInput = cumulative["input_tokens"] as? Int { usage.cumulativeMismatch = totalInput != usage.input }
+            if let totalOutput = cumulative["output_tokens"] as? Int, totalOutput != usage.output { usage.cumulativeMismatch = true }
+        }
         lastCallModel = model; lastCallEffort = effort
         callCount += 1
         if !reportedThisRecord, let prior = reportedOutput {

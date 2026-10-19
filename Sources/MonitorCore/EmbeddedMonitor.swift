@@ -89,6 +89,8 @@ public struct EmbeddedViewState: Codable {
     public var fiveHour: Allowance?
     public var weekly: Allowance?
     public var attribution: ContextAttribution
+    public var usage: ThreadUsage
+    public var apiCompactionBreakEven: Int?
     public var outputTotals: ThreadOutputTotals
     public var lastEvent: Date?
     public var lastCall: Date?
@@ -174,7 +176,7 @@ public final class EmbeddedTelemetryStore {
             input: input, cached: cached, fresh: fresh, contextLimit: p.contextLimit, contextPercent: percent,
             callCount: p.callCount, samples: p.samples, compactions: p.visibleCompactions, isCompacting: compacting,
             awaitingPostCompactionCall: p.awaitingPostCompactionCall, fiveHour: p.fiveHour, weekly: p.weekly,
-            attribution: p.contextAttribution, outputTotals: p.outputTotals, lastEvent: p.lastEvent, lastCall: p.samples.last?.timestamp,
+            attribution: p.contextAttribution, usage: p.usage, apiCompactionBreakEven: APIPricing.compactionBreakEven(input: input, model: p.lastCallModel, tier: p.samples.last?.serviceTier), outputTotals: p.outputTotals, lastEvent: p.lastEvent, lastCall: p.samples.last?.timestamp,
             cacheTemperature: CacheTemperature.schedule(lastCall: p.samples.last?.timestamp, now: now).temperature?.rawValue,
             contextHealth: TokenHealth.context(percent: percent), freshHealth: TokenHealth.fresh(tokens: fresh, input: input), compactionValue: estimate)
     }

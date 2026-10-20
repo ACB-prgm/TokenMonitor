@@ -8,6 +8,7 @@
 - Adds a prebuilt Apple silicon macOS release marketplace, integrity checks,
   isolated installation tests, version synchronization, CI and tag-driven releases.
 - Adds public installation, updating, removal, privacy and contribution guidance.
+- Makes a legacy native layout conversion explicit for the CI Swift toolchain.
 - Applies PolyForm Noncommercial License 1.0.0 to original software and bundles
   third-party license notices.
 

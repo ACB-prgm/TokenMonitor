@@ -1,11 +1,13 @@
 name: CI
 on:
+  workflow_dispatch:
   push:
     branches: [dev, main]
   pull_request:
     branches: [main, dev]
 permissions:
   contents: read
+  statuses: write
 jobs:
   validate:
     runs-on: macos-15
@@ -27,3 +29,13 @@ jobs:
           python3 scripts/test_embedded_archive.py
       - name: Host validation scope
         run: echo 'Codex hook discovery, clean-profile installation and desktop rendering are verified on the supported local host before tagging; no desktop host is installed on this runner.'
+      - name: Publish actual validation result
+        if: ${{ always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VALIDATION_RESULT: ${{ job.status }}
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          state=failure
+          if [ "$VALIDATION_RESULT" = success ]; then state=success; fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$COMMIT_SHA" -f state="$state" -f context=validated-build -f description="Build, tests and package validation: $VALIDATION_RESULT" -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

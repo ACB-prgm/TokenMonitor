@@ -1,7 +1,7 @@
 export type Price = {total?: number; categories?: number[]; cacheSavings?: number; assumedTier: boolean; issue?: string; rates?: {input: number; cached: number; write?: number; output: number}};
 export type Usage = {input: number; cached: number; cacheWrite: number; output: number; reasoning: number; inputComplete: boolean; outputComplete: boolean; reasoningComplete: boolean; cacheComplete: boolean; pricedCalls: number; unpricedCalls: number; assumedTierCalls: number; cost: number; cacheSavings: number; costCategories: number[]; models: string[]; issues: string[]; source: string; verifiedAt: string; coverage: string; cumulativeMismatch: boolean};
 export const categories = [
-  {label:'Ordinary input',color:'var(--ordinary)'}, {label:'Cache read',color:'var(--read)'},
+  {label:'Fresh Input',color:'var(--ordinary)'}, {label:'Cache read',color:'var(--read)'},
   {label:'Cache write',color:'var(--write)'}, {label:'Reasoning output',color:'var(--reason)'},
   {label:'Other output',color:'var(--other)'}, {label:'Unsplit output',color:'var(--unknown)'}
 ];

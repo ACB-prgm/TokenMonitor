@@ -1,0 +1,48 @@
+name: Release
+on:
+  push:
+    tags: ['v*.*.*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Require stable version on main
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          test "$RELEASE_TAG" = "v$(cat VERSION)"
+          git fetch origin main
+          git merge-base --is-ancestor HEAD origin/main
+          test "$(git cat-file -t "$RELEASE_TAG")" = tag
+          python3 scripts/check-release.py
+      - name: Test and build from tagged commit
+        run: |
+          swift test
+          python3 scripts/test_hooks.py
+          python3 scripts/build-release.py
+          python3 scripts/test_embedded_archive.py
+          python3 -c "import json; assert not json.load(open('dist/public-release/TokenMonitor/BUILD.json'))['dirty']"
+      - name: Publish verified packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo 'Refusing to replace an existing release.' >&2
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" dist/token-monitor-*-macos-arm64.zip dist/token-monitor-*-macos-arm64.zip.sha256 dist/token-monitor-embedded-*.zip dist/token-monitor-embedded-*.zip.sha256 --verify-tag --latest --title "TokenMonitor ${RELEASE_TAG#v}" --notes-file CHANGELOG.md

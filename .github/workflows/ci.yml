@@ -1,0 +1,29 @@
+name: CI
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [main, dev]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Metadata, licenses and package wiring
+        run: python3 scripts/check-release.py
+      - name: Swift and hook regression tests
+        run: |
+          swift test
+          python3 scripts/test_hooks.py
+      - name: Build and test standalone release
+        run: |
+          python3 scripts/build-release.py
+          python3 scripts/test_embedded_archive.py
+      - name: Host validation scope
+        run: echo 'Codex hook discovery, clean-profile installation and desktop rendering are verified on the supported local host before tagging; no desktop host is installed on this runner.'

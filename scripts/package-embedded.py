@@ -11,7 +11,9 @@ import zipfile
 repo = Path(__file__).resolve().parents[1]
 source = repo / 'plugins/token-monitor-embedded'
 manifest = json.loads((source / '.codex-plugin/plugin.json').read_text())
-version = manifest['version']
+version = (repo / 'VERSION').read_text().strip()
+if manifest['version'] != version:
+    raise SystemExit('Manifest does not match VERSION')
 output = repo / 'dist/token-monitor-embedded'
 if output.exists():
     shutil.rmtree(output)
@@ -23,6 +25,9 @@ for name in ['assets', '.codex-plugin', '.mcp.json', 'hooks', 'scripts/launch.sh
     else:
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dest)
+
+for name in ['LICENSE', 'NOTICE']:
+    shutil.copy2(repo / name, output / name)
 
 # Compress the verified Node binary to fit the account upload's per-member
 # limit. The launcher checks its digest before executing a private cached copy.
@@ -54,7 +59,7 @@ for path in sorted(output.rglob('*')):
             raise SystemExit('Personal home path found in package: ' + str(path.relative_to(output)))
         files.append({'path': path.relative_to(output).as_posix(), 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()})
 pin = json.loads((source / 'scripts/runtime.json').read_text())
-(output / 'release.json').write_text(json.dumps({'version': version, 'stage': 'private-desktop-plugin',
+(output / 'release.json').write_text(json.dumps({'version': version, 'stage': 'desktop-release',
     'architecture': 'arm64', 'minimumOS': '13.5', 'nodeVersion': pin['version'], 'files': files}, indent=2) + '\n')
 subprocess.run([str(source / 'runtime/node'), '--version'], check=True)
 archive = repo / 'dist' / f'token-monitor-embedded-{version}.zip'

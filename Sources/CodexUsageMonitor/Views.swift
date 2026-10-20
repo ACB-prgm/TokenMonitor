@@ -238,7 +238,7 @@ struct HUDView: View {
                             }
                         }
                     }
-                }.frame(height: min(CGFloat(s.attribution.contributors.count) * 20 * state.uiScale, 120 * state.uiScale))
+                }.frame(height: CGFloat(min(Double(s.attribution.contributors.count) * 20 * state.uiScale, 120 * state.uiScale)))
                 Text(s.attribution.afterCompaction ? "Estimate since compaction; summary attribution unavailable." : "Text estimate; actual retained context may differ.")
                     .font(.system(size: 9 * state.uiScale)).foregroundStyle(.tertiary)
                     .fixedSize(horizontal: false, vertical: true)

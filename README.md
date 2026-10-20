@@ -17,10 +17,10 @@ while visible, without additional model turns or API keys.
 - Per-panel task selection, light/dark themes, adjustable scale, and compact view.
 - Bundled Node runtime and Swift collector; no runtime downloads or external telemetry.
 
-![TokenMonitor project icon](plugins/token-monitor-embedded/assets/icon.png)
+![TokenMonitor panel with synthetic demonstration data](docs/tokenmonitor-preview.png)
 
-The icon above is the existing project asset. A release screenshot will be added
-once captured from a clean installation; no private conversation screenshot is bundled.
+Preview of the production UI in the local MCP Apps test host, using synthetic
+demonstration data. It contains no private conversations or account telemetry.
 The old floating native HUD is retired; see [migration guidance](DEPRECATION.md).
 
 ## Compatibility

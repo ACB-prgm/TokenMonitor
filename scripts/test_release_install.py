@@ -28,6 +28,10 @@ class ReleaseInstallTests(unittest.TestCase):
                     self.assertFalse(entry.filename.startswith('/'))
                     self.assertNotIn('..', Path(entry.filename).parts)
                 bundle.extractall(root)
+                for entry in bundle.infolist():
+                    mode = (entry.external_attr >> 16) & 0o777
+                    if mode and not entry.is_dir():
+                        (root / entry.filename).chmod(mode)
             source = root / 'TokenMonitor'
             (root / 'profile').mkdir()
             env = {**os.environ, 'CODEX_HOME': str(root / 'profile')}
@@ -46,6 +50,12 @@ class ReleaseInstallTests(unittest.TestCase):
             for relative in ['runtime/node.gz', 'runtime/TokenMonitorCollector',
                              'ui/dist/panel.html', 'server/dist/index.mjs', 'LICENSE', 'NOTICE']:
                 self.assertTrue((plugin / relative).is_file(), relative)
+            # Exercise the executable after Codex copies it, not just the source archive.
+            collector = subprocess.run([str(plugin / 'runtime/TokenMonitorCollector')],
+                env=env, input=json.dumps({'id': 'install-test', 'method': 'catalog'}) + '\n',
+                capture_output=True, text=True, timeout=10)
+            self.assertEqual(collector.returncode, 0, collector.stderr)
+            self.assertEqual(json.loads(collector.stdout)['id'], 'install-test')
             # Execute the installed hook from a different cwd; no real chat or trust changes.
             event = json.dumps({'hook_event_name': 'UserPromptSubmit', 'session_id': 'clean-install'})
             command = json.loads((plugin / 'hooks/hooks.json').read_text())['hooks']['UserPromptSubmit'][0]['hooks'][0]['command']

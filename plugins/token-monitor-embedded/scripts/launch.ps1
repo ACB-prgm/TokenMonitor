@@ -59,13 +59,20 @@ $start.CreateNoWindow = $true
 [Console]::InputEncoding = New-Object Text.UTF8Encoding($false)
 $child = [Diagnostics.Process]::Start($start)
 try {
-    # Forward raw stdin continuously, including JSON-RPC while the server runs.
+    # Forward each available chunk and flush it immediately. FileStream's
+    # buffered CopyToAsync waits for EOF for small MCP messages otherwise.
     $rawInput = $child.StandardInput.BaseStream
-    $inputTask = [Console]::OpenStandardInput().CopyToAsync($rawInput)
-    while (!$child.HasExited -and !$inputTask.IsCompleted) { [Threading.Thread]::Sleep(20) }
-    # Close the raw pipe, bypassing StreamWriter's encoding preamble. This
-    # also works on Windows PowerShell 5.1 / .NET Framework.
-    if ($inputTask.IsCompleted) { $null = $inputTask.GetAwaiter().GetResult(); $rawInput.Flush(); $rawInput.Close() }
+    $source = [Console]::OpenStandardInput()
+    $buffer = New-Object byte[] 16384
+    $readTask = $source.ReadAsync($buffer, 0, $buffer.Length)
+    while (!$child.HasExited) {
+        if (!$readTask.IsCompleted) { [Threading.Thread]::Sleep(20); continue }
+        $count = $readTask.GetAwaiter().GetResult()
+        if ($count -eq 0) { $rawInput.Close(); break }
+        $rawInput.Write($buffer, 0, $count)
+        $rawInput.Flush()
+        $readTask = $source.ReadAsync($buffer, 0, $buffer.Length)
+    }
     $child.WaitForExit()
     exit $child.ExitCode
 } finally { $child.Dispose() }

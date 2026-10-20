@@ -91,3 +91,21 @@ panel and inline-summary HTML. Audience remains WORKSPACE / PRIVATE.
 Existing running host connections may retain 0.3.2 until the installed plugin
 updates and a fresh chat loads the new connection; that host refresh was not
 performed as part of this release.
+
+## 0.3.4 — latest-call readability
+
+Published to the same private workspace plugin on 2026-10-19.
+Release: `pluginrel_6ad6d740eed88191b009e7bf69c5dd9b`.
+
+Deploys commits `21568b6` and `103fefe`: larger latest-call bar text at normal
+and narrow widths, and “Fresh Input” in the composition legend.
+
+Production build, type checking, all 26 Node tests, offline archive startup and
+six-hook discovery pass. Verified all package inventory hashes, no removals,
+and preserved manifest metadata/MCP configuration apart from version 0.3.4.
+Only manifest, README, validation notes and panel/summary HTML changed from
+0.3.3; runtime, hooks, server, launch script, notices and assets match exactly.
+Account readback confirms 0.3.4, the matching release inventory and configuration,
+and both new font sizes plus the Fresh Input label in the deployed panel HTML.
+Audience remains WORKSPACE / PRIVATE. Installed-host refresh/rendering was not
+verified; update the installed plugin and open a fresh chat to load the new UI.

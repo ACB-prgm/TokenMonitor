@@ -1,0 +1,7085 @@
+[
+  {
+    "id": "priced",
+    "records": [
+      {
+        "type": "turn_context",
+        "payload": {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:01.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 100000,
+              "cached_input_tokens": 80000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:02.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 280000,
+              "cached_input_tokens": 260000,
+              "cache_write_input_tokens": 100,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      }
+    ],
+    "expected": {
+      "apiCompactionBreakEven": 6,
+      "attribution": {
+        "afterCompaction": false,
+        "callCount": 0,
+        "contributors": [],
+        "skillCount": 0
+      },
+      "available": true,
+      "awaitingPostCompactionCall": false,
+      "cached": 260000,
+      "cacheTemperature": "PRES. COLD",
+      "callCount": 2,
+      "compactions": [],
+      "compactionValue": {
+        "breakEvenCalls": 6,
+        "category": "MEDIUM",
+        "currentInput": 280000,
+        "estimatedInput": 84000,
+        "level": 1
+      },
+      "contextHealth": 2.5,
+      "contextLimit": 400000,
+      "contextPercent": 70,
+      "effort": "high",
+      "fresh": 20000,
+      "freshHealth": 0,
+      "input": 280000,
+      "isCompacting": false,
+      "lastCall": "2026-10-19T12:00:02Z",
+      "lastEvent": "2026-10-19T12:00:02Z",
+      "model": "gpt-6.1-sol",
+      "outputTotals": {
+        "reasoning": 80,
+        "source": "recorded-calls",
+        "total": 200
+      },
+      "samples": [
+        {
+          "cached": 80000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 100000,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.152,
+            "categories": [
+              0.04,
+              0.008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.049
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:01Z"
+        },
+        {
+          "cached": 260000,
+          "cachedRecorded": true,
+          "cacheWrite": 100,
+          "cacheWriteRecorded": true,
+          "input": 280000,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.9879,
+            "categories": [
+              0.0796,
+              0.052,
+              0.0005,
+              0.0006,
+              0.0009000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.2,
+              "input": 4,
+              "output": 15,
+              "write": 5
+            },
+            "total": 0.1336
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:02Z"
+        }
+      ],
+      "status": "Monitoring selected task",
+      "task": {
+        "id": "priced",
+        "title": "Fixture priced",
+        "workspace": "workspace"
+      },
+      "usage": {
+        "assumedTierCalls": 2,
+        "cacheComplete": true,
+        "cached": 340000,
+        "cacheSavings": 1.1399,
+        "cacheWrite": 100,
+        "configurationEffectiveDate": "2026-10-19",
+        "cost": 0.18259999999999998,
+        "costCategories": [
+          0.11960000000000001,
+          0.06,
+          0.0005,
+          0.001,
+          0.0015,
+          0
+        ],
+        "coverage": "Recorded unique calls; historical completeness cannot be guaranteed",
+        "cumulativeMismatch": false,
+        "input": 380000,
+        "inputComplete": true,
+        "issues": [],
+        "models": [
+          "gpt-6.1-sol"
+        ],
+        "output": 200,
+        "outputComplete": true,
+        "pricedCalls": 2,
+        "reasoning": 80,
+        "reasoningComplete": true,
+        "source": "https://developers.openai.com/api/docs/pricing",
+        "unpricedCalls": 0,
+        "verifiedAt": "2026-10-19"
+      },
+      "version": 1
+    }
+  },
+  {
+    "id": "compaction",
+    "records": [
+      {
+        "type": "turn_context",
+        "payload": {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:01.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 100000,
+              "cached_input_tokens": 80000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "compacted",
+        "timestamp": "2026-10-19T12:00:02.000Z",
+        "payload": {}
+      },
+      {
+        "type": "compacted",
+        "timestamp": "2026-10-19T12:00:02.000Z",
+        "payload": {}
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:03.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 0,
+              "cached_input_tokens": 0,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 0,
+              "reasoning_output_tokens": 40,
+              "total_tokens": 22984
+            }
+          }
+        }
+      }
+    ],
+    "expected": {
+      "attribution": {
+        "afterCompaction": true,
+        "callCount": 0,
+        "contributors": [],
+        "skillCount": 0
+      },
+      "available": true,
+      "awaitingPostCompactionCall": true,
+      "cacheTemperature": "PRES. COLD",
+      "callCount": 1,
+      "compactions": [
+        {
+          "callPosition": 0.5,
+          "timestamp": "2026-10-19T12:00:02Z"
+        }
+      ],
+      "compactionValue": {
+        "category": "VERY LOW",
+        "currentInput": 22984,
+        "estimatedInput": 40000,
+        "level": 0
+      },
+      "contextHealth": 0,
+      "contextLimit": 400000,
+      "contextPercent": 5.7459999999999996,
+      "effort": "high",
+      "freshHealth": 0,
+      "input": 22984,
+      "isCompacting": false,
+      "lastCall": "2026-10-19T12:00:01Z",
+      "lastEvent": "2026-10-19T12:00:03Z",
+      "model": "gpt-6.1-sol",
+      "outputTotals": {
+        "reasoning": 40,
+        "source": "recorded-calls",
+        "total": 100
+      },
+      "samples": [
+        {
+          "cached": 80000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 100000,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.152,
+            "categories": [
+              0.04,
+              0.008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.049
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:01Z"
+        }
+      ],
+      "status": "Monitoring selected task",
+      "task": {
+        "id": "compaction",
+        "title": "Fixture compaction",
+        "workspace": "workspace"
+      },
+      "usage": {
+        "assumedTierCalls": 1,
+        "cacheComplete": true,
+        "cached": 80000,
+        "cacheSavings": 0.152,
+        "cacheWrite": 0,
+        "configurationEffectiveDate": "2026-10-19",
+        "cost": 0.049,
+        "costCategories": [
+          0.04,
+          0.008,
+          0,
+          0.0004,
+          0.0006000000000000001,
+          0
+        ],
+        "coverage": "Recorded unique calls; historical completeness cannot be guaranteed",
+        "cumulativeMismatch": false,
+        "input": 100000,
+        "inputComplete": true,
+        "issues": [],
+        "models": [
+          "gpt-6.1-sol"
+        ],
+        "output": 100,
+        "outputComplete": true,
+        "pricedCalls": 1,
+        "reasoning": 40,
+        "reasoningComplete": true,
+        "source": "https://developers.openai.com/api/docs/pricing",
+        "unpricedCalls": 0,
+        "verifiedAt": "2026-10-19"
+      },
+      "version": 1
+    }
+  },
+  {
+    "id": "history",
+    "records": [
+      {
+        "type": "turn_context",
+        "payload": {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:01.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10000,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:02.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10001,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:03.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10002,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:04.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10003,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:05.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10004,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:06.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10005,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:07.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10006,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:08.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10007,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:09.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10008,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:10.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10009,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:11.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10010,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:12.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10011,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:13.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10012,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:14.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10013,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:15.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10014,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:16.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10015,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:17.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10016,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:18.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10017,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:19.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10018,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:20.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10019,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:21.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10020,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:22.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10021,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:23.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10022,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:24.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10023,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:25.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10024,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:26.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10025,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:27.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10026,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:28.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10027,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:29.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10028,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:30.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10029,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:31.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10030,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:32.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10031,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:33.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10032,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:34.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10033,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:35.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10034,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:36.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10035,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:37.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10036,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:38.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10037,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:39.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10038,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:40.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10039,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:41.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10040,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:42.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10041,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:43.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10042,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:44.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10043,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:45.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10044,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:46.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10045,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:47.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10046,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:48.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10047,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:49.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10048,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:50.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10049,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:51.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10050,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:52.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10051,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:53.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10052,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:54.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10053,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:55.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10054,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:56.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10055,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:57.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10056,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:58.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10057,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:59.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10058,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:00.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10059,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:01.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10060,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:02.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10061,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:03.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10062,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:04.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10063,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:05.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10064,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:06.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10065,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:07.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10066,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:08.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10067,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:09.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10068,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:10.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10069,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:11.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10070,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:12.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10071,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:13.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10072,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:14.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10073,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:15.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10074,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:16.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10075,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:17.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10076,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:18.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10077,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:19.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10078,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:20.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10079,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:21.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10080,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:22.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10081,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:23.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10082,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:24.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10083,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:25.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10084,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:26.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10085,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:27.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10086,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:28.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10087,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:29.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10088,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:30.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10089,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:31.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10090,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:32.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10091,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:33.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10092,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:34.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10093,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:35.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10094,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:36.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10095,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:37.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10096,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:38.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10097,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:39.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10098,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:40.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10099,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:41.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10100,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:42.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10101,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:43.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10102,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:44.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10103,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:45.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10104,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:46.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10105,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:47.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10106,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:48.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10107,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:49.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10108,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:50.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10109,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:51.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10110,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:52.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10111,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:53.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10112,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:54.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10113,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:55.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10114,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:56.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10115,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:57.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10116,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:58.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10117,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:01:59.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10118,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:00.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10119,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:01.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10120,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:02.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10121,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:03.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10122,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:04.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10123,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:05.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10124,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:06.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10125,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:07.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10126,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:08.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10127,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:09.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10128,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:10.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10129,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:11.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10130,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:12.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10131,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:13.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10132,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:14.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10133,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:02:15.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10134,
+              "cached_input_tokens": 8000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      }
+    ],
+    "expected": {
+      "attribution": {
+        "afterCompaction": false,
+        "callCount": 0,
+        "contributors": [],
+        "skillCount": 0
+      },
+      "available": true,
+      "awaitingPostCompactionCall": false,
+      "cached": 8000,
+      "cacheTemperature": "PRES. COLD",
+      "callCount": 135,
+      "compactions": [],
+      "compactionValue": {
+        "category": "VERY LOW",
+        "currentInput": 10134,
+        "estimatedInput": 40000,
+        "level": 0
+      },
+      "contextHealth": 0,
+      "contextLimit": 400000,
+      "contextPercent": 2.5335,
+      "effort": "high",
+      "fresh": 2134,
+      "freshHealth": 0.7371883428721795,
+      "input": 10134,
+      "isCompacting": false,
+      "lastCall": "2026-10-19T12:02:15Z",
+      "lastEvent": "2026-10-19T12:02:15Z",
+      "model": "gpt-6.1-sol",
+      "outputTotals": {
+        "reasoning": 5400,
+        "source": "recorded-calls",
+        "total": 13500
+      },
+      "samples": [
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10015,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00403,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00583
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:16Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10016,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004032,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005832
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:17Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10017,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004034,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005834000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:18Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10018,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004036,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005836
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:19Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10019,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004038,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005838
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:20Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10020,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00404,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005840000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:21Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10021,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004042,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005842
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:22Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10022,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004044,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005844
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:23Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10023,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004046,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0058460000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:24Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10024,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004048,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005848000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:25Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10025,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00405,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00585
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:26Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10026,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004052,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005852
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:27Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10027,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004054,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005854000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:28Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10028,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004056,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005856
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:29Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10029,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004058,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005858
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:30Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10030,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00406,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005860000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:31Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10031,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004062,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005862
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:32Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10032,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004064,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005864
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:33Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10033,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004066,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0058660000000000006
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:34Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10034,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004068,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005868
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:35Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10035,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00407,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00587
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:36Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10036,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004072,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0058720000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:37Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10037,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004074,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005874000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:38Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10038,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004076,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005876
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:39Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10039,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004078,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005878
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:40Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10040,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00408,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005880000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:41Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10041,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004082,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005882
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:42Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10042,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004084,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005884
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:43Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10043,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004086,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005886000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:44Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10044,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004088,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005888
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:45Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10045,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00409,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00589
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:46Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10046,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004092,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0058920000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:47Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10047,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004094,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005894000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:48Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10048,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004096,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005896
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:49Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10049,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004098,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0058980000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:50Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10050,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.0041,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005900000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:51Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10051,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004102,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005902
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:52Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10052,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004104,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005904
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:53Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10053,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004106,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005906000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:54Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10054,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004108,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005908
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:55Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10055,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00411,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00591
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:56Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10056,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004112,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005912000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:57Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10057,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004114,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005914
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:58Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10058,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004116,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005916
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:59Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10059,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004118,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0059180000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:00Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10060,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00412,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005920000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:01Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10061,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004122,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005922
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:02Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10062,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004124,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0059240000000000004
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:03Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10063,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004126,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005926000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:04Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10064,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004128,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005928
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:05Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10065,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00413,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00593
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:06Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10066,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004132,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005932000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:07Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10067,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004134,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005934
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:08Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10068,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004136,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005936
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:09Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10069,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004138,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005938000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:10Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10070,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00414,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00594
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:11Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10071,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004142,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005942
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:12Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10072,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004144,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0059440000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:13Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10073,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004146,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005946000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:14Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10074,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004148,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005948
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:15Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10075,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00415,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00595
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:16Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10076,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004152,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005952000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:17Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10077,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004154,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005954
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:18Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10078,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004156,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005956
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:19Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10079,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004158,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005958000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:20Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10080,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00416,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00596
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:21Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10081,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004162,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005962
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:22Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10082,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004164,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0059640000000000006
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:23Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10083,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004166,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005966000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:24Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10084,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004168,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005968
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:25Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10085,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00417,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0059700000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:26Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10086,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004172,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005972000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:27Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10087,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004174,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005974
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:28Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10088,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004176,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005976
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:29Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10089,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004178,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005978000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:30Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10090,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00418,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00598
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:31Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10091,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004182,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005982
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:32Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10092,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004184,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005984000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:33Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10093,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004186,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005986
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:34Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10094,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004188,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005988
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:35Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10095,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00419,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0059900000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:36Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10096,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004192,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005992000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:37Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10097,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004194,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005994
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:38Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10098,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004196,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0059960000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:39Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10099,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004198,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.005998000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:40Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10100,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.0042,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:41Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10101,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004202,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006002
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:42Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10102,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004204,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006004000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:43Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10103,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004206,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006006
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:44Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10104,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004208,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006008
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:45Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10105,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00421,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006010000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:46Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10106,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004212,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006012
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:47Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10107,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004214,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006014
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:48Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10108,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004216,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0060160000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:49Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10109,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004218,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006018000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:50Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10110,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00422,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00602
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:51Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10111,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004222,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0060220000000000004
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:52Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10112,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004224,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006024000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:53Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10113,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004226,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006026
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:54Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10114,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004228,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006028
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:55Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10115,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00423,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006030000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:56Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10116,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004232,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006032
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:57Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10117,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004234,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006034
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:58Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10118,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004236,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0060360000000000006
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:01:59Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10119,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004238,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006038
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:00Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10120,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00424,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00604
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:01Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10121,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004242,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0060420000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:02Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10122,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004244,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006044000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:03Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10123,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004246,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006046
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:04Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10124,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004248,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006048
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:05Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10125,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00425,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006050000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:06Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10126,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004252,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006052
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:07Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10127,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004254,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006054
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:08Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10128,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004256,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006056000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:09Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10129,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004258,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006058
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:10Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10130,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.00426,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.00606
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:11Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10131,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004262,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0060620000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:12Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10132,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004264,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006064000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:13Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10133,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004266,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.006066
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:14Z"
+        },
+        {
+          "cached": 8000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 10134,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.0152,
+            "categories": [
+              0.004268,
+              0.0008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0060680000000000005
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:02:15Z"
+        }
+      ],
+      "status": "Monitoring selected task",
+      "task": {
+        "id": "history",
+        "title": "Fixture history",
+        "workspace": "workspace"
+      },
+      "usage": {
+        "assumedTierCalls": 135,
+        "cacheComplete": true,
+        "cached": 1080000,
+        "cacheSavings": 2.0520000000000067,
+        "cacheWrite": 0,
+        "configurationEffectiveDate": "2026-10-19",
+        "cost": 0.8010900000000003,
+        "costCategories": [
+          0.5580900000000003,
+          0.10799999999999979,
+          0,
+          0.053999999999999895,
+          0.08100000000000027,
+          0
+        ],
+        "coverage": "Recorded unique calls; historical completeness cannot be guaranteed",
+        "cumulativeMismatch": false,
+        "input": 1359045,
+        "inputComplete": true,
+        "issues": [],
+        "models": [
+          "gpt-6.1-sol"
+        ],
+        "output": 13500,
+        "outputComplete": true,
+        "pricedCalls": 135,
+        "reasoning": 5400,
+        "reasoningComplete": true,
+        "source": "https://developers.openai.com/api/docs/pricing",
+        "unpricedCalls": 0,
+        "verifiedAt": "2026-10-19"
+      },
+      "version": 1
+    }
+  },
+  {
+    "id": "malformed",
+    "records": [
+      {
+        "type": "turn_context",
+        "payload": {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:01.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 20,
+              "cached_input_tokens": 0,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:01.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 20,
+              "cached_input_tokens": 0,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:02.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 0,
+              "cached_input_tokens": 0,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:03.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 10,
+              "cached_input_tokens": 11,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      }
+    ],
+    "expected": {
+      "attribution": {
+        "afterCompaction": false,
+        "callCount": 0,
+        "contributors": [],
+        "skillCount": 0
+      },
+      "available": true,
+      "awaitingPostCompactionCall": false,
+      "cached": 0,
+      "cacheTemperature": "PRES. COLD",
+      "callCount": 1,
+      "compactions": [],
+      "compactionValue": {
+        "category": "VERY LOW",
+        "currentInput": 20,
+        "estimatedInput": 40000,
+        "level": 0
+      },
+      "contextHealth": 0,
+      "contextLimit": 400000,
+      "contextPercent": 0.005,
+      "effort": "high",
+      "fresh": 20,
+      "freshHealth": 0,
+      "input": 20,
+      "isCompacting": false,
+      "lastCall": "2026-10-19T12:00:01Z",
+      "lastEvent": "2026-10-19T12:00:03Z",
+      "model": "gpt-6.1-sol",
+      "outputTotals": {
+        "reasoning": 40,
+        "source": "recorded-calls",
+        "total": 100
+      },
+      "samples": [
+        {
+          "cached": 0,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 20,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0,
+            "categories": [
+              0.00004,
+              0,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.0010400000000000001
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:01Z"
+        }
+      ],
+      "status": "Monitoring selected task",
+      "task": {
+        "id": "malformed",
+        "title": "Fixture malformed",
+        "workspace": "workspace"
+      },
+      "usage": {
+        "assumedTierCalls": 1,
+        "cacheComplete": true,
+        "cached": 0,
+        "cacheSavings": 0,
+        "cacheWrite": 0,
+        "configurationEffectiveDate": "2026-10-19",
+        "cost": 0.0010400000000000001,
+        "costCategories": [
+          0.00004,
+          0,
+          0,
+          0.0004,
+          0.0006000000000000001,
+          0
+        ],
+        "coverage": "Recorded unique calls; historical completeness cannot be guaranteed",
+        "cumulativeMismatch": false,
+        "input": 20,
+        "inputComplete": true,
+        "issues": [],
+        "models": [
+          "gpt-6.1-sol"
+        ],
+        "output": 100,
+        "outputComplete": true,
+        "pricedCalls": 1,
+        "reasoning": 40,
+        "reasoningComplete": true,
+        "source": "https://developers.openai.com/api/docs/pricing",
+        "unpricedCalls": 0,
+        "verifiedAt": "2026-10-19"
+      },
+      "version": 1
+    }
+  },
+  {
+    "id": "attribution",
+    "records": [
+      {
+        "type": "turn_context",
+        "payload": {
+          "model": "gpt-6.1-sol",
+          "effort": "high"
+        }
+      },
+      {
+        "type": "response_item",
+        "payload": {
+          "type": "function_call",
+          "call_id": "read",
+          "name": "exec_command",
+          "arguments": "cat skills/pdf/SKILL.md"
+        }
+      },
+      {
+        "type": "response_item",
+        "payload": {
+          "type": "function_call_output",
+          "call_id": "read",
+          "output": "abcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcdabcd"
+        }
+      },
+      {
+        "type": "response_item",
+        "payload": {
+          "type": "message",
+          "role": "assistant",
+          "content": []
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:01.000Z",
+        "payload": {
+          "type": "token_count",
+          "info": {
+            "model_context_window": 400000,
+            "last_token_usage": {
+              "input_tokens": 100000,
+              "cached_input_tokens": 80000,
+              "cache_write_input_tokens": 0,
+              "output_tokens": 100,
+              "reasoning_output_tokens": 40
+            }
+          }
+        }
+      }
+    ],
+    "expected": {
+      "apiCompactionBreakEven": 21,
+      "attribution": {
+        "afterCompaction": false,
+        "callCount": 0,
+        "contributors": [],
+        "skillCount": 0
+      },
+      "available": true,
+      "awaitingPostCompactionCall": false,
+      "cached": 80000,
+      "cacheTemperature": "PRES. COLD",
+      "callCount": 1,
+      "compactions": [],
+      "compactionValue": {
+        "breakEvenCalls": 9,
+        "category": "LOW",
+        "currentInput": 100000,
+        "estimatedInput": 40000,
+        "level": 0
+      },
+      "contextHealth": 0,
+      "contextLimit": 400000,
+      "contextPercent": 25,
+      "effort": "high",
+      "fresh": 20000,
+      "freshHealth": 0.6666666666666666,
+      "input": 100000,
+      "isCompacting": false,
+      "lastCall": "2026-10-19T12:00:01Z",
+      "lastEvent": "2026-10-19T12:00:01Z",
+      "model": "gpt-6.1-sol",
+      "outputTotals": {
+        "reasoning": 40,
+        "source": "recorded-calls",
+        "total": 100
+      },
+      "samples": [
+        {
+          "cached": 80000,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": true,
+          "input": 100000,
+          "model": "gpt-6.1-sol",
+          "output": 100,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "cacheSavings": 0.152,
+            "categories": [
+              0.04,
+              0.008,
+              0,
+              0.0004,
+              0.0006000000000000001,
+              0
+            ],
+            "rates": {
+              "cached": 0.1,
+              "input": 2,
+              "output": 10,
+              "write": 2.5
+            },
+            "total": 0.049
+          },
+          "reasoning": 40,
+          "reasoningRecorded": true,
+          "timestamp": "2026-10-19T12:00:01Z"
+        }
+      ],
+      "status": "Monitoring selected task",
+      "task": {
+        "id": "attribution",
+        "title": "Fixture attribution",
+        "workspace": "workspace"
+      },
+      "usage": {
+        "assumedTierCalls": 1,
+        "cacheComplete": true,
+        "cached": 80000,
+        "cacheSavings": 0.152,
+        "cacheWrite": 0,
+        "configurationEffectiveDate": "2026-10-19",
+        "cost": 0.049,
+        "costCategories": [
+          0.04,
+          0.008,
+          0,
+          0.0004,
+          0.0006000000000000001,
+          0
+        ],
+        "coverage": "Recorded unique calls; historical completeness cannot be guaranteed",
+        "cumulativeMismatch": false,
+        "input": 100000,
+        "inputComplete": true,
+        "issues": [],
+        "models": [
+          "gpt-6.1-sol"
+        ],
+        "output": 100,
+        "outputComplete": true,
+        "pricedCalls": 1,
+        "reasoning": 40,
+        "reasoningComplete": true,
+        "source": "https://developers.openai.com/api/docs/pricing",
+        "unpricedCalls": 0,
+        "verifiedAt": "2026-10-19"
+      },
+      "version": 1
+    }
+  },
+  {
+    "id": "missing",
+    "records": [
+      {
+        "type": "turn_context",
+        "payload": {
+          "model": "unknown"
+        }
+      },
+      {
+        "type": "event_msg",
+        "timestamp": "2026-10-19T12:00:01.000Z",
+        "payload": {
+          "type": "token_count",
+          "rate_limits": {
+            "primary": {
+              "used_percent": 42,
+              "window_minutes": 300,
+              "resets_at": 1900000000
+            },
+            "secondary": {
+              "used_percent": 71,
+              "window_minutes": 10080
+            }
+          },
+          "info": {
+            "last_token_usage": {
+              "input_tokens": 1000,
+              "cached_input_tokens": 0,
+              "output_tokens": 10
+            },
+            "total_token_usage": {
+              "input_tokens": 1000,
+              "output_tokens": 500,
+              "reasoning_output_tokens": 120
+            }
+          }
+        }
+      }
+    ],
+    "expected": {
+      "attribution": {
+        "afterCompaction": false,
+        "callCount": 0,
+        "contributors": [],
+        "skillCount": 0
+      },
+      "available": true,
+      "awaitingPostCompactionCall": false,
+      "cached": 0,
+      "cacheTemperature": "PRES. COLD",
+      "callCount": 1,
+      "compactions": [],
+      "compactionValue": {
+        "category": "VERY LOW",
+        "currentInput": 1000,
+        "estimatedInput": 40000,
+        "level": 0
+      },
+      "contextHealth": 0,
+      "fiveHour": {
+        "reset": "2030-03-17T17:46:40Z",
+        "used": 42
+      },
+      "fresh": 1000,
+      "freshHealth": 0,
+      "input": 1000,
+      "isCompacting": false,
+      "lastCall": "2026-10-19T12:00:01Z",
+      "lastEvent": "2026-10-19T12:00:01Z",
+      "model": "unknown",
+      "outputTotals": {
+        "reasoning": 120,
+        "source": "reported-cumulative",
+        "total": 500
+      },
+      "samples": [
+        {
+          "cached": 0,
+          "cachedRecorded": true,
+          "cacheWrite": 0,
+          "cacheWriteRecorded": false,
+          "input": 1000,
+          "model": "unknown",
+          "output": 10,
+          "outputRecorded": true,
+          "price": {
+            "assumedTier": true,
+            "issue": "No verified rate for model/tier"
+          },
+          "reasoning": 0,
+          "reasoningRecorded": false,
+          "timestamp": "2026-10-19T12:00:01Z"
+        }
+      ],
+      "status": "Monitoring selected task",
+      "task": {
+        "id": "missing",
+        "title": "Fixture missing",
+        "workspace": "workspace"
+      },
+      "usage": {
+        "assumedTierCalls": 1,
+        "cacheComplete": false,
+        "cached": 0,
+        "cacheSavings": 0,
+        "cacheWrite": 0,
+        "configurationEffectiveDate": "2026-10-19",
+        "cost": 0,
+        "costCategories": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "coverage": "Recorded unique calls; historical completeness cannot be guaranteed",
+        "cumulativeMismatch": true,
+        "input": 1000,
+        "inputComplete": true,
+        "issues": [
+          "unknown: No verified rate for model/tier"
+        ],
+        "models": [
+          "unknown"
+        ],
+        "output": 10,
+        "outputComplete": true,
+        "pricedCalls": 0,
+        "reasoning": 0,
+        "reasoningComplete": false,
+        "source": "https://developers.openai.com/api/docs/pricing",
+        "unpricedCalls": 1,
+        "verifiedAt": "2026-10-19"
+      },
+      "version": 1,
+      "weekly": {
+        "used": 71
+      }
+    }
+  }
+]

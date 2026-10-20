@@ -20,6 +20,14 @@ try{
   const args=config.args.map(a=>a.startsWith('./')?path.join(plugin,a):a),launcher=mode=>[...args,...(mode?(process.platform==='win32'?['-Mode',mode.replace('--','')]:[mode]):[])];
   const run=(mode,input='',extra={})=>new Promise((resolve,reject)=>{const child=spawn(config.command,launcher(mode),{cwd:temp,env:{...env,...extra},stdio:['pipe','pipe','pipe']});let stdout='',stderr='';const timer=setTimeout(()=>{child.kill();reject(new Error('Launcher timeout '+mode));},15000);child.on('error',reject);child.stdout.on('data',x=>stdout+=x);child.stderr.on('data',x=>stderr+=x);child.on('exit',code=>{clearTimeout(timer);code===0?resolve({stdout,stderr}):reject(new Error('Launcher exit '+code+' '+stderr));});child.stdin.end(input);});
   const event=JSON.stringify({session_id:id,hook_event_name:'UserPromptSubmit',transcript_path:transcript,prompt:'PRIVATE_PROMPT'});
+  // Probe the actual bootstrap pipe using synthetic bytes before invoking hooks.
+  const hookEntry=path.join(plugin,'server/dist/startup-hook.mjs'),hookSource=await readFile(hookEntry);
+  const probeInput='{"synthetic":"é 漢字"}';
+  try {
+   await writeFile(hookEntry,"const chunks=[];for await(const c of process.stdin)chunks.push(c);process.stdout.write(Buffer.concat(chunks).toString('base64'));\n");
+   const probe=await run('--startup-hook',probeInput);assert.equal(probe.stderr,'');assert.equal(probe.stdout,Buffer.from(probeInput).toString('base64'),'bootstrap must preserve raw UTF-8 stdin');
+  } finally { await writeFile(hookEntry,hookSource); }
+
   const startup=await run('--startup-hook',event);assert.equal(startup.stderr,'');assert.match(startup.stdout,/open_monitor/);assert.equal((await run('--startup-hook',event)).stdout,'');
   const cached=path.join(home,'token-monitor-embedded/runtime',expected,process.platform==='win32'?'node.exe':'node');assert.equal(digest(await readFile(cached)),expected);await writeFile(cached,'corrupt');assert.match((await run('--node-version')).stdout,/^v24\./);assert.equal(digest(await readFile(cached)),expected);
   await run('--node-version','',{PLUGIN_DATA:path.join(temp,'plugin data')});assert.equal(digest(await readFile(path.join(temp,'plugin data/runtime',expected,process.platform==='win32'?'node.exe':'node'))),expected);

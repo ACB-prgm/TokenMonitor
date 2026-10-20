@@ -50,7 +50,10 @@ third-party notices; discuss commercial authorization with the copyright holder.
    ancestry and VERSION, rebuilds from the tag, tests the extracted package,
    generates checksums, and publishes exactly one GitHub Release. If GitHub does
    not enqueue the tag event, explicitly run `gh workflow run release.yml --ref
-   vX.Y.Z`; the same tag/version/ancestry gates still apply.
+   vX.Y.Z`; the same tag/version/ancestry gates still apply. To repair a workflow for an
+   existing unpublished tag without moving it, merge the workflow fix to main,
+   then run `gh workflow run release.yml --ref main -f tag=vX.Y.Z`. Checkout and
+   all artifacts still use the requested tag's exact source commit.
 6. Confirm the run passed, download/check the assets, then merge origin/main back
    into dev and push dev. Leave the local checkout on dev.
 

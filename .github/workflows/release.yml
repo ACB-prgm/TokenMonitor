@@ -1,6 +1,11 @@
 name: Release
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing annotated stable tag to rebuild (optional)'
+        required: false
+        type: string
   push:
     tags: ['v*.*.*']
 permissions:
@@ -18,15 +23,18 @@ jobs:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          ref: ${{ inputs.tag || github.ref }}
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
       - name: Require stable version on main
         env:
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           test "$RELEASE_TAG" = "v$(cat VERSION)"
           git fetch origin main
+          git fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "$RELEASE_TAG^{}")"
           git merge-base --is-ancestor HEAD origin/main
           test "$(git cat-file -t "$RELEASE_TAG")" = tag
           python3 scripts/check-release.py
@@ -40,7 +48,7 @@ jobs:
       - name: Publish verified packages
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo 'Refusing to replace an existing release.' >&2

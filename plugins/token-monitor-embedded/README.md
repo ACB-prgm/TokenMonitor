@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 0.3.2
+# TokenMonitor Embedded 0.3.3
 
 Local Swift telemetry inside Codex's expanded conversation panel. Opens once per
 chat through the working first-prompt model instruction, then refreshes directly
@@ -8,6 +8,7 @@ every two seconds while visible. No remote connections or floating-window contro
 
 - Context capacity and account allowances at the top, expanded by default.
 - Thread API-equivalent spend, cumulative input/output, composition bars and cache savings.
+- Estimated thread allowance usage: 5-hour and weekly (7-day), using fixed cost conversions.
 - Cached → Fresh → Input in latest-call details, with exact values and health colors.
 - Model/effort; five-hour and weekly allowance remaining and reset times.
 - Context use, cache temperature, Compaction Value and its break-even estimate.
@@ -120,6 +121,20 @@ Layout state has a version marker; locks remain per-panel and are not persisted.
 The optional All Threads summary is deferred: reliable aggregation would require
 cross-thread transcript scanning/caching beyond the selected-thread collector.
 The native floating HUD remains compatible and unchanged in layout.
+
+## Thread allowance estimates
+
+The selected thread’s full recorded API-equivalent cost is multiplied by the
+user-supplied fixed calibration: **12.9 percentage points per USD** for 5-hour usage
+and **2.1 percentage points per USD** for weekly (7-day) usage. These correspond
+to about $7.75 and $47.62 per 100 points. For example, a $1 thread displays
+≈12.9% and ≈2.1%. The calculation uses unrounded cost and is not capped at 100%.
+
+These are lifetime thread contributions across resets, not rolling-window totals
+or measured account usage. The account allowances above remain recorded telemetry.
+Unpriced calls are excluded, partial history/pricing is labeled partial, and no
+priced calls displays unknown rather than zero. Estimates follow the selected
+thread and retain totals beyond the 120-call chart history.
 
 ## Local privacy and packaging
 

@@ -515,3 +515,19 @@ produced no visible summary. Hook invocation counts in the live panel distinguis
 execution from presentation. Do not claim automatic opening or summaries from
 these experimental hooks. Merely switching to an existing chat does not trigger
 UserPromptSubmit.
+
+## 0.3.3 — thread allowance estimates (2026-10-19)
+
+Added selected-thread allowance estimates using the owner's fixed calibration:
+12.9 percentage points per API-equivalent USD for 5-hour usage, and 2.1 for
+weekly (7-day) usage. Uses full unrounded thread cost, preserves values above
+100%, labels incomplete pricing/history as partial, and leaves unavailable
+pricing unknown. This is a lifetime thread conversion across allowance resets,
+not a rolling-window calculation or observed account usage.
+
+Verified production build and type checking; all 26 Node tests pass, including
+calibration, zero/unknown/invalid values, uncapped estimates, selected-thread
+cost changes, partial coverage, and independence from account telemetry. Offline
+archive startup regression and six-hook host discovery pass. The actual bundled
+panel rendered the estimate row correctly in the local browser fixture at the
+600px host width. Account-installed host rendering remains a separate check.

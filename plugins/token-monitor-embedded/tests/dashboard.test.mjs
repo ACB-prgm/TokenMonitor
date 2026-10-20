@@ -5,9 +5,9 @@ import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 const root=fileURLToPath(new URL('..',import.meta.url));
-const result=await build({stdin:{resolveDir:root,contents:`import React from 'react'; import {renderToStaticMarkup} from 'react-dom/server'; import {MonitorView} from './ui/src/view'; export {percent,money,migrateLayout,composition} from './ui/src/analytics'; export const render=(s,expanded=false)=>renderToStaticMarkup(React.createElement(MonitorView,{s,expanded,scale:1}));`},bundle:true,platform:'node',format:'cjs',write:false});
+const result=await build({stdin:{resolveDir:root,contents:`import React from 'react'; import {renderToStaticMarkup} from 'react-dom/server'; import {MonitorView} from './ui/src/view'; export {percent,money,migrateLayout,composition,threadAllowanceEstimate} from './ui/src/analytics'; export const render=(s,expanded=false)=>renderToStaticMarkup(React.createElement(MonitorView,{s,expanded,scale:1}));`},bundle:true,platform:'node',format:'cjs',write:false});
 const mod={exports:{}};new Function('require','module','exports',result.outputFiles[0].text)(createRequire(path.join(root,'package.json')),mod,mod.exports);
-const {percent,money,migrateLayout,composition,render}=mod.exports;
+const {percent,money,migrateLayout,composition,threadAllowanceEstimate,render}=mod.exports;
 test('small nonzero and near-full percentages never round to false zero or 100',()=>{
  assert.equal(percent(.0001),'<0.1%');assert.equal(percent(99.999),'>99.9%');assert.equal(percent(0),'0%');assert.equal(percent(100),'100%');assert.equal(money(undefined),'—');assert.equal(money(.000001),'<$0.0001');
 });
@@ -51,4 +51,26 @@ test('latest call preserves unknown cache and output while recorded zeros remain
  const zero=summary({...latestFixture,samples:[{...sample,cached:0,output:0}]});
  assert.match(zero,/\(0%\)/);assert.match(zero,/<b>0<\/b>/);
  const empty=summary({panelId:'p',status:'Waiting'});assert.match(empty,/Cache warmth: Unavailable/);assert.doesNotMatch(empty,/NaN|undefined/);
+});
+
+const allowanceFixture={input:100,cached:60,cacheWrite:0,output:20,reasoning:8,cacheComplete:true,outputComplete:true,reasoningComplete:true,pricedCalls:200,unpricedCalls:0,cost:1,cacheSavings:0,costCategories:[1,0,0,0,0,0],issues:[],models:['gpt-6.1-sol'],cumulativeMismatch:false};
+test('thread allowance uses unrounded lifetime cost and fixed points per dollar without capping',()=>{
+ assert.deepEqual(threadAllowanceEstimate(allowanceFixture),{fiveHour:12.9,weekly:2.1});
+ const large=threadAllowanceEstimate({...allowanceFixture,cost:10});assert.equal(large.fiveHour,129);assert.equal(large.weekly,21);
+ assert.deepEqual(threadAllowanceEstimate({...allowanceFixture,cost:0}),{fiveHour:0,weekly:0});
+ assert.equal(threadAllowanceEstimate({...allowanceFixture,cost:.004}).fiveHour,.004*12.9);
+ for(const cost of [NaN,Infinity,-1])assert.equal(threadAllowanceEstimate({...allowanceFixture,cost}),undefined);
+ assert.equal(threadAllowanceEstimate({...allowanceFixture,pricedCalls:0}),undefined);assert.equal(threadAllowanceEstimate(),undefined);
+});
+test('allowance estimates follow selected thread totals and preserve partial/unknown independently of account telemetry',()=>{
+ const renderUsage=usage=>render({panelId:'p',status:'Monitoring',callCount:200,samples:[],fiveHour:{used:6},weekly:{used:49},usage});
+ const row=html=>html.match(/<div class="usage-line" aria-label="Estimated thread allowance usage"[\s\S]*?<\/div>/)[0];
+ const html=renderUsage(allowanceFixture);assert.match(row(html),/≈12.9%/);assert.match(row(html),/Weekly \(7d\)/);assert.match(row(html),/≈2.1%/);assert.match(html,/94%/);assert.match(html,/51%/);assert.match(html,/across resets/);
+ assert.match(row(renderUsage({...allowanceFixture,cost:10})),/≈129%/);
+ assert.match(row(renderUsage({...allowanceFixture,cost:2})),/≈25.8%/);
+ assert.match(row(renderUsage({...allowanceFixture,unpricedCalls:1})),/partial/);
+ assert.match(row(renderUsage({...allowanceFixture,cumulativeMismatch:true})),/partial/);
+ const unknown=row(renderUsage({...allowanceFixture,pricedCalls:0}));assert.match(unknown,/>—<\/b>/);assert.doesNotMatch(unknown,/≈0%/);
+ assert.match(row(renderUsage({...allowanceFixture,cost:0})),/≈0%/);
+ assert.doesNotMatch(row(renderUsage(undefined)),/NaN|undefined|≈0%/);
 });

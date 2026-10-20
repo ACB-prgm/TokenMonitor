@@ -9,6 +9,12 @@ export const number = (n?: number | null) => n == null || !Number.isFinite(n) ? 
 export const exact = (n?: number | null) => n == null ? 'Unknown' : n.toLocaleString();
 export const percent = (n?: number | null) => n == null || !Number.isFinite(n) ? '—' : n > 0 && n < .1 ? '<0.1%' : n < 100 && n > 99.9 ? '>99.9%' : `${Number(n.toFixed(1))}%`;
 export const money = (n?: number | null) => n == null || !Number.isFinite(n) ? '—' : n > 0 && n < .0001 ? '<$0.0001' : `${n < 0 ? '−' : ''}$${Math.abs(n).toFixed(Math.abs(n) < .01 && n !== 0 ? 4 : 2)}`;
+// User-supplied calibration: percentage points of allowance per API-equivalent USD.
+export const allowanceMultipliers = {fiveHour:12.9,weekly:2.1} as const;
+export function threadAllowanceEstimate(usage?: Usage): {fiveHour:number; weekly:number} | undefined {
+  if (!usage || usage.pricedCalls <= 0 || !Number.isFinite(usage.cost) || usage.cost < 0) return undefined;
+  return {fiveHour:usage.cost*allowanceMultipliers.fiveHour,weekly:usage.cost*allowanceMultipliers.weekly};
+}
 export function composition(input: number, cached: number, write: number, output: number, reasoning?: number): number[] {
   return [input-cached-write,cached,write,reasoning??0,reasoning==null?0:output-reasoning,reasoning==null?output:0];
 }

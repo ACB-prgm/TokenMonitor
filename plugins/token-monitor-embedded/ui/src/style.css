@@ -13,7 +13,7 @@ progress::-webkit-progress-bar{background:var(--line)}progress::-webkit-progress
 @media(max-width:380px){.allowances{grid-template-columns:repeat(auto-fit,minmax(min(100%,10em),1fr))}}
 
 /* One disclosure keeps latest-call telemetry and compaction economics together. */
-.latest-call{border:1px solid var(--line);border-radius:6px;background:var(--surface);font-size:.85em}
+.latest-call{border:1px solid var(--line);border-radius:6px;background:var(--surface);font-size:.95em}
 .latest-call>summary{display:flex;align-items:center;gap:.45em;padding:.55em .6em;list-style:none;overflow-x:auto;white-space:nowrap}
 .latest-call>summary::-webkit-details-marker{display:none}
 .latest-call>summary::before{content:'▸';flex-shrink:0;color:var(--muted)}
@@ -27,4 +27,4 @@ progress::-webkit-progress-bar{background:var(--line)}progress::-webkit-progress
 .latest-body{padding:.7em;border-top:1px solid var(--line)}
 .latest-body h2{font-size:1em}
 .latest-compaction{border-top:1px solid var(--line);margin-top:.8em;padding-top:.7em}
-@media(max-width:480px){.latest-call{font-size:.68em}.latest-bar{gap:.3em}.latest-call>summary{gap:.3em;padding:.55em .4em}.latest-bar .wide-label{display:none}.narrow-label{display:inline}}
+@media(max-width:480px){.latest-call{font-size:.75em}.latest-bar{gap:.3em}.latest-call>summary{gap:.3em;padding:.55em .4em}.latest-bar .wide-label{display:none}.narrow-label{display:inline}}

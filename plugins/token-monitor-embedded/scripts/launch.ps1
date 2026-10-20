@@ -54,6 +54,9 @@ $start.Arguments = $nodeArguments
 $start.UseShellExecute = $false
 $start.RedirectStandardInput = $true
 $start.CreateNoWindow = $true
+# .NET Framework chooses the child stdin writer encoding from Console.
+# Its default UTF-8 BOM otherwise precedes even direct BaseStream writes.
+[Console]::InputEncoding = New-Object Text.UTF8Encoding($false)
 $child = [Diagnostics.Process]::Start($start)
 try {
     # Forward raw stdin continuously, including JSON-RPC while the server runs.
@@ -62,7 +65,7 @@ try {
     while (!$child.HasExited -and !$inputTask.IsCompleted) { [Threading.Thread]::Sleep(20) }
     # Close the raw pipe, bypassing StreamWriter's encoding preamble. This
     # also works on Windows PowerShell 5.1 / .NET Framework.
-    if ($inputTask.IsCompleted) { $inputTask.GetAwaiter().GetResult(); $rawInput.Flush(); $rawInput.Close() }
+    if ($inputTask.IsCompleted) { $null = $inputTask.GetAwaiter().GetResult(); $rawInput.Flush(); $rawInput.Close() }
     $child.WaitForExit()
     exit $child.ExitCode
 } finally { $child.Dispose() }

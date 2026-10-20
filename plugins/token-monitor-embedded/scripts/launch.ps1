@@ -53,13 +53,15 @@ $start.FileName = $nodePath
 $start.Arguments = $nodeArguments
 $start.UseShellExecute = $false
 $start.RedirectStandardInput = $true
+# Closing StandardInput must not append an encoding preamble after raw JSON.
+$start.StandardInputEncoding = New-Object Text.UTF8Encoding($false)
 $start.CreateNoWindow = $true
 $child = [Diagnostics.Process]::Start($start)
 try {
     # Forward raw stdin continuously, including JSON-RPC while the server runs.
     $inputTask = [Console]::OpenStandardInput().CopyToAsync($child.StandardInput.BaseStream)
     while (!$child.HasExited -and !$inputTask.IsCompleted) { [Threading.Thread]::Sleep(20) }
-    if ($inputTask.IsCompleted) { $child.StandardInput.Close() }
+    if ($inputTask.IsCompleted) { $inputTask.GetAwaiter().GetResult(); $child.StandardInput.BaseStream.Flush(); $child.StandardInput.Close() }
     $child.WaitForExit()
     exit $child.ExitCode
 } finally { $child.Dispose() }

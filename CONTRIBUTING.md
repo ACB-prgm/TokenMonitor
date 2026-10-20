@@ -48,7 +48,9 @@ third-party notices; discuss commercial authorization with the copyright holder.
 5. Fetch main. On its tested commit, create `git tag -a vX.Y.Z -m "TokenMonitor
    X.Y.Z"`, then `git push origin vX.Y.Z`. The release workflow checks main
    ancestry and VERSION, rebuilds from the tag, tests the extracted package,
-   generates checksums, and publishes exactly one GitHub Release.
+   generates checksums, and publishes exactly one GitHub Release. If GitHub does
+   not enqueue the tag event, explicitly run `gh workflow run release.yml --ref
+   vX.Y.Z`; the same tag/version/ancestry gates still apply.
 6. Confirm the run passed, download/check the assets, then merge origin/main back
    into dev and push dev. Leave the local checkout on dev.
 

@@ -1,7 +1,7 @@
 import { randomUUID, createHash } from 'node:crypto';
 import { CollectorBridge } from './collector.js';
 
-type Panel = { hostId?: string; selected?: string; locked: boolean; hook?: string; source: string;
+type Panel = { hostId?: string; selected?: string; hook?: string; source: string;
   revision?: string; snapshot?: any; touched: number; disconnected: boolean; hostMatched: boolean };
 export class Panels {
   private panels = new Map<string, Panel>();
@@ -9,16 +9,16 @@ export class Panels {
   constructor(readonly collector = new CollectorBridge()) {}
   create(hostId?: string) {
     const id = randomUUID();
-    this.panels.set(id, { hostId, locked: false, source: 'waiting', touched: Date.now(), disconnected: false, hostMatched: false });
+    this.panels.set(id, { hostId, source: 'waiting', touched: Date.now(), disconnected: false, hostMatched: false });
     return id;
   }
   private panel(id: string, hostId?: string) {
-    // UI state may outlive an MCP restart. Recreate an unlocked panel, never a
-    // remembered lock. Selection is recovered from the exact host ID or hooks.
+    // UI state may outlive an MCP restart. Recover selection from the exact
+    // host ID or hooks.
     let panel = this.panels.get(id);
     if (!panel) {
       if (!/^[0-9a-f-]{36}$/i.test(id)) throw new Error('Invalid panel session');
-      panel = { hostId, locked: false, source: 'waiting', touched: Date.now(), disconnected: false, hostMatched: false };
+      panel = { hostId, source: 'waiting', touched: Date.now(), disconnected: false, hostMatched: false };
       this.panels.set(id, panel);
     }
     if (hostId) panel.hostId = hostId;
@@ -30,14 +30,14 @@ export class Panels {
     const panel = this.panel(id, hostId);
     return this.collector.request('catalog', { hostId: panel.hostId });
   }
-  async state(id: string, input: { taskId?: string; action?: 'select' | 'lock' | 'unlock'; revision?: string } = {}, hostId?: string) {
+  async state(id: string, input: { taskId?: string; action?: 'select'; revision?: string } = {}, hostId?: string) {
     const previous = this.queues.get(id) ?? Promise.resolve();
     const request = previous.catch(() => {}).then(() => this.stateNow(id, input, hostId));
     this.queues.set(id, request);
     try { return await request; }
     finally { if (this.queues.get(id) === request) this.queues.delete(id); }
   }
-  private async stateNow(id: string, input: { taskId?: string; action?: 'select' | 'lock' | 'unlock'; revision?: string }, hostId?: string) {
+  private async stateNow(id: string, input: { taskId?: string; action?: 'select'; revision?: string }, hostId?: string) {
     const panel = this.panel(id, hostId);
     const wasDisconnected = panel.disconnected;
     try {
@@ -48,17 +48,15 @@ export class Panels {
       if (input.action === 'select') {
         if (!catalog.tasks.some((task: any) => task.id === input.taskId) && input.taskId !== panel.selected && !(catalog.hostMatched && input.taskId === panel.hostId)) throw new Error('Task is not available locally');
         panel.selected = input.taskId; panel.source = 'manual';
-      } else if (input.action === 'lock' && panel.selected) panel.locked = true;
-      else if (input.action === 'unlock') panel.locked = false;
-      else if (!panel.locked) {
+      } else {
         if (catalog.hostMatched && (!panel.selected || bindingChanged || (hookChanged && catalog.latestHook.id === panel.hostId) || (panel.source !== 'manual' && panel.selected !== panel.hostId))) {
           panel.selected = panel.hostId; panel.source = 'host-chat';
         } else if (!catalog.hostMatched && hookChanged) {
           panel.selected = catalog.latestHook.id; panel.source = 'latest-hook';
         }
       }
-      // Consuming hook changes while locked/manual/unlocking prevents old events
-      // from unexpectedly changing the task after an unlock.
+      // Consume hook changes during manual selection so only a new relevant
+      // event resumes automatic following.
       panel.hook = catalog.latestHook?.sequence;
       let data: any = { unavailable: true };
       if (panel.selected) data = await this.collector.request('state', { taskId: panel.selected, revision: panel.revision });
@@ -67,14 +65,14 @@ export class Panels {
       panel.disconnected = false;
       const view = { ...panel.snapshot, version: 1, panelId: id, selectedId: panel.selected,
         selectionSource: panel.source, followingMode: panel.hostMatched ? 'host-chat' : 'latest-hook',
-        locked: panel.locked, disconnected: false,
+        disconnected: false,
         status: panel.snapshot?.status ?? (panel.selected ? 'Task unavailable · choose another task or refresh' : 'Waiting for a valid local task'),
-        tasks: catalog.tasks, revision: createHash('sha256').update(JSON.stringify([panel.revision, panel.selected, panel.source, panel.locked, panel.hostMatched, catalog.tasks])).digest('hex') };
+        tasks: catalog.tasks, revision: createHash('sha256').update(JSON.stringify([panel.revision, panel.selected, panel.source, panel.hostMatched, catalog.tasks])).digest('hex') };
       return !wasDisconnected && input.revision === view.revision ? { panelId: id, unchanged: true, revision: view.revision } : view;
     } catch (error) {
       if (input.action === 'select') throw error;
       panel.disconnected = true;
-      return { ...panel.snapshot, version: 1, panelId: id, selectedId: panel.selected, locked: panel.locked,
+      return { ...panel.snapshot, version: 1, panelId: id, selectedId: panel.selected,
         selectionSource: panel.source, followingMode: panel.hostMatched ? 'host-chat' : 'latest-hook', disconnected: true,
         status: 'Collector disconnected · showing last snapshot · retrying', revision: `disconnected:${panel.revision ?? ''}` };
     }

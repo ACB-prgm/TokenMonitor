@@ -21,7 +21,7 @@ test('capacity, allowances, spending and cost chart appear in compact mode witho
  const s={panelId:'p',status:'Monitoring',callCount:1,task:{id:'a',title:'Task'},selectedId:'a',contextPercent:50,input:100,contextLimit:200,fiveHour:{used:6},weekly:{used:49},samples:[],usage:{input:100,cached:60,cacheWrite:10,output:20,reasoning:8,cacheComplete:true,outputComplete:true,reasoningComplete:true,pricedCalls:1,unpricedCalls:0,cost:.12,cacheSavings:.05,costCategories:[.04,.01,.01,.02,.04,0],issues:[],models:['gpt-6.1-sol']}};
  const html=render(s);
  assert.ok(html.indexOf('header-controls')<html.indexOf('task-controls'));assert.ok(html.indexOf('Context window')<html.indexOf('Thread usage'));assert.ok(html.indexOf('Thread usage')<html.indexOf('Recent calls'));
- assert.equal((html.match(/Context window<\/h2>/g)??[]).length,1);assert.match(html,/5 Hour/);assert.match(html,/94%/);assert.match(html,/51%/);assert.match(html,/API-equivalent/);assert.match(html,/Token composition/);assert.match(html,/Cost composition/);assert.match(html,/aria-pressed="true">Cost/);assert.match(html,/does not compact/);assert.doesNotMatch(html,/<details[^>]* open/g);
+ assert.equal((html.match(/Context window<\/h2>/g)??[]).length,1);assert.match(html,/5 Hour/);assert.match(html,/94%/);assert.match(html,/51%/);assert.match(html,/API-equivalent/);assert.match(html,/Token composition/);assert.match(html,/Cost composition/);assert.match(html,/aria-pressed="true">Cost/);assert.match(html,/does not compact/);assert.doesNotMatch(html,/Lock|locked|Unlock/);assert.doesNotMatch(html,/<details[^>]* open/g);
  const expanded=render(s,true);assert.match(expanded,/<details[^>]* open/g);assert.match(expanded,/>Compact<\/button>/);
 });
 test('missing pricing and cache data stay visibly unavailable',()=>{
@@ -30,11 +30,13 @@ test('missing pricing and cache data stay visibly unavailable',()=>{
 });
 
 const latestFixture={panelId:'p',status:'Monitoring',input:40000,awaitingPostCompactionCall:true,callCount:1,cacheTemperature:'WARM',compactionValue:{category:'MEDIUM',level:1,currentInput:40000,estimatedInput:40000,breakEvenCalls:6},apiCompactionBreakEven:10,samples:[{timestamp:'2026-10-19T12:00:00Z',model:'gpt-6.1-sol',input:100000,cached:90000,cacheWrite:0,output:1200,reasoning:800}]};
-test('single latest-call bar sits under the graph and expands call and compaction details together',()=>{
+test('single latest-call bar sits between thread usage and the graph and expands call and compaction details together',()=>{
  const html=render(latestFixture);
  const bar=html.match(/<details class="latest-call"[^>]*>[\s\S]*?<\/details>/)?.[0];
  assert.ok(bar);assert.doesNotMatch(bar,/<details[^>]* open/);
- assert.ok(html.indexOf('</svg>')<html.indexOf('class="latest-call"'));
+ assert.ok(html.indexOf('class="thread-usage"')<html.indexOf('class="latest-call"'));
+ assert.ok(html.indexOf('class="latest-call"')<html.indexOf('class="history"'));
+ assert.ok(html.indexOf('class="latest-call"')<html.indexOf('<svg'));
  assert.ok(html.indexOf('class="latest-call"')<html.indexOf('Exact call values'));
  const summary=bar.match(/<summary[\s\S]*?<\/summary>/)[0];
  assert.match(summary,/<b>100.0k<\/b> \(90%\)/);assert.match(summary,/<b>1.2k<\/b>/);

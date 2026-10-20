@@ -539,3 +539,15 @@ text and the “Fresh Input” legend label. Production build, type checking and
 26 Node tests pass. Release packaging and account readback are recorded in the
 private release log. Existing host connections require an installed-plugin
 refresh and a fresh chat to load the new UI.
+
+## Latest call placement and lock removal — 2026-10-19
+
+- Moved the shared panel/summary Latest call disclosure immediately after Thread
+  usage and before Recent calls, preserving its expanded details.
+- Removed embedded selection locking from the UI, state, action schema, preview,
+  and current usage documentation. The native floating HUD is unchanged.
+- Type checking, production build, and all 26 embedded tests pass. Integration
+  coverage verifies independent panels, manual inspection, relevant host-hook
+  following, fallback following, and rejection of the retired lock actions.
+- Visually verified the production widget in the local fixture host: Thread
+  usage, Latest call, and Recent calls appear in order; no lock button remains.

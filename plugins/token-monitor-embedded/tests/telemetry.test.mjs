@@ -43,30 +43,30 @@ test('real Swift metrics bind exactly to the host, stay UI-only, and return only
   assert.equal((await f.call('list_tasks',{panelId:s.panelId},'a'))._meta.tasks.length,2);
  }finally{await f.client.close();}
 });
-test('simultaneous panels preserve explicit locks and unlocking waits for a new relevant hook',async()=>{
+test('simultaneous panels inspect independently and resume on relevant host hooks',async()=>{
  const f=await fixture();try{
-  const a=await f.open('a'),b=await f.open('b');await f.refresh(a.panelId,{action:'lock'},'a');
-  const selected=await f.refresh(a.panelId,{action:'select',taskId:'b'},'a');assert.equal(selected.locked,true);assert.equal(selected.selectedId,'b');
-  f.hook('a');assert.equal((await f.refresh(a.panelId,{},'a')).selectedId,'b');
-  const unaffected=await f.refresh(b.panelId,{},'b');assert.equal(unaffected.selectedId,'b');assert.equal(unaffected.locked,false);
-  const unlocked=await f.refresh(a.panelId,{action:'unlock'},'a');assert.equal(unlocked.selectedId,'b');assert.equal(unlocked.locked,false);
-  assert.equal((await f.refresh(a.panelId,{},'a')).selectedId,'b');f.hook('a');assert.equal((await f.refresh(a.panelId,{},'a')).selectedId,'a');
-  const fresh=await f.open('a');assert.equal(fresh.locked,false);assert.notEqual(fresh.panelId,a.panelId);
+  const a=await f.open('a'),b=await f.open('b');
+  const selected=await f.refresh(a.panelId,{action:'select',taskId:'b'},'a');assert.equal(selected.selectedId,'b');assert.equal('locked' in selected,false);
+  assert.equal((await f.refresh(a.panelId,{},'a')).selectedId,'b');
+  f.hook('b');assert.equal((await f.refresh(a.panelId,{},'a')).selectedId,'b');
+  assert.equal((await f.refresh(b.panelId,{},'b')).selectedId,'b');
+  f.hook('a');assert.equal((await f.refresh(a.panelId,{},'a')).selectedId,'a');
+  assert.equal((await f.refresh(b.panelId,{},'b')).selectedId,'b');
+  const fresh=await f.open('a');assert.equal(fresh.selectedId,'a');assert.notEqual(fresh.panelId,a.panelId);
+  for(const action of ['lock','unlock'])assert.equal((await f.call('get_monitor_state',{panelId:a.panelId,action},'a')).isError,true);
  }finally{await f.client.close();}
 });
 test('fallback follows background completion and compaction clears cached/fresh until the next call',async()=>{
  const f=await fixture();try{
   f.hook('a');const s=await f.open();assert.equal(s.selectedId,'a');assert.equal(s.followingMode,'latest-hook');
   f.hook('b','SessionEnd');const next=await f.refresh(s.panelId);assert.equal(next.selectedId,'b');assert.match(next.status,/Session ended/);
-  await f.refresh(s.panelId,{action:'lock'});f.hook('a');assert.equal((await f.refresh(s.panelId)).selectedId,'b');
-  await f.refresh(s.panelId,{action:'unlock'});assert.equal((await f.refresh(s.panelId)).selectedId,'b');
   f.hook('a','PreCompact');const compacting=await f.refresh(s.panelId);assert.equal(compacting.selectedId,'a');assert.equal(compacting.isCompacting,true);
   const file=path.join(f.home,'a.jsonl');const original=await readFile(file,'utf8');
   await writeFile(file,original+JSON.stringify({type:'compacted',timestamp:new Date(Date.now()+1000).toISOString(),payload:{}})+'\n'+JSON.stringify({type:'event_msg',timestamp:new Date(Date.now()+2000).toISOString(),payload:{type:'token_count',info:{last_token_usage:{input_tokens:0,cached_input_tokens:0,output_tokens:0,total_tokens:40000}}}})+'\n');
   const completed=await f.refresh(s.panelId);assert.equal(completed.isCompacting,false);assert.equal(completed.awaitingPostCompactionCall,true);assert.equal(completed.input,40000);assert.equal(completed.cached,undefined);assert.equal(completed.compactions.length,1);
  }finally{await f.client.close();}
 });
-test('disconnect retains metrics and recovery reconstructs an unlocked panel',async()=>{
+test('disconnect retains metrics and recovery reconstructs a host-bound panel',async()=>{
  let broken=false;const backend={request:async(method)=>{
   if(broken)throw new Error('offline');if(method==='catalog')return {hostMatched:true,tasks:[{id:'a',title:'A'}]};
   return {revision:'r1',state:{task:{id:'a',title:'A'},input:123,available:true,status:'Monitoring selected task'}};
@@ -74,7 +74,7 @@ test('disconnect retains metrics and recovery reconstructs an unlocked panel',as
  const panels=new Panels(backend),id=panels.create('a');assert.equal((await panels.state(id)).input,123);
  broken=true;const offline=await panels.state(id);assert.equal(offline.input,123);assert.equal(offline.disconnected,true);
  broken=false;const online=await panels.state(id,{revision:offline.revision});assert.equal(online.disconnected,false);assert.equal(online.input,123);
- const recovered=await new Panels(backend).state(id,{},'a');assert.equal(recovered.locked,false);assert.equal(recovered.selectedId,'a');
+ const recovered=await new Panels(backend).state(id,{},'a');assert.equal('locked' in recovered,false);assert.equal(recovered.selectedId,'a');
 });
 
 test('concurrent task switches cannot label a stale snapshot as the newly selected task',async()=>{

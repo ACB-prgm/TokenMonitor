@@ -15,7 +15,7 @@ every two seconds while visible. No remote connections or floating-window contro
 - Skills/tool attribution with the native approximation and compaction disclosure.
 - Recent 120 calls: Cost / Tokens / Context chart, compaction markers and exact call table.
 - Thread-total output, thinking, and non-reasoning output, plus latest-call output.
-- Local task picker, explicit lock, compact/details layouts, 85/100/118/135% scaling,
+- Local task picker, compact/details layouts, 85/100/118/135% scaling,
   light/dark themes, help and diagnostics, manual refresh, unavailable/disconnected states.
 
 The bundled headless Swift helper uses MonitorCore's parser, file tail, SQLite task
@@ -40,14 +40,11 @@ called automatically at the end of responses.
 The panel prefers the host-supplied thread ID **only after exact matching to a
 validated local session**. It never infers identity from titles or workspaces.
 Otherwise it follows the latest valid hook, including background completions, and
-labels that mode. The task picker inspects other local tasks. Selecting does not
-change lock state; selecting while locked moves the lock. Unlocking leaves the
-current task until the next relevant automatic selection event. A fresh panel
-starts unlocked. Different panels keep independent selections and locks.
+labels that mode. The task picker inspects other local tasks until the next
+relevant automatic selection event. Different panels keep independent selections.
 
 Compact/details and scale preferences use host widget state when exposed, with
-frame session storage as fallback. Diagnostics reports the active storage. Locks
-are not persisted. Returning to a visible panel triggers an immediate refresh.
+frame session storage as fallback. Diagnostics reports the active storage. Returning to a visible panel triggers an immediate refresh.
 Collector failure retains the last snapshot and retries with bounded backoff.
 
 ## Output totals and unknowns
@@ -116,7 +113,7 @@ Codex thread-compaction action.
 
 The former 85% visual size is now the real 100% base. Persisted old scales migrate
 by dividing by 0.85, preserving their visual size (old 100/115 become 118/135).
-Layout state has a version marker; locks remain per-panel and are not persisted.
+Layout state has a version marker.
 
 The optional All Threads summary is deferred: reliable aggregation would require
 cross-thread transcript scanning/caching beyond the selected-thread collector.

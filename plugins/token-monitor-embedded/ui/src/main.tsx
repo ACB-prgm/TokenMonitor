@@ -24,7 +24,7 @@ function Panel() {
     if (value.unchanged) { setError(''); return; }
     current.current = value; setState(value);
   }
-  async function refresh(action?: 'select'|'lock'|'unlock', taskId?: string) {
+  async function refresh(action?: 'select', taskId?: string) {
     const now = Date.now();
     if (!active.current || !current.current.panelId || fetching.current || (!action && now < retry.current.at)) return;
     const request = ++serial.current; fetching.current = true; setBusy(true);

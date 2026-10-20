@@ -21,7 +21,7 @@ const state={usage,apiCompactionBreakEven:10,version:1,panelId:'12345678-1234-42
 const bridge=new AppBridge(null,{name:'developer-fixture-host',version:'1'},{serverTools:{}});
 bridge.setHostContext({theme:'light',displayMode:'fullscreen',availableDisplayModes:['inline','fullscreen']});
 function counts(){document.querySelector('#counts').textContent='Refresh calls '+calls+' · prompts '+messages+' · context updates '+updates;}
-bridge.oncalltool=async p=>{calls++;counts();if(offline)throw new Error('Simulated collector disconnect');if(p.arguments.action==='lock')state.locked=true;if(p.arguments.action==='unlock')state.locked=false;if(p.arguments.action==='select'){state.selectedId=p.arguments.taskId;state.task=state.tasks.find(t=>t.id===state.selectedId);}return {content:[],_meta:{monitor:{...state,revision:String(calls)}}};};
+bridge.oncalltool=async p=>{calls++;counts();if(offline)throw new Error('Simulated collector disconnect');if(p.arguments.action==='select'){state.selectedId=p.arguments.taskId;state.task=state.tasks.find(t=>t.id===state.selectedId);}return {content:[],_meta:{monitor:{...state,revision:String(calls)}}};};
 bridge.onmessage=async()=>{messages++;counts();return {};};bridge.onupdatemodelcontext=async()=>{updates++;counts();return {};};
 bridge.oninitialized=async()=>{await bridge.sendToolInput({arguments:{}});await bridge.sendToolResult({content:[],_meta:{monitor:state}});counts();};
 bridge.connect(new PostMessageTransport(frame.contentWindow,frame.contentWindow));

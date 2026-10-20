@@ -64,7 +64,7 @@ server.registerTool('open_monitor', {
 server.registerTool('get_monitor_state', {
   title: 'Refresh monitor', description: 'Refresh local token metrics without a model turn. Task IDs must be discovered locally.',
   inputSchema: { panelId: z.string().uuid(), taskId: z.string().min(1).max(200).optional(),
-    action: z.enum(['select', 'lock', 'unlock']).optional(), revision: z.string().max(500).optional() },
+    action: z.enum(['select']).optional(), revision: z.string().max(500).optional() },
   annotations, _meta: { ui: { visibility: ['app'] } },
 }, async (args, extra) => {
   try { return { content: [], _meta: { monitor: await panels.state(args.panelId, args, hostID(extra)) } }; }

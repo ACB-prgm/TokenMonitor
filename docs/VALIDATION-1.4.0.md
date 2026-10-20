@@ -26,3 +26,7 @@ Mac desktop rendering, real trusted lifecycle delivery and user confirmation rem
 - Started the actual installed launcher with developer tools absent from PATH. MCP reported 1.4.0, all four tools, available live metrics for the active chat, and the 1.4.0 UI resource. The smoke-test connection was then closed.
 - Existing desktop connections require a Codex reload. Mac visual behavior and trusted lifecycle delivery await the user's confirmation; Windows execution remains unverified locally.
 - No GitHub push, tag, release change or public asset removal occurred during this migration.
+
+## Maintainer Mac confirmation — October 20, 2026
+
+The maintainer confirmed version 1.4.0 in both the plugin registry and running service. A fresh chat opened the service automatically and ran as expected. This clears the GitHub push and protected promotion gate. Windows desktop testing remains pending; the new public release must stay in draft.

@@ -18,7 +18,7 @@ Costs are estimates using the bundled rate table, not invoices. Subscription all
 
 Packages target macOS Apple silicon (`macos-arm64`), macOS Intel (`macos-x64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop behavior is pending user verification for 1.4.0.
 
-Version 1.4.0 is undergoing private Mac validation. GitHub distribution will be prepared after that confirmation and remain a draft until Windows validation. Existing published downloads belong to the previous architecture.
+Version 1.4.0 passed maintainer testing on macOS on October 20, 2026: the registry and running service report 1.4.0, and a fresh chat opens the panel automatically. The GitHub release remains a draft pending Windows desktop validation. The old Swift-based release is superseded.
 
 Once the matching release is available:
 

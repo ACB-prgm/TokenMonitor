@@ -109,3 +109,26 @@ Account readback confirms 0.3.4, the matching release inventory and configuratio
 and both new font sizes plus the Fresh Input label in the deployed panel HTML.
 Audience remains WORKSPACE / PRIVATE. Installed-host refresh/rendering was not
 verified; update the installed plugin and open a fresh chat to load the new UI.
+
+## 0.3.5 — latest call placement and lock removal
+
+Published to the same private workspace plugin on 2026-10-19.
+Release: `pluginrel_6ad6e9eb81fc819180762cf46c3182de`.
+
+Deploys `ed24035`: Latest call now sits between Thread usage and Recent calls.
+Removed embedded locking from the task picker, status/help text, panel state and
+MCP action schema. Manual task inspection and per-chat automatic following remain.
+Release metadata and UI/resource versions are synchronized in `34caf0f`.
+
+Production build, type checking, all 26 Node tests, extracted offline archive
+startup and six-hook discovery pass. Visually checked the production panel in
+the local browser fixture. Verified every package inventory hash, no removals,
+and unchanged manifest metadata/MCP configuration except the version bump.
+Runtime, hooks, startup hook, launcher, notices and assets match 0.3.4.
+
+Account readback confirms version 0.3.5, release ID, complete file inventory,
+matching manifest, MCP configuration and release inventory. Deployed panel HTML
+contains 0.3.5 and no retired lock status/help text. Audience remains WORKSPACE /
+PRIVATE. Existing running host connections may retain the previous UI until the
+installed plugin updates and a fresh chat loads its connection; installed-host
+refresh/rendering was not performed as part of this release.

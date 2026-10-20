@@ -26,6 +26,7 @@ if [ ! -x "$node_path" ]; then
     fi
 fi
 case "${1:-}" in
+    --hook) exec "$node_path" "$plugin_root/server/dist/hook.mjs";;
     --startup-hook) exec "$node_path" "$plugin_root/server/dist/startup-hook.mjs";;
     --node-version) exec "$node_path" --version;;
     '') exec "$node_path" "$plugin_root/server/dist/index.mjs";;

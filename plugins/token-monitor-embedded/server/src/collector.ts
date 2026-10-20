@@ -1,73 +1,85 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import {createHash,randomUUID} from 'node:crypto';
+import {readFileSync,readdirSync,lstatSync} from 'node:fs';
 import path from 'node:path';
-
-const root = fileURLToPath(new URL('../..', import.meta.url));
-export class CollectorBridge {
-  private child?: ChildProcessWithoutNullStreams;
-  private pending = new Map<string, { resolve: (value: any) => void; reject: (error: Error) => void; timer: NodeJS.Timeout }>();
-  private buffer = '';
-  private failures = 0;
-  private nextRetry = 0;
-  private idle?: NodeJS.Timeout;
-  private fail(child: ChildProcessWithoutNullStreams, error: Error) {
-    if (this.child !== child) return;
-    this.child = undefined; this.buffer = ''; child.kill();
-    this.nextRetry = Date.now() + Math.min(30000, 1000 * 2 ** Math.min(this.failures++, 5));
-    for (const item of this.pending.values()) { clearTimeout(item.timer); item.reject(error); }
-    this.pending.clear();
+import {DatabaseSync} from 'node:sqlite';
+import {acceptedTranscript,atomicJSON,codexHome,stateRoot,validID,withStateLock} from './platform.js';
+import {cleanTitle,type RecordValue} from './metrics.js';
+import {TelemetryParser} from './parser.js';
+import {JSONLTail} from './tail.js';
+type Session={session_id:string;transcript_path:string;title?:string;cwd?:string;model?:string;turn_id?:string;hook_event_name?:string;ended?:boolean;updated_at?:string};
+type Hook={sequence:string;session:Session};
+type Entry={parser:TelemetryParser;tail:JSONLTail;path:string;session:Session;touched:number};
+const events=new Set(['SessionStart','UserPromptSubmit','Stop','SessionEnd','PreCompact','PostCompact']);
+export class TelemetryStore {
+  private entries=new Map<string,Entry>();
+  constructor(readonly home=codexHome()){}
+  private hookFile(id?:string){return id?path.join(stateRoot(this.home),'tasks',id+'.json'):path.join(stateRoot(this.home),'latest-hook.json');}
+  hook(id?:string):Hook|undefined {if(id!=null&&!validID(id))return;try{
+    const file=this.hookFile(id),s=lstatSync(file);if(!s.isFile()||s.size>=65536)return;
+    const record=JSON.parse(readFileSync(file,'utf8'));
+    if(typeof record.sequence==='string'&&record.sequence.length<=100&&record.session&&(!id||record.session.session_id===id)&&acceptedTranscript(record.session.transcript_path,record.session.session_id,this.home))return record;
+  }catch{} }
+  metadata(id?:string):RecordValue[] {
+    if(id!=null&&!validID(id))return [];
+    let files:string[];try{files=readdirSync(this.home).filter(f=>/^state_\d+\.sqlite$/.test(f)).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true}));}catch{return [];}
+    for(const file of files){let db:DatabaseSync|undefined;try{
+      db=new DatabaseSync(path.join(this.home,file),{readOnly:true,allowExtension:false});db.exec('PRAGMA busy_timeout=100');
+      const columns=new Set((db.prepare('PRAGMA table_info(threads)').all() as RecordValue[]).map(c=>c.name));
+      if(!['id','title','rollout_path'].every(c=>columns.has(c)))continue;
+      const title=columns.has('name')?"COALESCE(NULLIF(name, ''), title)":'title';
+      const optional=(name:string)=>columns.has(name)?name:'NULL';
+      const where=id?'WHERE id = ?':columns.has('archived')?'WHERE archived = 0':'';
+      const order=columns.has('updated_at')?'updated_at DESC, id':'id';
+      const statement=db.prepare(`SELECT id, ${title} AS title, rollout_path, ${optional('cwd')} AS cwd, ${optional('model')} AS model, ${optional('reasoning_effort')} AS effort FROM threads ${where} ORDER BY ${order}`);
+      const result:RecordValue[]=[];
+      // Iterate without materializing an unbounded threads table.
+      for(const row of statement.iterate(...(id?[id]:[])) as Iterable<RecordValue>){if(acceptedTranscript(row.rollout_path,row.id,this.home))result.push(row);if(result.length>=100)break;}
+      return result;
+    }catch{}finally{db?.close();}}
+    return [];
   }
-  private start() {
-    if (this.child) return this.child;
-    if (Date.now() < this.nextRetry) throw new Error('Collector reconnecting');
-    const child = spawn(path.join(root, 'runtime/TokenMonitorCollector'), [], { stdio: ['pipe', 'pipe', 'pipe'] });
-    this.child = child;
-    child.on('error', () => this.fail(child, new Error('Local collector unavailable')));
-    child.on('exit', () => this.fail(child, new Error('Local collector disconnected')));
-    // Never forward source paths or transcript diagnostics through MCP stdout.
-    child.stderr.resume();
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (data: string) => {
-      if (this.child !== child) return;
-      this.buffer += data;
-      if (this.buffer.length > 2 * 1024 * 1024) { this.fail(child, new Error('Collector response exceeded limit')); return; }
-      let end: number;
-      while ((end = this.buffer.indexOf('\n')) >= 0) {
-        const line = this.buffer.slice(0, end); this.buffer = this.buffer.slice(end + 1);
-        try {
-          const response = JSON.parse(line);
-          const request = this.pending.get(response.id);
-          if (!request) continue;
-          this.pending.delete(response.id); clearTimeout(request.timer);
-          this.failures = 0; this.nextRetry = 0;
-          request.resolve(response.result);
-        } catch { this.fail(child, new Error('Invalid collector response')); return; }
-      }
-    });
-    return child;
+  resolve(id:string):Session|undefined {
+    if(!validID(id))return;const hook=this.hook(id);if(hook)return hook.session;
+    const row=this.metadata(id)[0];if(row)return {session_id:row.id,transcript_path:row.rollout_path,cwd:row.cwd??undefined,title:cleanTitle(row.title)};
   }
-  async request(method: 'catalog' | 'state', params: Record<string, unknown> = {}): Promise<any> {
-    if (this.pending.size >= 32) throw new Error('Collector busy');
-    const child = this.start();
-    clearTimeout(this.idle);
-    this.idle = setTimeout(() => { if (!this.pending.size) this.close(); }, 60000);
-    this.idle.unref();
-    const id = randomUUID();
-    const line = JSON.stringify({ id, method, ...params }) + '\n';
-    if (Buffer.byteLength(line) > 65536) throw new Error('Collector request exceeded limit');
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => this.fail(child, new Error('Collector response timed out')), 10000);
-      this.pending.set(id, { resolve, reject, timer });
-      child.stdin.write(line, error => { if (error) this.fail(child, new Error('Collector connection closed')); });
-    });
+  private task(session:Session,title?:string) {return {id:session.session_id,title:cleanTitle(title??session.title)??`${session.cwd?path.basename(session.cwd):'Task'} · ${session.session_id.slice(-8)}`,workspace:session.cwd?path.basename(session.cwd):undefined};}
+  tasks(){const sessions:Session[]=this.metadata().map(row=>({session_id:row.id,transcript_path:row.rollout_path,cwd:row.cwd??undefined,title:row.title}));const latest=this.hook()?.session;if(latest&&!sessions.some(s=>s.session_id===latest.session_id))sessions.unshift(latest);return sessions.map(s=>this.task(s));}
+  taskMetadata(id:string){const s=this.resolve(id);return s?this.task(s,s.title??this.metadata(id)[0]?.title):undefined;}
+  async record(payload:unknown):Promise<boolean> {
+    if(!payload||typeof payload!=='object')return false;const p=payload as RecordValue;
+    if(!validID(p.session_id)||!events.has(p.hook_event_name)||p.agent_id)return false;
+    const initial=p.transcript_path??this.hook(p.session_id)?.session.transcript_path??this.metadata(p.session_id)[0]?.rollout_path;
+    if(!acceptedTranscript(initial,p.session_id,this.home))return false;
+    return (await withStateLock(stateRoot(this.home),()=>{
+      const prior=this.hook(p.session_id)?.session,candidate=p.transcript_path??prior?.transcript_path??this.metadata(p.session_id)[0]?.rollout_path;
+      if(!acceptedTranscript(candidate,p.session_id,this.home))return false;
+      const string=(value:any,fallback?:string)=>typeof value==='string'?value.slice(0,16384):fallback;
+      const session:Session={session_id:p.session_id,transcript_path:candidate,cwd:string(p.cwd,prior?.cwd),model:string(p.model,prior?.model),title:cleanTitle(p.title)??prior?.title,turn_id:string(p.turn_id),hook_event_name:p.hook_event_name,ended:p.hook_event_name==='SessionEnd',updated_at:new Date().toISOString()};
+      const hook={sequence:randomUUID(),session};if(Buffer.byteLength(JSON.stringify(hook))>=65536)return false;
+      atomicJSON(this.hookFile(p.session_id),hook);atomicJSON(this.hookFile(),hook);return true;
+    }))??false;
   }
-  close() {
-    clearTimeout(this.idle);
-    const child = this.child;
-    if (child) {
-      this.fail(child, new Error('Collector stopped'));
-      this.nextRetry = 0; this.failures = 0;
-    }
+  prune(now=Date.now()){for(const [id,e]of this.entries)if(now-e.touched>=60000)this.entries.delete(id);}
+  get activeCollectorCount(){return this.entries.size;}
+  snapshot(id:string,now=Date.now()) {
+    this.prune(now);const session=this.resolve(id),source=session?.transcript_path??this.entries.get(id)?.path;if(!source)return;
+    let entry=this.entries.get(id);if(!entry||entry.path!==source){if(this.entries.size>=64)this.entries.delete(this.entries.keys().next().value!);entry={parser:new TelemetryParser(),tail:new JSONLTail(),path:source,session:session!,touched:now};this.entries.set(id,entry);}
+    if(session)entry.session=session;entry.touched=now;let available=!!session;
+    try{if(session)entry.tail.read(source,()=>entry!.parser=new TelemetryParser(),line=>entry!.parser.consume(line));}catch{available=false;}
+    const metadata=this.metadata(id)[0]??{},s=entry.session,p=entry.parser;
+    return p.snapshot(this.task(s,cleanTitle(s.title)??cleanTitle(metadata.title)??p.title),s,metadata,available,now);
   }
+  close(){this.entries.clear();}
+}
+// In-process replacement for the former subprocess bridge. The request shape
+// stays stable so panel selection and revision handling do not change.
+export class Collector {
+  readonly store:TelemetryStore;constructor(home=codexHome()){this.store=new TelemetryStore(home);}
+  async request(method:'catalog'|'state',params:Record<string,unknown>={}):Promise<any> {
+    if(method==='catalog'){const host=typeof params.hostId==='string'?this.store.taskMetadata(params.hostId):undefined,tasks=this.store.tasks(),hook=this.store.hook();if(host&&!tasks.some(t=>t.id===host.id))tasks.unshift(host);return {hostMatched:!!host,tasks,...(hook?{latestHook:{id:hook.session.session_id,sequence:hook.sequence,event:hook.session.hook_event_name??''}}:{})};}
+    if(typeof params.taskId!=='string'||!validID(params.taskId))return {unavailable:true};
+    const state=this.store.snapshot(params.taskId);if(!state)return {unavailable:true};
+    const revision=createHash('sha256').update(JSON.stringify(state)).digest('hex');return params.revision===revision?{revision,unchanged:true}:{revision,state};
+  }
+  close(){this.store.close();}
 }

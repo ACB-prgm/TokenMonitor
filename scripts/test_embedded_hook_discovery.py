@@ -18,7 +18,7 @@ class EmbeddedHookDiscoveryTests(unittest.TestCase):
     def test_release_hooks_are_discovered_as_untrusted_plugin_hooks(self):
         manifest = json.loads((REPO / 'plugins/token-monitor-embedded/.codex-plugin/plugin.json').read_text())
         name, version = manifest['name'], manifest['version']
-        archive = REPO / 'dist' / f'{name}-{version}.zip'
+        archive = REPO / 'dist' / f'{name}-{version}-macos-arm64.zip'
         self.assertTrue(archive.is_file(), 'Build the release archive first')
         with tempfile.TemporaryDirectory(prefix='embedded-hook-discovery-') as directory:
             root = Path(directory)
@@ -66,7 +66,7 @@ class EmbeddedHookDiscoveryTests(unittest.TestCase):
                         {'preCompact', 'postCompact', 'sessionStart', 'sessionEnd', 'userPromptSubmit', 'stop'})
                     self.assertEqual(len(found), 6)
                     self.assertTrue(all(hook['source'] == 'plugin' and hook['trustStatus'] == 'untrusted' for hook in found))
-                    self.assertTrue(all(not item['errors'] and not item['warnings'] for item in result['data']))
+                    self.assertTrue(all(not item['errors'] and not item['warnings'] for item in result['data']), json.dumps([{'errors': item['errors'], 'warnings': item['warnings']} for item in result['data']]))
                 finally:
                     process.terminate()
                     try:

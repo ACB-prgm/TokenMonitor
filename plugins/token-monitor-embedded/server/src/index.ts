@@ -7,18 +7,19 @@ import { z } from 'zod';
 import { recordRouting } from './routing-trace.js';
 import { acknowledgeStartup, startupState } from './startup.js';
 import { Panels } from './panels.js';
-import { CollectorBridge } from './collector.js';
+import { Collector } from './collector.js';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const resourceUri = 'ui://token-monitor-embedded/panel-v1.3.0.html';
-const summaryUri = 'ui://token-monitor-embedded/turn-summary-v1.3.0.html';
-const server = new McpServer({ name: 'token-monitor-embedded', version: '1.3.0' });
+const resourceUri = 'ui://token-monitor-embedded/panel-v1.4.0.html';
+const summaryUri = 'ui://token-monitor-embedded/turn-summary-v1.4.0.html';
+const server = new McpServer({ name: 'token-monitor-embedded', version: '1.4.0' });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
-const collector = new CollectorBridge();
+const collector = new Collector();
 const panels = new Panels(collector);
 process.on('exit', () => collector.close());
-process.stdin.on('end', () => collector.close());
+process.stdin.on('end', () => { collector.close(); void server.close(); });
 process.on('SIGTERM', () => { collector.close(); process.exit(0); });
+process.on('SIGINT', () => { collector.close(); process.exit(0); });
 function hostID(extra: { _meta?: Record<string, unknown> }): string | undefined {
   return typeof extra._meta?.threadId === 'string' ? extra._meta.threadId : undefined;
 }

@@ -23,14 +23,14 @@ async function fixture(){
   db.prepare('INSERT INTO threads VALUES (?,?,?,?,0,1)').run(id,`Task ${id}`,file,'/SECRET/workspace');
  }db.close();
  const client=new Client({name:'telemetry-integration',version:'1'});
- await client.connect(new StdioClientTransport({command:'/bin/sh',args:['scripts/launch.sh'],cwd:root,env:{...process.env,CODEX_HOME:home},stderr:'pipe'}));
+ await client.connect(new StdioClientTransport({command:process.execPath,args:[path.join(root,'server/dist/index.mjs')],cwd:root,env:{...process.env,CODEX_HOME:home},stderr:'pipe'}));
  const call=(name,args={},host)=>client.callTool({name,arguments:args,...(host?{_meta:{threadId:host}}:{})});
  const open=async(host)=>(await call('open_monitor',{},host))._meta.monitor;
  const refresh=async(panelId,args={},host)=>(await call('get_monitor_state',{panelId,...args},host))._meta?.monitor;
- const hook=(id,event='Stop')=>execFileSync(path.join(root,'runtime/TokenMonitorCollector'),['--hook'],{env:{...process.env,CODEX_HOME:home},input:JSON.stringify({hook_event_name:event,session_id:id,transcript_path:path.join(home,`${id}.jsonl`)})});
+ const hook=(id,event='Stop')=>execFileSync(process.execPath,[path.join(root,'server/dist/hook.mjs')],{env:{...process.env,CODEX_HOME:home},input:JSON.stringify({hook_event_name:event,session_id:id,transcript_path:path.join(home,`${id}.jsonl`)})});
  return {home,client,call,open,refresh,hook};
 }
-test('real Swift metrics bind exactly to the host, stay UI-only, and return only changed revisions',async()=>{
+test('real TypeScript metrics bind exactly to the host, stay UI-only, and return only changed revisions',async()=>{
  const f=await fixture();try{
   const s=await f.open('a');assert.equal(s.followingMode,'host-chat');assert.equal(s.selectedId,'a');
   assert.equal(s.input,100000);assert.equal(s.cached,80000);assert.equal(s.fresh,20000);assert.equal(s.model,'gpt-test');assert.equal(s.contextPercent,50);assert.equal(s.fiveHour.used,25);
@@ -89,16 +89,3 @@ test('concurrent task switches cannot label a stale snapshot as the newly select
  const last=await panels.state(id);assert.equal(last.task.id,last.selectedId);assert.equal(last.input,200);
 });
 
-test('the real collector bridge reconnects after its Swift child exits',async()=>{
- const f=await fixture(),previous=process.env.CODEX_HOME;
- process.env.CODEX_HOME=f.home;
- const bridge=new Panels().collector;
- try{
-  assert.equal((await bridge.request('catalog',{hostId:'a'})).hostMatched,true);
-  const child=bridge.child;
-  const exited=new Promise(resolve=>child.once('exit',resolve));child.kill('SIGKILL');await exited;
-  await assert.rejects(bridge.request('catalog'),/reconnecting/);
-  await new Promise(resolve=>setTimeout(resolve,1050));
-  assert.equal((await bridge.request('catalog',{hostId:'a'})).hostMatched,true);
- }finally{bridge.close();await f.client.close();if(previous===undefined)delete process.env.CODEX_HOME;else process.env.CODEX_HOME=previous;}
-});

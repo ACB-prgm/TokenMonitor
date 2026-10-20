@@ -41,7 +41,7 @@ test('single latest-call bar sits between thread usage and the graph and expands
  const summary=bar.match(/<summary[\s\S]*?<\/summary>/)[0];
  assert.match(summary,/<b>100.0k<\/b> \(90%\)/);assert.match(summary,/<b>1.2k<\/b>/);
  assert.match(summary,/Cache warmth: WARM/);assert.match(summary,/MEDIUM/);
- assert.match(bar,/Thinking/);assert.match(bar,/gpt-6.1-sol/);assert.match(bar,/Native heuristic break-even 6 calls/);assert.match(bar,/~10 calls/);
+ assert.match(bar,/Thinking/);assert.match(bar,/gpt-6.1-sol/);assert.match(bar,/Context heuristic break-even 6 calls/);assert.match(bar,/~10 calls/);
  assert.equal((html.match(/Compaction Value ·/g)??[]).length,1);
  assert.match(render(latestFixture,true),/<details class="latest-call" open/);
 });

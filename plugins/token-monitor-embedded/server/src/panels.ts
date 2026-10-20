@@ -1,12 +1,12 @@
 import { randomUUID, createHash } from 'node:crypto';
-import { CollectorBridge } from './collector.js';
+import { Collector } from './collector.js';
 
 type Panel = { hostId?: string; selected?: string; hook?: string; source: string;
   revision?: string; snapshot?: any; touched: number; disconnected: boolean; hostMatched: boolean };
 export class Panels {
   private panels = new Map<string, Panel>();
   private queues = new Map<string, Promise<any>>();
-  constructor(readonly collector = new CollectorBridge()) {}
+  constructor(readonly collector = new Collector()) {}
   create(hostId?: string) {
     const id = randomUUID();
     this.panels.set(id, { hostId, source: 'waiting', touched: Date.now(), disconnected: false, hostMatched: false });

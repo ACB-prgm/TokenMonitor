@@ -1,6 +1,6 @@
 {
   "name": "token-monitor-embedded",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -23,7 +23,7 @@
     "@types/react-dom": "19.2.3"
   },
   "license": "PolyForm-Noncommercial-1.0.0",
-  "description": "Local Codex token usage, context, cache, allowances, and API-equivalent cost in an embedded panel.",
+  "description": "Portable Codex token telemetry, collected locally by a bundled Node/TypeScript server.",
   "repository": {
     "type": "git",
     "url": "https://github.com/ACB-prgm/TokenMonitor.git"

@@ -8,7 +8,7 @@
             "type": "command",
             "command": "/bin/sh \"$PLUGIN_ROOT/scripts/launch.sh\" --startup-hook",
             "statusMessage": "Preparing TokenMonitor",
-            "timeout": 3
+            "timeout": 10
           }
         ]
       }
@@ -18,8 +18,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$PLUGIN_ROOT/runtime/TokenMonitorCollector\" --hook",
-            "timeout": 3
+            "command": "/bin/sh \"$PLUGIN_ROOT/scripts/launch.sh\" --hook",
+            "timeout": 10
           }
         ]
       }
@@ -29,8 +29,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$PLUGIN_ROOT/runtime/TokenMonitorCollector\" --hook",
-            "timeout": 3
+            "command": "/bin/sh \"$PLUGIN_ROOT/scripts/launch.sh\" --hook",
+            "timeout": 10
           }
         ]
       }
@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$PLUGIN_ROOT/runtime/TokenMonitorCollector\" --hook",
+            "command": "/bin/sh \"$PLUGIN_ROOT/scripts/launch.sh\" --hook",
             "timeout": 3
           }
         ]
@@ -51,8 +51,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$PLUGIN_ROOT/runtime/TokenMonitorCollector\" --hook",
-            "timeout": 3
+            "command": "/bin/sh \"$PLUGIN_ROOT/scripts/launch.sh\" --hook",
+            "timeout": 10
           }
         ]
       }
@@ -62,8 +62,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$PLUGIN_ROOT/runtime/TokenMonitorCollector\" --hook",
-            "timeout": 3
+            "command": "/bin/sh \"$PLUGIN_ROOT/scripts/launch.sh\" --hook",
+            "timeout": 10
           }
         ]
       }

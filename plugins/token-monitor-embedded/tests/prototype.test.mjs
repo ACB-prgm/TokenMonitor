@@ -19,8 +19,8 @@ async function connectedClient(env = {}) {
   const client = new Client({ name: 'embedded-prototype-tests', version: '0.1.0' });
   const manifest = JSON.parse(await readFile(root + '/.mcp.json', 'utf8'));
   const config = manifest.mcpServers['token-monitor-embedded'];
-  const transport = new StdioClientTransport({ command: config.command,
-    args: config.args, cwd: path.resolve(root, config.cwd), stderr: 'pipe',
+  const transport = new StdioClientTransport({ command: process.execPath,
+    args: [path.join(root,'server/dist/index.mjs')], cwd: path.resolve(root, config.cwd), stderr: 'pipe',
     env: { ...process.env, CODEX_HOME: testHome, ...env } });
   await client.connect(transport);
   return { client, transport };
@@ -89,13 +89,13 @@ test('six silent metadata command hooks include one first-prompt instruction, wi
   const manifest = JSON.parse(await readFile(root + '/.codex-plugin/plugin.json', 'utf8'));
   const hooks = JSON.parse(await readFile(path.resolve(root, manifest.hooks), 'utf8')).hooks;
   assert.deepEqual(Object.keys(hooks).sort(), ['PostCompact','PreCompact','SessionEnd','SessionStart','Stop','UserPromptSubmit']);
-  for (const groups of Object.values(hooks)) for (const group of groups) for (const handler of group.hooks) {
-    assert.equal(handler.type, 'command'); assert.equal(handler.timeout, 3); assert.equal(handler.async, undefined);
+  for (const [event, groups] of Object.entries(hooks)) for (const group of groups) for (const handler of group.hooks) {
+    assert.equal(handler.type, 'command'); assert.equal(handler.timeout, event==='SessionEnd'?3:10); assert.equal(handler.async, undefined);
   }
   assert.equal(hooks.UserPromptSubmit.length, 1);
   const handler = hooks.UserPromptSubmit[0].hooks[0];
   assert.equal(handler.type, 'command');
-  assert.equal(handler.timeout, 3);
+  assert.equal(handler.timeout, 10);
   assert.equal(handler.async, undefined);
   const { client } = await connectedClient();
   try {
@@ -108,8 +108,8 @@ async function startupHook(home, event) {
   const hooks = JSON.parse(await readFile(root + '/hooks/hooks.json', 'utf8')).hooks;
   const command = hooks.UserPromptSubmit[0].hooks[0].command;
   return new Promise((resolve, reject) => {
-    const child = spawn('/bin/sh', ['-c', command], { cwd: tmpdir(),
-      env: { PATH: '/usr/bin:/bin', PLUGIN_ROOT: root, CODEX_HOME: home } });
+    const child = spawn(process.execPath, [path.join(root,'server/dist/startup-hook.mjs')], { cwd: tmpdir(),
+      env: { ...process.env, NODE_NO_WARNINGS: '1', PLUGIN_ROOT: root, CODEX_HOME: home } });
     let stdout = '', stderr = '';
     child.stdout.on('data', data => { stdout += data; });
     child.stderr.on('data', data => { stderr += data; });
@@ -140,8 +140,8 @@ test('first-prompt instructions are atomic, once per chat, isolated, and omit pr
   assert.ok(record.requestedAt);
   assert.equal(record.launcherCalledAt, undefined);
   assert.deepEqual(Object.keys(record).sort(), ['requestedAt', 'sessionId', 'version']);
-  assert.equal((await stat(file)).mode & 0o777, 0o600);
-  assert.equal((await stat(path.dirname(file))).mode & 0o777, 0o700);
+  if(process.platform!=='win32')assert.equal((await stat(file)).mode & 0o777, 0o600);
+  if(process.platform!=='win32')assert.equal((await stat(path.dirname(file))).mode & 0o777, 0o700);
   assert.equal((await startupHook(home, { ...event, turn_id: 'second' })).stdout, '');
   assert.ok((await startupHook(home, { ...event, session_id: randomUUID() })).stdout);
 });
@@ -264,22 +264,22 @@ test('routing capture is opt-in, exact-thread scoped, private, and bounded', asy
     assert.equal(traces[1].originHint, 'hook');
     assert.equal(traces[1].arguments.sessionId, threadId);
     assert.doesNotMatch(text, /MUST_NOT_RECORD|PRIVATE_PROMPT/);
-    assert.equal((await stat(file)).mode & 0o777, 0o600);
+    if(process.platform!=='win32')assert.equal((await stat(file)).mode & 0o777, 0o600);
     assert.doesNotMatch(JSON.stringify(model), /model-call|window-1|model-item|MUST_NOT_RECORD|PRIVATE_PROMPT/);
     assert.equal(hook._meta.monitor.presentation, 'turn-summary');
     const helper = path.resolve(root, '../../scripts/routing_capture.py');
-    const result = JSON.parse(execFileSync('python3', [helper, '--state-root', path.dirname(directory), 'compare'], { encoding: 'utf8' }));
+    const result = JSON.parse(execFileSync(process.platform==='win32'?'python':'python3', [helper, '--state-root', path.dirname(directory), 'compare'], { encoding: 'utf8' }));
     assert.equal(result.status, 'captured');
     assert.equal(result.onlyManual['/callId'], 'model-call');
     assert.equal(result.httpHeaders.manual, null);
     assert.equal(result.httpHeaders.hook, null);
     assert.equal(result.sameTurn, true);
-    const watched = JSON.parse(execFileSync('python3', [helper, '--state-root', path.dirname(directory), 'watch', '--seconds', '1'], { encoding: 'utf8' }));
+    const watched = JSON.parse(execFileSync(process.platform==='win32'?'python':'python3', [helper, '--state-root', path.dirname(directory), 'watch', '--seconds', '1'], { encoding: 'utf8' }));
     assert.equal(watched.captureStopped, true);
     assert.equal(JSON.parse(await readFile(path.join(directory, 'routing-capture.json'), 'utf8')).enabled, false);
     config.maxRecords = 10;
     await writeFile(path.join(directory, 'routing-capture.json'), JSON.stringify(config));
-    execFileSync('python3', [helper, '--state-root', path.dirname(directory), 'stop']);
+    execFileSync(process.platform==='win32'?'python':'python3', [helper, '--state-root', path.dirname(directory), 'stop']);
     await call('show_turn_summary', { source: 'manual' }, { threadId });
     assert.equal(await readFile(file, 'utf8'), text);
     await writeFile(path.join(directory, 'routing-capture.json'), JSON.stringify(config));

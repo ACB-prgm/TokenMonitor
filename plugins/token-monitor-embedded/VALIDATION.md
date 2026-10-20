@@ -540,7 +540,7 @@ text and the “Fresh Input” legend label. Production build, type checking and
 private release log. Existing host connections require an installed-plugin
 refresh and a fresh chat to load the new UI.
 
-## Latest call placement and lock removal — 2026-10-19
+## 0.3.5 — latest call placement and lock removal (2026-10-19)
 
 - Moved the shared panel/summary Latest call disclosure immediately after Thread
   usage and before Recent calls, preserving its expanded details.

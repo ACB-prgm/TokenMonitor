@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 0.3.4
+# TokenMonitor Embedded 0.3.5
 
 Local Swift telemetry inside Codex's expanded conversation panel. Opens once per
 chat through the working first-prompt model instruction, then refreshes directly

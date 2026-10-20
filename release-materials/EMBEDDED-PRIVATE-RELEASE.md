@@ -70,3 +70,24 @@ The source native listing and submission materials are also marked deprecated.
 The logo problem remains unresolved in host presentation. Both Embedded and
 JobHunter have correct installed assets but null catalog image URLs. See
 `LOGO-DIAGNOSIS.md` for reproducible evidence and the catalog repair point.
+
+## 0.3.3 — selected-thread allowance estimates
+
+Published to the same private workspace plugin on 2026-10-19.
+Release: `pluginrel_6ad6d4e495a081918b0d25a67f36ff42`.
+
+Adds 5-hour and weekly (7-day) estimates beneath selected-thread API-equivalent
+cost, using the owner's fixed multipliers of 12.9 and 2.1 percentage points per
+USD. Full recorded thread cost is used across resets; partial coverage is marked,
+unknown pricing stays unknown, and estimates are not capped at 100%.
+
+Production build, type checking, all 26 Node tests, offline archive startup and
+six-hook host discovery pass. The bundled browser fixture shows both estimates.
+Before upload, verified every package inventory hash, no file removals, and
+unchanged manifest metadata/MCP configuration apart from the version bump.
+Runtime, hooks, launch script, notices and assets have identical hashes to 0.3.2.
+Account readback confirms version 0.3.3 and the estimate row/multipliers in both
+panel and inline-summary HTML. Audience remains WORKSPACE / PRIVATE.
+Existing running host connections may retain 0.3.2 until the installed plugin
+updates and a fresh chat loads the new connection; that host refresh was not
+performed as part of this release.

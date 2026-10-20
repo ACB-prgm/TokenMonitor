@@ -44,7 +44,7 @@ third-party notices; discuss commercial authorization with the copyright holder.
    README installation example. Commit the synchronized metadata.
 3. Run validation above and check a fresh desktop install, hook trust, panel
    opening, live refresh, task selection, and retained settings.
-4. Push dev, open a dev → main PR, wait for the `validate` check, and merge it.
+4. Push dev, open a dev → main PR, wait for the `validated-build` status, and merge it.
 5. Fetch main. On its tested commit, create `git tag -a vX.Y.Z -m "TokenMonitor
    X.Y.Z"`, then `git push origin vX.Y.Z`. The release workflow checks main
    ancestry and VERSION, rebuilds from the tag, tests the extracted package,
@@ -56,7 +56,11 @@ third-party notices; discuss commercial authorization with the copyright holder.
 
 Do not move published tags or replace existing stable assets. Fix failed validation
 before retrying a tag that has not published. Release jobs use a concurrency group
-and refuse to overwrite an existing published release. dev pushes never release.
+and refuse to overwrite an existing published release. dev pushes never release. CI publishes `validated-build` only from its actual
+job result, with a link to the run. This commit status also supports manual runs,
+whose workflow-job checks GitHub does not evaluate for PR protection. Main requires
+the GitHub Actions source for this status. Fork PRs run read-only checks; normal
+contributions target dev and release promotions run from the maintainer's dev branch.
 
 For an emergency fix, branch from the affected main/tag, make the smallest change,
 bump the patch version, and promote through a tested PR to main. Merge the released

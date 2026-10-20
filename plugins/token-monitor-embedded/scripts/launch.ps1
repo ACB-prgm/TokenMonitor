@@ -1,5 +1,13 @@
 param([string]$Mode = '')
 $ErrorActionPreference = 'Stop'
+# Hash directly through .NET: inherited PSModulePath may refer to another
+# PowerShell edition, and runtime verification must not depend on its modules.
+function Get-RuntimeDigest([string]$FilePath) {
+    $stream = [IO.File]::OpenRead($FilePath)
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { return [BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() }
+    finally { $sha.Dispose(); $stream.Dispose() }
+}
 $pluginRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $expected = [IO.File]::ReadAllText((Join-Path $pluginRoot 'runtime/node.sha256')).Trim()
 if ($expected -notmatch '^[0-9a-f]{64}$') { throw 'Invalid bundled runtime digest' }
@@ -14,7 +22,7 @@ if (!(Test-Path -LiteralPath $nodePath)) {
     $cacheRoot = Join-Path $dataRoot "runtime/$expected"
     [IO.Directory]::CreateDirectory($cacheRoot) | Out-Null
     $nodePath = Join-Path $cacheRoot 'node.exe'
-    if (!(Test-Path -LiteralPath $nodePath) -or (Get-FileHash -LiteralPath $nodePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) {
+    if (!(Test-Path -LiteralPath $nodePath) -or (Get-RuntimeDigest $nodePath) -ne $expected) {
         $temporary = Join-Path $cacheRoot ([Guid]::NewGuid().ToString() + '.tmp')
         try {
             $source = [IO.File]::OpenRead((Join-Path $pluginRoot 'runtime/node.gz'))
@@ -22,10 +30,10 @@ if (!(Test-Path -LiteralPath $nodePath)) {
                 $gzip = New-Object IO.Compression.GZipStream($source, [IO.Compression.CompressionMode]::Decompress)
                 try { $destination = [IO.File]::Create($temporary); try { $gzip.CopyTo($destination) } finally { $destination.Dispose() } } finally { $gzip.Dispose() }
             } finally { $source.Dispose() }
-            if ((Get-FileHash -LiteralPath $temporary -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Bundled runtime checksum mismatch' }
+            if ((Get-RuntimeDigest $temporary) -ne $expected) { throw 'Bundled runtime checksum mismatch' }
             # Another concurrent launcher may have already published the same bytes.
             try { [IO.File]::Move($temporary, $nodePath) } catch {
-                if (!(Test-Path -LiteralPath $nodePath) -or (Get-FileHash -LiteralPath $nodePath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) {
+                if (!(Test-Path -LiteralPath $nodePath) -or (Get-RuntimeDigest $nodePath) -ne $expected) {
                     Remove-Item -LiteralPath $nodePath -Force -ErrorAction SilentlyContinue
                     [IO.File]::Move($temporary, $nodePath)
                 }

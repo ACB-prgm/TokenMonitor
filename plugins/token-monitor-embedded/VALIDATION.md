@@ -531,3 +531,11 @@ cost changes, partial coverage, and independence from account telemetry. Offline
 archive startup regression and six-hook host discovery pass. The actual bundled
 panel rendered the estimate row correctly in the local browser fixture at the
 600px host width. Account-installed host rendering remains a separate check.
+
+## 0.3.4 — latest-call readability (2026-10-19)
+
+Includes committed UI changes `21568b6` and `103fefe`: larger latest-call bar
+text and the “Fresh Input” legend label. Production build, type checking and all
+26 Node tests pass. Release packaging and account readback are recorded in the
+private release log. Existing host connections require an installed-plugin
+refresh and a fresh chat to load the new UI.

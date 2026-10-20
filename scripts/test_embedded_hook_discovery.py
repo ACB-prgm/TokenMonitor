@@ -66,7 +66,7 @@ class EmbeddedHookDiscoveryTests(unittest.TestCase):
                         {'preCompact', 'postCompact', 'sessionStart', 'sessionEnd', 'userPromptSubmit', 'stop'})
                     self.assertEqual(len(found), 6)
                     self.assertTrue(all(hook['source'] == 'plugin' and hook['trustStatus'] == 'untrusted' for hook in found))
-                    self.assertTrue(all(not item['errors'] and not item['warnings'] for item in result['data']))
+                    self.assertTrue(all(not item['errors'] and not item['warnings'] for item in result['data']), json.dumps([{'errors': item['errors'], 'warnings': item['warnings']} for item in result['data']]))
                 finally:
                     process.terminate()
                     try:

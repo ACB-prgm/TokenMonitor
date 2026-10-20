@@ -89,8 +89,8 @@ test('six silent metadata command hooks include one first-prompt instruction, wi
   const manifest = JSON.parse(await readFile(root + '/.codex-plugin/plugin.json', 'utf8'));
   const hooks = JSON.parse(await readFile(path.resolve(root, manifest.hooks), 'utf8')).hooks;
   assert.deepEqual(Object.keys(hooks).sort(), ['PostCompact','PreCompact','SessionEnd','SessionStart','Stop','UserPromptSubmit']);
-  for (const groups of Object.values(hooks)) for (const group of groups) for (const handler of group.hooks) {
-    assert.equal(handler.type, 'command'); assert.equal(handler.timeout, 10); assert.equal(handler.async, undefined);
+  for (const [event, groups] of Object.entries(hooks)) for (const group of groups) for (const handler of group.hooks) {
+    assert.equal(handler.type, 'command'); assert.equal(handler.timeout, event==='SessionEnd'?3:10); assert.equal(handler.async, undefined);
   }
   assert.equal(hooks.UserPromptSubmit.length, 1);
   const handler = hooks.UserPromptSubmit[0].hooks[0];

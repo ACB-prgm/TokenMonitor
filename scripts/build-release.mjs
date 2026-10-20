@@ -32,7 +32,7 @@ for(const target of targets){
  const hooks={};for(const event of ['UserPromptSubmit','SessionStart','Stop','SessionEnd','PreCompact','PostCompact']){
   const mode=event==='UserPromptSubmit'?'--startup-hook':'--hook';
   const hookCommand=windows?`powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$env:PLUGIN_ROOT/scripts/launch.ps1" -Mode ${mode.slice(2)}`:`/bin/sh "$PLUGIN_ROOT/scripts/launch.sh" ${mode}`;
-  hooks[event]=[{hooks:[{type:'command',command:hookCommand,timeout:10,...(event==='UserPromptSubmit'?{statusMessage:'Preparing TokenMonitor'}:{})}]}];
+  hooks[event]=[{hooks:[{type:'command',command:hookCommand,timeout:event==='SessionEnd'?3:10,...(event==='UserPromptSubmit'?{statusMessage:'Preparing TokenMonitor'}:{})}]}];
  }
  await mkdir(path.join(output,'hooks'),{recursive:true});await writeFile(path.join(output,'hooks/hooks.json'),JSON.stringify({description:'Local metadata hooks and a once-per-chat startup instruction; no model refresh turns.',hooks},null,2)+'\n');
  await writeFile(path.join(output,'THIRD-PARTY-NOTICES.txt'),notices.join('\n\n---\n\n'));

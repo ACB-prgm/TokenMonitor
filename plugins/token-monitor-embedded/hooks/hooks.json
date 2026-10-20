@@ -41,7 +41,7 @@
           {
             "type": "command",
             "command": "/bin/sh \"$PLUGIN_ROOT/scripts/launch.sh\" --hook",
-            "timeout": 10
+            "timeout": 3
           }
         ]
       }

@@ -1,6 +1,0 @@
-interface:
-  display_name: "TokenMonitor (Deprecated)"
-  short_description: "Remove the legacy native monitor"
-  default_prompt: "Use $token-monitor to uninstall the deprecated native monitor, preserving saved data."
-policy:
-  allow_implicit_invocation: false

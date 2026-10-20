@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synchronize the active release metadata; legacy native history is unchanged."""
+"""Synchronize the active release metadata."""
 import json
 from pathlib import Path
 import re

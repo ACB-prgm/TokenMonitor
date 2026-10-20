@@ -1,14 +1,14 @@
 {
   "name": "token-monitor-embedded",
-  "version": "1.3.0",
-  "description": "Local Codex token telemetry in an automatically opened embedded panel.",
+  "version": "1.4.0",
+  "description": "Portable local Codex telemetry in an embedded panel, powered by a bundled Node runtime.",
   "mcpServers": "./.mcp.json",
   "hooks": "./hooks/hooks.json",
   "requires_local_executor": true,
   "interface": {
     "displayName": "TokenMonitor Embedded",
     "shortDescription": "Embedded Codex token monitor",
-    "longDescription": "Local token usage, per-call API-equivalent cost, thread input/output and reasoning totals, cache status, allowances, compaction, history, and tool attribution. Opens once per local chat through a first-prompt instruction; refreshes directly without model turns.",
+    "longDescription": "Local token usage, per-call API-equivalent cost, thread input/output and reasoning totals, cache status, allowances, compaction, history, and tool attribution. Bundled Node runtime for macOS and Windows. Opens once per local chat; refreshes directly without model turns.",
     "developerName": "ACB-prgm",
     "category": "Productivity",
     "logo": "./assets/icon.png",

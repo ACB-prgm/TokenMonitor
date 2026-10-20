@@ -24,4 +24,3 @@ archived_sessions/
 *.sqlite-shm
 *.sqlite-wal
 *.log
-.swiftpm/

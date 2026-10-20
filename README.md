@@ -1,183 +1,54 @@
 # TokenMonitor
 
-Token usage, context capacity, cache behavior, and account allowances inside Codex.
-TokenMonitor Embedded opens an interactive panel once per chat and refreshes locally
-while visible, without additional model turns or API keys.
+Portable, local Codex token telemetry in an embedded panel. A React interface and bundled Node/TypeScript server show usage without additional model turns or an external service.
 
-[Releases](https://github.com/ACB-prgm/TokenMonitor/releases/latest) ·
-[Report a bug](https://github.com/ACB-prgm/TokenMonitor/issues) ·
-[Development](CONTRIBUTING.md)
+![TokenMonitor panel](docs/tokenmonitor-preview.png)
 
-## Features
+## What it shows
 
-- Latest-call cached, fresh, input, output, and reasoning tokens.
-- Context capacity, five-hour and weekly account allowances, and reset times.
-- Thread API-equivalent cost, cache savings, and pricing coverage.
-- Recent-call charts, compaction markers, cache temperature, and tool attribution.
-- Per-panel task selection, light/dark themes, adjustable scale, and compact view.
-- Bundled Node runtime and Swift collector; no runtime downloads or external telemetry.
+- Recorded input, cache reads and writes, output and reasoning totals.
+- Context capacity, recent calls, cache temperature, and compaction state.
+- Account allowances and clearly labeled thread allowance estimates.
+- Tool and skill attribution estimates, and API-equivalent costs with explicit coverage limitations.
+- Separate live-panel and inline-summary views, with independent task selection.
 
-![TokenMonitor panel with synthetic demonstration data](docs/tokenmonitor-preview.png)
+Costs are estimates using the bundled rate table, not invoices. Subscription allowance estimates are calibrated approximations. Missing telemetry and unsupported pricing remain unavailable rather than displaying invented zeros.
 
-Preview of the production UI in the local MCP Apps test host, using synthetic
-demonstration data. It contains no private conversations or account telemetry.
-The old floating native HUD is retired; see [migration guidance](DEPRECATION.md).
+## Platforms and installation
 
-## Compatibility
+Packages target macOS Apple silicon (`macos-arm64`), macOS Intel (`macos-x64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop behavior is pending user verification for 1.4.0.
 
-The prebuilt package supports **Apple silicon Macs, macOS 13.5 or later**, with
-Codex desktop's local plugins, MCP Apps panel, and reviewed command hooks.
-The tested host is **Codex 0.163.0-alpha.10.2**. Later builds may change transcript
-formats or plugin behavior; they are not automatically certified.
+Version 1.4.0 is undergoing private Mac validation. GitHub distribution will be prepared after that confirmation and remain a draft until Windows validation. Existing published downloads belong to the previous architecture.
 
-Windows, Linux, Intel Macs, browser/mobile clients, and a standalone CLI panel
-are unsupported. The CLI manages installation; the desktop client renders the UI.
-Connected remote execution has been reported working by the maintainer but is not
-independently certified for this public release. Install on each execution Mac.
-The compatibility manifest is deliberate: the tested host discovers its hooks,
-whereas a root Agent Plugins manifest suppressed them during earlier tests.
+Once the matching release is available:
 
-## Installation
+1. Download `token-monitor-VERSION-PLATFORM.zip` and its `.sha256` companion from [Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Verify its SHA-256 checksum and extract the archive.
+2. Register the extracted `TokenMonitor` directory with `codex plugin marketplace add "ABSOLUTE_PATH_TO_TokenMonitor"`.
+3. Install with `codex plugin add token-monitor-embedded@tokenmonitor`. Enable and trust the six plugin hooks through Codex's normal controls if you want automatic startup and lifecycle updates.
+4. Reload the plugin or restart Codex when requested by the host. Open TokenMonitor in a local chat. The first-prompt instruction opens it once per chat when enabled; subsequent updates happen directly in the panel.
 
-Use the **prebuilt release**, which includes the actual server, UI, Swift collector,
-Node runtime, license notices, and a local marketplace. You need the Codex CLI
-available as `codex`; you do not need Node, Python, Xcode, or an OpenAI API key.
+The smaller `token-monitor-embedded-VERSION-PLATFORM.zip` contains the plugin alone for account deployment or a host's direct plugin installation. The source checkout does not include its bundled runtime or compiled assets; build a package before installing.
 
-Download `token-monitor-VERSION-macos-arm64.zip` and its `.sha256` file from
-[the latest release](https://github.com/ACB-prgm/TokenMonitor/releases/latest).
-For version 1.3.0:
+No system Node, Python, development tools, or API key is needed by an installed plugin. Platform launchers unpack a checksum-verified runtime already inside the package. Runtime operation requires no network downloads.
 
-```sh
-curl -fLO https://github.com/ACB-prgm/TokenMonitor/releases/download/v1.3.0/token-monitor-1.3.0-macos-arm64.zip
-curl -fLO https://github.com/ACB-prgm/TokenMonitor/releases/download/v1.3.0/token-monitor-1.3.0-macos-arm64.zip.sha256
-shasum -a 256 -c token-monitor-1.3.0-macos-arm64.zip.sha256
-mkdir -p "$HOME/Applications/TokenMonitor/1.3.0"
-unzip token-monitor-1.3.0-macos-arm64.zip -d "$HOME/Applications/TokenMonitor/1.3.0"
-codex plugin marketplace add "$HOME/Applications/TokenMonitor/1.3.0/TokenMonitor"
-codex plugin add token-monitor-embedded@tokenmonitor
-```
+## Update and removal
 
-Keep that version directory for updates and rollback. Open the desktop Plugins
-Directory, choose **TokenMonitor**, and confirm **TokenMonitor Embedded** is installed
-and enabled. Restart Codex if the source is not visible. Review and trust its six
-hooks in Settings → Hooks, then start a fresh chat. Ask “Open TokenMonitor” if it
-does not open automatically. First-prompt opening requires the model to follow the
-hook instruction. Installing a plugin does not grant hook trust.
+For a marketplace installation, register the newly extracted directory and reinstall/update `token-monitor-embedded@tokenmonitor` through Codex. Reload the host connection so the new server replaces the running version. For an account installation, update the existing plugin through its original account entry.
 
-The binaries are ad-hoc signed and **not notarized**. Respect macOS security prompts;
-this project does not remove quarantine or bypass Gatekeeper.
+Remove with `codex plugin remove token-monitor-embedded@tokenmonitor`, then `codex plugin marketplace remove tokenmonitor`. Account installations can be removed through Codex's plugin controls. Plugin telemetry state and runtime caches remain under `CODEX_HOME/token-monitor-embedded` unless explicitly removed; Codex chat data remains intact.
 
-Do not use `codex plugin marketplace add ACB-prgm/TokenMonitor --ref main` as an
-end-user installation: the Git source excludes compiled assets, and marketplace
-installation does not build them. The release contains a complete local marketplace.
-Universal public-directory listing is a separate review process and is not claimed.
+## Privacy and behavior
 
-## Updating and rollback
+The server reads local Codex JSONL telemetry and schema-checked SQLite thread metadata. It opens databases read-only and does not modify chats. It returns aggregate metrics and task labels to the panel; raw transcripts, prompts and absolute transcript paths are not returned. Runtime state uses the configured Codex home, with private plugin storage preferred for runtime caches when supplied by the host.
 
-Download and verify the next release, extract to its own version directory, then
-repeat the marketplace-add and plugin-add commands using that directory. If your
-host refuses to replace the local source, run `codex plugin marketplace remove
-tokenmonitor` first, then add the new version's directory. Start a fresh chat and
-review changed hooks. Do not delete monitor state during an update.
-
-The same procedure with a previous release rolls back. Historical release assets
-remain available. Close old panels to avoid using a previous running connection.
-
-## Uninstallation
-
-```sh
-codex plugin remove token-monitor-embedded@tokenmonitor
-codex plugin marketplace remove tokenmonitor
-```
-
-You can then delete the extracted version directories. Monitor metadata remains in
-`${CODEX_HOME:-~/.codex}/token-monitor-embedded`; host-managed plugin data may also
-contain an extracted runtime. Remove retained data only if you explicitly want to
-reset it. Codex conversation logs are owned by Codex and are never deleted by this
-plugin. Removing Embedded does not uninstall a legacy native HUD; use its own
-[uninstaller](DEPRECATION.md).
-
-## Usage and interpretation
-
-Enable reviewed hooks and send a prompt in a new chat. The panel refreshes every
-two seconds while visible; refreshes do not send prompts. Choose a local task to
-inspect its recorded usage. Host identity is used only after validating the exact
-session; fallback follows valid hook events, including background completions.
-
-**Input already includes cached input. Fresh = input − cached.** Reasoning is
-included in output. Missing telemetry displays an em dash. Context is observed
-usage, not a forecast. Cost is an API-equivalent estimate using the bundled rate
-table, not a subscription bill. Thread allowance estimates use fixed calibrations
-and lifetime thread cost; they are not measured rolling-window account usage.
-Tool attribution and compaction recommendations are approximations.
-
-[Detailed behavior and assumptions](plugins/token-monitor-embedded/README.md)
-include pricing coverage, partial histories, fork limits, and reset semantics.
+UI refreshes do not request model turns or update model context. The optional first-prompt hook emits one startup instruction. Other lifecycle hooks record bounded metadata and do not launch a window. Diagnostics are off unless explicitly enabled locally.
 
 ## Development
 
-Requires Apple silicon macOS, Swift/Xcode, Node 24, and Python 3 for build tooling.
-SwiftUI/AppKit native sources remain for shared telemetry and legacy cleanup;
-the supported UI is React/TypeScript served by a local stdio MCP server.
+Use Node 24 LTS and Python 3.12+ for build-time archive extraction only. Run `npm ci` in `plugins/token-monitor-embedded`, followed by `node scripts/build-release.mjs --target macos-arm64` from the repository root. Supported `--target` values are the four platform names above and `all`. Archives and SHA-256 files are written to `dist/`.
 
-```sh
-swift test
-python3 scripts/test_hooks.py
-cd plugins/token-monitor-embedded
-npm ci --ignore-scripts
-npm run build
-npm run typecheck
-npm test
-cd ../..
-python3 scripts/check-release.py
-python3 scripts/build-release.py
-python3 scripts/test_embedded_archive.py
-python3 scripts/test_embedded_hook_discovery.py
-python3 scripts/test_release_install.py
-```
-
-The release builder downloads only the pinned official Node archive at build time,
-verifies its SHA-256, and bundles it. `VERSION` is authoritative; use
-`python3 scripts/set-version.py X.Y.Z` to synchronize active package/UI metadata.
-The retired native manifest keeps its historical version.
-
-## Releases and maintenance
-
-[CHANGELOG.md](CHANGELOG.md) records releases. Public versioning starts at **1.3.0**
-to follow the historical native 1.2.0 and embedded 0.3.5 versions without reusing them.
-Development follows `feature/* → dev → tested PR → main → annotated vX.Y.Z tag →
-GitHub Release`. Small changes may go directly to dev. Tags run the release workflow;
-dev commits do not publish. [CONTRIBUTING.md](CONTRIBUTING.md) covers patches,
-features, breaking changes, emergency fixes, and rollback.
-
-## Privacy and data handling
-
-Processing stays on the execution Mac. The collector reads Codex telemetry and
-schema-checked task metadata without editing transcripts or databases. Task IDs,
-derived titles, workspace basenames, and aggregates reach the panel in UI-only
-metadata. Raw transcripts, prompt text, and full source paths remain in the collector.
-The panel can reveal task context; consider that before sharing a screenshot.
-
-Startup uses one model-visible instruction per chat. The diagnostic routing recorder
-is off by default. No external analytics, uploads, cloud services, credentials, or
-pricing requests are introduced. Local metadata and runtime caches persist across
-updates. Codex's transcript format is not a stable public telemetry API.
+See [Contributing](CONTRIBUTING.md) for tests and the staged release process. The shared TypeScript collector runs inside the MCP server. Platform adapters cover path validation, data locations, safe writes and runtime launch. Linux packaging is deferred.
 
 ## License
 
-Original TokenMonitor code is licensed under **PolyForm Noncommercial License 1.0.0**
-(`PolyForm-Noncommercial-1.0.0`); see [LICENSE](LICENSE) and [NOTICE](NOTICE).
-It is free for personal and other uses permitted by the license. You may modify and
-redistribute it within those terms. Commercial use requires separate authorization
-from the copyright holder unless otherwise permitted by the license.
-
-Public source availability does not make this OSI-approved open source. Third-party
-components retain their respective licenses; release packages include their notices.
-TokenMonitor is independent of OpenAI.
-
-## Bug reports and contributions
-
-[Open an issue](https://github.com/ACB-prgm/TokenMonitor/issues) with the release,
-macOS and Codex versions, expected behavior, and reproduction steps. Redact task
-titles, paths, and account details; do not upload raw conversations, credentials,
-or your Codex data directory. Read [CONTRIBUTING.md](CONTRIBUTING.md) before a PR.
+[PolyForm Noncommercial 1.0.0](LICENSE). Noncommercial use only under the license terms. Bundled dependencies retain their own licenses and notices.

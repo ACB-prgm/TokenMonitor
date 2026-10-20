@@ -1,19 +1,9 @@
 import { build } from 'esbuild';
-import { mkdir, readFile, writeFile, copyFile, chmod } from 'node:fs/promises';
-import { execFileSync } from 'node:child_process';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const repository = path.resolve(root, '../..');
-const swiftArgs = ['build', '-c', 'release', '--product', 'TokenMonitorCollector', '--triple', 'arm64-apple-macosx13.5'];
-execFileSync('swift', swiftArgs, { cwd: repository, stdio: 'inherit' });
-const bin = execFileSync('swift', [...swiftArgs, '--show-bin-path'], { cwd: repository, encoding: 'utf8' }).trim();
-await mkdir(path.join(root, 'runtime'), { recursive: true });
-await copyFile(path.join(bin, 'TokenMonitorCollector'), path.join(root, 'runtime/TokenMonitorCollector'));
-await chmod(path.join(root, 'runtime/TokenMonitorCollector'), 0o755);
-execFileSync('/usr/bin/strip', ['-S', path.join(root, 'runtime/TokenMonitorCollector')]);
-execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', path.join(root, 'runtime/TokenMonitorCollector')]);
 await mkdir(path.join(root, 'server/dist'), { recursive: true });
 await mkdir(path.join(root, 'ui/dist'), { recursive: true });
 const ui = await build({
@@ -28,10 +18,10 @@ await writeFile(path.join(root, `ui/dist/${view}.html`), `<!doctype html>
 <title>TokenMonitor Embedded</title><style>${await readFile(path.join(root, 'ui/src/style.css'), 'utf8')}</style></head>
 <body><div id="root"></div><script>${script}</script></body></html>`);
 }
-for (const entry of ['index', 'startup-hook', 'panels']) await build({
+for (const entry of ['index', 'startup-hook', 'hook', 'panels', 'collector', 'parser', 'metrics', 'platform', 'tail']) await build({
   entryPoints: [path.join(root, `server/src/${entry}.ts`)], bundle: true,
   platform: 'node', format: 'esm', target: 'node24',
   outfile: path.join(root, `server/dist/${entry}.mjs`),
   banner: { js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url);' },
 });
-console.log('Built local telemetry collector, embedded panel, and MCP server.');
+console.log('Built portable telemetry modules, embedded panel, and MCP server.');

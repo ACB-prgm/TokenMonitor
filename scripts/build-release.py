@@ -36,8 +36,9 @@ if output.parent.exists():
 shutil.copytree(repo / 'dist/token-monitor-embedded', output / 'plugins/token-monitor-embedded')
 (output / '.agents/plugins').mkdir(parents=True)
 shutil.copy2(repo / '.agents/plugins/marketplace.json', output / '.agents/plugins/marketplace.json')
-for name in ['README.md', 'LICENSE', 'NOTICE', 'CHANGELOG.md']:
+for name in ['README.md', 'LICENSE', 'NOTICE', 'CHANGELOG.md', 'CONTRIBUTING.md', 'DEPRECATION.md']:
     shutil.copy2(repo / name, output / name)
+shutil.copytree(repo / 'docs', output / 'docs')
 commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=repo, text=True).strip()
 dirty = bool(subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=repo))
 (output / 'BUILD.json').write_text(json.dumps({'version': version, 'commit': commit, 'dirty': dirty}, indent=2) + '\n')

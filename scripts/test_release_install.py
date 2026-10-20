@@ -33,6 +33,8 @@ class ReleaseInstallTests(unittest.TestCase):
                     if mode and not entry.is_dir():
                         (root / entry.filename).chmod(mode)
             source = root / 'TokenMonitor'
+            for name in ['README.md', 'CONTRIBUTING.md', 'DEPRECATION.md', 'docs/tokenmonitor-preview.png']:
+                self.assertTrue((source / name).is_file(), name)
             (root / 'profile').mkdir()
             env = {**os.environ, 'CODEX_HOME': str(root / 'profile')}
             def codex(*args):

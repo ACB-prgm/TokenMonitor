@@ -1,170 +1,183 @@
-# Codex Usage Monitor
+# TokenMonitor
 
-A native macOS HUD for Codex Desktop token telemetry. SwiftUI + AppKit, macOS 13+, no dependencies, API keys, or model calls. Local monitoring makes no network requests; optional remote monitoring uses SSH. This project is in `/Users/aaronbastian/code/TokenMonitor`.
+Token usage, context capacity, cache behavior, and account allowances inside Codex.
+TokenMonitor Embedded opens an interactive panel once per chat and refreshes locally
+while visible, without additional model turns or API keys.
 
-Compact is the first-launch default:
+[Releases](https://github.com/ACB-prgm/TokenMonitor/releases/latest) ·
+[Report a bug](https://github.com/ACB-prgm/TokenMonitor/issues) ·
+[Development](CONTRIBUTING.md)
 
-```text
-Codex · Task title                         10:37 PM
-Cached 66.7k · Fresh 1.3k · Input 68.0k
-Out 41 · Context 26% · 5h 42% used · 7d 77% used
-Call 13 · 3a8e8218 · Following hook-selected task
-```
+## Features
 
-Expanded adds model/effort/workspace, full call time, cache hit, reasoning/total output, context bar and warning label, quota resets, input/fresh history, and a thread-details disclosure. Hover token metrics for exact integers.
+- Latest-call cached, fresh, input, output, and reasoning tokens.
+- Context capacity, five-hour and weekly account allowances, and reset times.
+- Thread API-equivalent cost, cache savings, and pricing coverage.
+- Recent-call charts, compaction markers, cache temperature, and tool attribution.
+- Per-panel task selection, light/dark themes, adjustable scale, and compact view.
+- Bundled Node runtime and Swift collector; no runtime downloads or external telemetry.
 
-```text
-Cached · Fresh · Input
-Model · effort · workspace
-Last call: local date and time
-Cache hit · Reason · Total
-Context / observed limit · Healthy/Elevated/High/Very high
-5 hours used + reset          Weekly used + reset
-Recent calls: input / fresh history
-▸ Thread details
-```
+![TokenMonitor project icon](plugins/token-monitor-embedded/assets/icon.png)
 
-## Build, install, remove
+The icon above is the existing project asset. A release screenshot will be added
+once captured from a clean installation; no private conversation screenshot is bundled.
+The old floating native HUD is retired; see [migration guidance](DEPRECATION.md).
 
-Requires Apple's Swift toolchain / Xcode Command Line Tools and the macOS system Python 3. No downloads during build.
+## Compatibility
 
-```sh
-swift test
-/usr/bin/python3 -m unittest discover -s scripts -p 'test_*.py'
-./scripts/install.sh
-./scripts/uninstall.sh
-# Explicitly remove the retained monitor state/logs/preferences too:
-./scripts/uninstall.sh --purge
-```
+The prebuilt package supports **Apple silicon Macs, macOS 13.5 or later**, with
+Codex desktop's local plugins, MCP Apps panel, and reviewed command hooks.
+The tested host is **Codex 0.163.0-alpha.10.2**. Later builds may change transcript
+formats or plugin behavior; they are not automatically certified.
 
-The installer builds an ad-hoc signed release app, discovers the installed Codex bundle, preserves unrelated hooks, removes only exact old experimental usage-hook commands, and backs up `hooks.json` every time. It is safe to rerun. Existing experimental script files remain untouched. The uninstaller removes this monitor's exact registrations; it does not restore obsolete hooks or change unrelated Codex settings.
+Windows, Linux, Intel Macs, browser/mobile clients, and a standalone CLI panel
+are unsupported. The CLI manages installation; the desktop client renders the UI.
+Connected remote execution has been reported working by the maintainer but is not
+independently certified for this public release. Install on each execution Mac.
+The compatibility manifest is deliberate: the tested host discovers its hooks,
+whereas a root Agent Plugins manifest suppressed them during earlier tests.
 
-**Hook trust:** Review the four changed user hooks in Codex's `/hooks` interface (or the app's hooks settings). Trust the reviewed definitions, then resume/reopen a task if needed. The installer does not bypass hook trust. Until hooks run, automatic startup can show a waiting or last-recorded task; it cannot discover the active task by itself. The initial installation was smoke-tested by directly invoking the bridge with this task's verified session ID and transcript path, not by changing trust state.
+## Installation
 
-Installed locations:
+Use the **prebuilt release**, which includes the actual server, UI, Swift collector,
+Node runtime, license notices, and a local marketplace. You need the Codex CLI
+available as `codex`; you do not need Node, Python, Xcode, or an OpenAI API key.
 
-- `~/Applications/Codex Usage Monitor.app`
-- `~/.codex/hooks/TokenMonitor.py`
-- `~/.codex/hooks.json` (merged; backups named `hooks.json.usage-monitor-backup-<timestamp>`)
-- `~/.codex/usage-monitor/installation.json` (discovered bundle ID and paths)
-- `~/.codex/usage-monitor/active-session.json` (only task metadata)
-- `~/.codex/usage-monitor/suppression.json` (explicit-Quit PID)
-- `~/.codex/usage-monitor/CodexUsageLauncher` (startup helper)
-- `~/Library/LaunchAgents/local.codex.usage-monitor.launcher.plist`
-- `~/Library/Preferences/local.codex.usage-monitor.plist` (macOS-managed UI preferences)
-- `~/.codex/usage-monitor/logs/hook.log` (bounded error-class diagnostics, only if needed)
-
-## Operation
-
-The gauge menu-bar icon provides Show/Hide, Expanded, Click-through, and Quit Monitor. The HUD's chevron toggles compact/expanded. The corner picker beside it snaps to any corner of the current screen; the selected corner stays anchored when the content resizes. Dragging releases the corner anchor. Both modes size to their content and follow the system light/dark appearance. Drag the panel background to reposition it. Mode, position, hidden state, and click-through persist. The window floats above normal windows and does not become key or steal typing focus. There is no Dock icon. Click-through never disables the menu-bar control.
-
-Closing or hiding keeps monitoring, and subsequent hooks never show the hidden HUD. Quit Monitor persists the current Codex Desktop PID; neither hooks nor the startup helper relaunch it for that PID. A new Codex Desktop PID enables automatic launch again. Manually opening the app is an explicit override. The HUD exits about 6–8 seconds after Codex disappears. A separate small event-driven launcher remains resident to observe the next macOS application launch; it does not read transcripts or poll processes. The HUD checks application liveness every two seconds using NSWorkspace.
-
-This machine's Codex Desktop is `/Applications/ChatGPT.app`, executable `ChatGPT`, bundle ID `com.openai.codex`. Installation records the detected paths. The lifecycle follows that whole application process, not an individual Codex window inside it.
-
-## Meaning and limitations
-
-`input_tokens` already includes cached tokens. **Fresh = Input − Cached**. Never add Cached to Input. Cached, Fresh, Input always appear in that order. Output includes whatever output telemetry reports; reasoning is shown separately without adding it again. Cache-write tokens are parsed for schema compatibility but are not added to input or cached values.
-
-Context is the most recent model call's input divided by the **observed** `model_context_window`. No hard-coded context denominator or model fallback map is used. Unknown limits display the count. This is a last-call measurement, not a forecast of the next request. The thresholds are <40% healthy, 40–<60% elevated, 60–<75% high, and ≥75% very high. Labels accompany colors.
-
-Quota windows are identified by their reported 300/10080-minute duration, and percentages explicitly mean **used**. Missing telemetry displays an em dash. Reset times are local. Unknown quota window lengths are not guessed.
-
-The task title is a dropdown listing up to 30 recent, unarchived local tasks with readable transcripts. Select one to inspect its latest recorded usage without sending a prompt. Selecting a task does not change the lock. The monitor starts unlocked: the next SessionStart, UserPromptSubmit, Stop, or SessionEnd hook selects its task, including background completions. The adjacent lock button is the only control that changes locking. While locked, other tasks’ hooks are ignored; manually choosing another task moves the lock to that task. Unlocking keeps the current task visible until the next hook event. Lock state resets to unlocked on app launch. Duplicate file notifications do not undo a manual selection. Use Refresh tasks in the menu to reload the list. The list also refreshes on startup and new hooks. This follows hook events, not Codex’s visibly selected task; clicking between tasks in Codex alone is not a reliable hook event.
-
-Titles prefer hook metadata, then a read-only schema-checked query of Codex's `state_*.sqlite` (`name` or `title`), then a sanitized first meaningful user prompt, then workspace + short ID. Attachment-wrapper titles are skipped. Only the short derived title lives in memory. There is no Accessibility/UI scraping in the app. UI automation was used only to inspect the resulting HUD during development.
-
-Parsing is isolated in `MonitorCore/CodexTelemetryParser`. It accepts unknown fields, skips malformed and zero-input call records, and continues to ingest quota-only events. The latest 120 calls are kept in memory; initial history is streamed from disk. Offset-based reads and filesystem notifications handle partial final lines, append, replacement, and truncation, with a small byte checkpoint to detect truncate-and-regrow. Identical consecutive records are deduplicated. Like any file watcher, it cannot recover intermediate bytes overwritten before observation.
-
-The [official hook documentation](https://learn.chatgpt.com/docs/hooks) documents hook input, user hooks, and trust, and explicitly states that transcript format is not a stable hook API. Future Codex schema changes may require a parser update. No rollout or Codex database is modified.
-
-## Validation
-
-See [VALIDATION.md](VALIDATION.md) for verified behavior, source parity, and manual checks still pending. A read-only diagnostic command is also available:
+Download `token-monitor-VERSION-macos-arm64.zip` and its `.sha256` file from
+[the latest release](https://github.com/ACB-prgm/TokenMonitor/releases/latest).
+For version 1.3.0:
 
 ```sh
-.build/release/CodexUsageMonitor --inspect /absolute/path/to/rollout.jsonl
+curl -fLO https://github.com/ACB-prgm/TokenMonitor/releases/download/v1.3.0/token-monitor-1.3.0-macos-arm64.zip
+curl -fLO https://github.com/ACB-prgm/TokenMonitor/releases/download/v1.3.0/token-monitor-1.3.0-macos-arm64.zip.sha256
+shasum -a 256 -c token-monitor-1.3.0-macos-arm64.zip.sha256
+mkdir -p "$HOME/Applications/TokenMonitor/1.3.0"
+unzip token-monitor-1.3.0-macos-arm64.zip -d "$HOME/Applications/TokenMonitor/1.3.0"
+codex plugin marketplace add "$HOME/Applications/TokenMonitor/1.3.0/TokenMonitor"
+codex plugin add token-monitor-embedded@tokenmonitor
 ```
 
-This prints only the last call's token metadata, time, count, and formatted metric row. It performs no network or model calls.
+Keep that version directory for updates and rollback. Open the desktop Plugins
+Directory, choose **TokenMonitor**, and confirm **TokenMonitor Embedded** is installed
+and enabled. Restart Codex if the source is not visible. Review and trust its six
+hooks in Settings → Hooks, then start a fresh chat. Ask “Open TokenMonitor” if it
+does not open automatically. First-prompt opening requires the model to follow the
+hook instruction. Installing a plugin does not grant hook trust.
 
-Closing or hiding the HUD hides it until the next recorded call, prompt hook, or Stop hook. Quit Monitor suppresses relaunch for the current Codex process. SessionStart, UserPromptSubmit and Stop hooks reopen the app unless suppressed. Changing the installed hook command to TokenMonitor.py may require reviewing/trusting it again and resuming the task.
+The binaries are ad-hoc signed and **not notarized**. Respect macOS security prompts;
+this project does not remove quarantine or bypass Gatekeeper.
 
-### Desktop placement
+Do not use `codex plugin marketplace add ACB-prgm/TokenMonitor --ref main` as an
+end-user installation: the Git source excludes compiled assets, and marketplace
+installation does not build them. The release contains a complete local marketplace.
+Universal public-directory listing is a separate review process and is not claimed.
 
-TokenMonitor occupies one macOS Space. Hooks and new telemetry show or relocate it only while Codex is the foreground app. Background completions update data without presenting or moving the panel. Returning to Codex (or changing Spaces while Codex is foreground) brings an enabled panel to that active Space. A hidden panel reappears on return only if a new hook or call has arrived. The menu's Show HUD remains an explicit manual override. Quit Monitor still suppresses automatic launch for the current Codex process.
+## Updating and rollback
 
-### Panel size
+Download and verify the next release, extract to its own version directory, then
+repeat the marketplace-add and plugin-add commands using that directory. If your
+host refuses to replace the local source, run `codex plugin marketplace remove
+tokenmonitor` first, then add the new version's directory. Start a fresh chat and
+review changed hooks. Do not delete monitor state during an update.
 
-Compact mode is 340 points wide (expanded mode remains 440). The separate layout-size menu offers 85%, 100%, and 115% size choices, scaling the text and controls together and remembering the choice. Bottom-snapped panels expand upward with their bottom edge anchored. Unsnapped panels are moved back within the visible screen when their content grows.
+The same procedure with a previous release rolls back. Historical release assets
+remain available. Close old panels to avoid using a previous running connection.
 
-Corner snapping tolerates accidental drags: movement up to 20 screen points retains the selected corner and returns there on release. Larger drags detach the HUD; releasing within 25 points of a corner snaps it there. Compact/full and scale changes retain that corner anchor.
-
-The **Skills & tools** disclosure adds one line to the compact HUD. Expand it for skill/call counts, the three largest contributors, and a scrollable per-group breakdown. Percentages divide estimated retained tool/skill tokens by the latest call's input tokens (not the model's maximum window).
-
-Attribution is approximate: `ContextAttributionEstimator` estimates recorded arguments and text results at four characters per token. Skill reads are recognized heuristically from read commands targeting `SKILL.md`; catalogs alone are not loaded skills. Read/search and shell calls are grouped, MCP names remain identifiable, and wrapped executions count once without inventing per-inner-call allocations. Counts cover the observed retained history, not session lifetime. The parser freezes the estimate before the response so newly produced tool results enter the next input's estimate. Compaction rebuilds from replacement history and excludes summaries whose provenance is unavailable. Images, hidden schemas, and unlogged content are not estimated. Totals are bounded by measured input; the approximation can over- or underestimate actual retention. The estimator is separate from UI/parsing so a tokenizer or richer telemetry can replace it later.
-
-### Compaction indicators
-PreCompact and PostCompact hooks update the silent bridge for both manual and automatic compaction. The footer shows “Compacting…” until completion or a subsequent lifecycle event; transcript completion or a newer call also clears it. PostCompact triggers a transcript refresh; token totals remain the latest recorded call until new usage telemetry arrives.
-Faint dotted chart lines mark completed `compacted` transcript records between adjacent calls. They survive monitor restarts and disappear when they fall outside the recent-call chart. The chart uses call order, not elapsed time. New hooks must be trusted in Codex before they run; no conversation/system messages are emitted.
-
-### Codex app lifecycle
-The monitor exits immediately when macOS reports Codex termination. The existing two-second process check and five-second absence grace period remain unchanged as a fallback. Notifications add no polling. Unrelated app exits are ignored; if a replacement Codex instance is already running, the monitor stays open. Automatic shutdown does not suppress the next automatic launch.
-
-Automatic task following ignores internal/subagent session headers and waits for a valid transcript before accepting an unidentified task. After compaction, Input ≈ and Context use the reduced context reported by Codex; Cached/Fresh show — until a model call supplies actual cache usage. Compaction bookkeeping does not add a call to the graph.
-
-Compaction Value uses S = max(30% of current input, 40k), cached/fresh cost ratio 0.10, and 3,600 estimated compaction output tokens with weight 1.0. The common current-context read cancels. Break-even is the first whole model-call count strictly above 1 + (S + 3,600)/(0.10 × (C−S)). VERY HIGH means at most 2 calls, HIGH 3–4, MEDIUM 5–7, LOW 8–12, and VERY LOW over 12 or no break-even. Compact labels use XHIGH, MED, and XLOW. This does not measure conversation quality or predict how many calls remain.
-
-Cache temperature predicts availability before the next model call: WARM under 30 minutes, UNCERTAIN from 30 through 120 minutes, PRES. COLD afterward. A one-shot transition timer and wake/activation refresh avoid polling for this status. Actual cache-hit telemetry remains unchanged. Cache temperature does not affect Compaction Value. The app never compacts automatically.
-
-Cmd+\ toggles compact/expanded mode while TokenMonitor is visible on the active desktop. The shortcut is unregistered while hidden or on another desktop; no keyboard-monitoring permission or polling is required.
-
-
-## Shareable Codex plugin (1.2.0)
-
-The shareable release is `dist/token-monitor-1.2.0.zip`. It packages an explicitly invoked setup/maintenance skill and a prebuilt Apple silicon app for macOS 13+. Recipients do not need Python, Xcode, an MCP server, or an API key. Install the plugin, start a new Codex task, and invoke **Set up TokenMonitor**. The companion app is independent of OpenAI and the package is not publicly approved merely because local validation passed.
-
-Setup uses macOS Launch Services, preserves quarantine, installs the native app and launch helper, and migrates exact owned hook registrations to the app's `--hook` mode. Review the six changed hook definitions in Codex Settings > Hooks; setup never modifies trust records. A one-time macOS first-open approval may be needed because this release is ad-hoc signed and unnotarized.
-
-The skill supports setup/update/repair, read-only `--doctor`, and `--uninstall` with an explicitly requested optional `--purge`. The app menu also offers uninstall. Removing the plugin alone leaves the separately installed companion and user hooks; ordinary uninstall retains monitor preferences/state. Updates preserve unrelated hooks and roll back installed files if setup fails. Unknown app/helper files and malformed hook configuration are refused.
-
-### Build the release
-
-Developer prerequisites: Apple silicon macOS, Swift/Xcode toolchain, Python 3, and the Codex system skill-creator validator. Packaging uses the repository plugin scaffold validator when the optional system plugin validator is unavailable. Python is build-time only for this packaging route. The existing Python installer remains available for developer compatibility; use the plugin skill for native recipient setup.
+## Uninstallation
 
 ```sh
-python3 -m venv .build/plugin-tools
-.build/plugin-tools/bin/pip install -r scripts/release-requirements.txt
+codex plugin remove token-monitor-embedded@tokenmonitor
+codex plugin marketplace remove tokenmonitor
+```
+
+You can then delete the extracted version directories. Monitor metadata remains in
+`${CODEX_HOME:-~/.codex}/token-monitor-embedded`; host-managed plugin data may also
+contain an extracted runtime. Remove retained data only if you explicitly want to
+reset it. Codex conversation logs are owned by Codex and are never deleted by this
+plugin. Removing Embedded does not uninstall a legacy native HUD; use its own
+[uninstaller](DEPRECATION.md).
+
+## Usage and interpretation
+
+Enable reviewed hooks and send a prompt in a new chat. The panel refreshes every
+two seconds while visible; refreshes do not send prompts. Choose a local task to
+inspect its recorded usage. Host identity is used only after validating the exact
+session; fallback follows valid hook events, including background completions.
+
+**Input already includes cached input. Fresh = input − cached.** Reasoning is
+included in output. Missing telemetry displays an em dash. Context is observed
+usage, not a forecast. Cost is an API-equivalent estimate using the bundled rate
+table, not a subscription bill. Thread allowance estimates use fixed calibrations
+and lifetime thread cost; they are not measured rolling-window account usage.
+Tool attribution and compaction recommendations are approximations.
+
+[Detailed behavior and assumptions](plugins/token-monitor-embedded/README.md)
+include pricing coverage, partial histories, fork limits, and reset semantics.
+
+## Development
+
+Requires Apple silicon macOS, Swift/Xcode, Node 24, and Python 3 for build tooling.
+SwiftUI/AppKit native sources remain for shared telemetry and legacy cleanup;
+the supported UI is React/TypeScript served by a local stdio MCP server.
+
+```sh
 swift test
 python3 scripts/test_hooks.py
-python3 scripts/package-plugin.py
-python3 scripts/test_plugin_archive.py
+cd plugins/token-monitor-embedded
+npm ci --ignore-scripts
+npm run build
+npm run typecheck
+npm test
+cd ../..
+python3 scripts/check-release.py
+python3 scripts/build-release.py
+python3 scripts/test_embedded_archive.py
+python3 scripts/test_embedded_hook_discovery.py
+python3 scripts/test_release_install.py
 ```
 
-`VERSION` is the app/release version source. `scripts/package-plugin.py` produces the plugin directory, ZIP, checksum file and structural verification report. It scans for personal home paths and excludes transcripts/caches. `--skip-build` is for a previously built matching app. Developer-local cachebuster suffixes are used only when refreshing the personal marketplace installation, not in the distributable ZIP.
+The release builder downloads only the pinned official Node archive at build time,
+verifies its SHA-256, and bundles it. `VERSION` is authoritative; use
+`python3 scripts/set-version.py X.Y.Z` to synchronize active package/UI metadata.
+The retired native manifest keeps its historical version.
 
-See `release-materials/` and `dist/submission/` for listing copy, privacy disclosure, reviewer scenarios and recipient instructions. `dist/LOCAL-VERIFICATION.md` records executed checks and outstanding manual verification. Public submission still needs the owner's verified publisher name, portal access, attestations, security scans, review and publication. Native executable acceptance is a review outcome.
+## Releases and maintenance
 
-## Settings and remote monitoring (1.2.0)
+[CHANGELOG.md](CHANGELOG.md) records releases. Public versioning starts at **1.3.0**
+to follow the historical native 1.2.0 and embedded 0.3.5 versions without reusing them.
+Development follows `feature/* → dev → tested PR → main → annotated vX.Y.Z tag →
+GitHub Release`. Small changes may go directly to dev. Tags run the release workflow;
+dev commits do not publish. [CONTRIBUTING.md](CONTRIBUTING.md) covers patches,
+features, breaking changes, emergency fixes, and rollback.
 
-The HUD gear groups task locking and the existing layout sizes. Choose **Manage remotes…**, or **Settings…** in the menu bar, to open the editable settings window. The menu remains available during click-through. Existing size preferences are retained; locking still resets on launch.
+## Privacy and data handling
 
-Remote monitoring is optional. Install/update TokenMonitor on each source Mac first. Enable Remote Login, authorize a dedicated SSH public key there, and load the matching private key into the viewing Mac's SSH agent (`ssh-add --apple-use-keychain /absolute/path/to/key`). Add a remote with its machine label, hostname/SSH alias, username, port and private-key path. Save connects immediately; Test / Reconnect retries. The UI does not copy applications or authorize keys on other machines automatically.
+Processing stays on the execution Mac. The collector reads Codex telemetry and
+schema-checked task metadata without editing transcripts or databases. Task IDs,
+derived titles, workspace basenames, and aggregates reach the panel in UI-only
+metadata. Raw transcripts, prompt text, and full source paths remain in the collector.
+The panel can reveal task context; consider that before sharing a screenshot.
 
-Unknown host keys must be verified in Terminal first: compare the offered fingerprint against the source Mac's host key, then accept it. Changed keys require investigation and explicit correction of your known_hosts entry. TokenMonitor uses strict host-key checking and never asks for or stores passphrases. SSH aliases and configured VPN/proxy routes work through OpenSSH; a `.local` hostname generally requires local name resolution. Outside your LAN, use a reachable VPN/mesh-network address.
+Startup uses one model-visible instruction per chat. The diagnostic routing recorder
+is off by default. No external analytics, uploads, cloud services, credentials, or
+pricing requests are introduced. Local metadata and runtime caches persist across
+updates. Codex's transcript format is not a stable public telemetry API.
 
-The dropdown groups up to 30 recent tasks per machine. New trusted hook events from any enabled machine select that task while unlocked. Locking pins the machine and task together; manual selection moves an existing lock. Connecting/reconnecting never replays old hook events. Remote failures retain the last snapshot with a disconnected label and last-call time, while local collection continues. Disabling/removing the displayed remote returns to local data. Connection configuration is retained under `~/.codex/usage-monitor/remotes.json`; no key contents are copied. Removing a remote does not delete keys or revoke remote authorization.
+## License
 
-`--remote-agent` is a headless, read-only collector within the installed executable. It streams versioned bounded JSON over SSH stdin/stdout, watches source-local Codex files, and exits when the stream closes. It does not depend on the source HUD being open. Both machines must support protocol version 1. No public telemetry port, cloud relay or OpenAI remote-control connection is used. Source transcript paths, raw transcripts, prompts and tool arguments/results are never transmitted. Derived titles, workspace basenames, task IDs and parsed HUD aggregates are transmitted; these may still reveal task context.
+Original TokenMonitor code is licensed under **PolyForm Noncommercial License 1.0.0**
+(`PolyForm-Noncommercial-1.0.0`); see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+It is free for personal and other uses permitted by the license. You may modify and
+redistribute it within those terms. Commercial use requires separate authorization
+from the copyright holder unless otherwise permitted by the license.
 
-### Restrict the dedicated public key
+Public source availability does not make this OSI-approved open source. Third-party
+components retain their respective licenses; release packages include their notices.
+TokenMonitor is independent of OpenAI.
 
-After installing the new helper on the source Mac, replace **only the dedicated key's existing line** in its `~/.ssh/authorized_keys` with:
+## Bug reports and contributions
 
-```text
-restrict,command="\"$HOME/Applications/Codex Usage Monitor.app/Contents/MacOS/CodexUsageMonitor\" --remote-agent" ssh-ed25519 YOUR_PUBLIC_KEY TokenMonitor
-```
-
-Keep unrelated keys unchanged. The forced command ignores requested shell commands and runs only the telemetry protocol; `restrict` disables forwarding, PTY allocation and user rc scripts. Verify a telemetry handshake after editing. A general shell request must not run; it may receive the helper's JSON handshake before its input is rejected/closed. An SSH agent may offer this key during ordinary shell connections too; select your administration identity explicitly with `ssh -o IdentitiesOnly=yes -i /path/to/admin-key user@host` if that happens. Do not use this key for application updates after restricting it; update through the source Mac's normal plugin setup or another administration connection.
-
-The viewing HUD still exits when local Codex closes. Hide keeps collection running; Quit closes all SSH connections and retains existing relaunch suppression. Ordinary uninstall retains remote configuration; explicit purge removes monitor state but never SSH keys or authorized_keys entries.
+[Open an issue](https://github.com/ACB-prgm/TokenMonitor/issues) with the release,
+macOS and Codex versions, expected behavior, and reproduction steps. Redact task
+titles, paths, and account details; do not upload raw conversations, credentials,
+or your Codex data directory. Read [CONTRIBUTING.md](CONTRIBUTING.md) before a PR.

@@ -20,5 +20,6 @@
     ],
     "composerIcon": "./assets/icon.png",
     "logo": "./assets/icon.png"
-  }
+  },
+  "license": "PolyForm-Noncommercial-1.0.0"
 }

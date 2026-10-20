@@ -1,7 +1,7 @@
 {
-  "name": "token-monitor-development",
+  "name": "tokenmonitor",
   "interface": {
-    "displayName": "TokenMonitor Development"
+    "displayName": "TokenMonitor"
   },
   "plugins": [
     {

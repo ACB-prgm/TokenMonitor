@@ -49,23 +49,23 @@ Coverage includes token arithmetic, required example formatting, missing/zero/ma
 
 ## Changed/created locations
 
-- All source, scripts, tests, and documentation under `/Users/aaronbastian/code/TokenMonitor`.
-- `/Users/aaronbastian/Applications/Codex Usage Monitor.app`.
-- `/Users/aaronbastian/.codex/hooks/codex_usage_monitor_hook.py`.
-- `/Users/aaronbastian/.codex/hooks.json` (four merged events; exact prior experimental Stop registration removed).
-- `/Users/aaronbastian/.codex/usage-monitor/` (metadata, launcher, and small runtime state).
-- `/Users/aaronbastian/Library/LaunchAgents/local.codex.usage-monitor.launcher.plist`.
+- All source, scripts, tests, and documentation under `~/code/TokenMonitor`.
+- `~/Applications/Codex Usage Monitor.app`.
+- `~/.codex/hooks/codex_usage_monitor_hook.py`.
+- `~/.codex/hooks.json` (four merged events; exact prior experimental Stop registration removed).
+- `~/.codex/usage-monitor/` (metadata, launcher, and small runtime state).
+- `~/Library/LaunchAgents/local.codex.usage-monitor.launcher.plist`.
 - Native preferences for `local.codex.usage-monitor`.
 
 Original pre-install hooks backup:
 
-`/Users/aaronbastian/.codex/hooks.json.usage-monitor-backup-20260918-223628-717646`
+`~/.codex/hooks.json.usage-monitor-backup-20260918-223628-717646`
 
 Additional backups from verified repeated installs:
 
-- `/Users/aaronbastian/.codex/hooks.json.usage-monitor-backup-20260918-223730-199738`
-- `/Users/aaronbastian/.codex/hooks.json.usage-monitor-backup-20260918-223927-680790`
-- `/Users/aaronbastian/.codex/hooks.json.usage-monitor-backup-20260918-224327-838766`
+- `~/.codex/hooks.json.usage-monitor-backup-20260918-223730-199738`
+- `~/.codex/hooks.json.usage-monitor-backup-20260918-223927-680790`
+- `~/.codex/hooks.json.usage-monitor-backup-20260918-224327-838766`
 
 No Codex rollout, internal database, unrelated hook, API credential, or hook-trust setting was modified.
 

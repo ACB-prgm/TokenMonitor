@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 0.3.5
+# TokenMonitor Embedded 1.3.0
 
 Local Swift telemetry inside Codex's expanded conversation panel. Opens once per
 chat through the working first-prompt model instruction, then refreshes directly
@@ -149,7 +149,7 @@ recorder remains off by default; see the repository's `scripts/routing_capture.p
 for developer capture/compare/stop/clear commands. Captures are never packaged.
 
 Recipients need Apple silicon macOS 13.5+. No system Node, Python or Xcode required.
-Windows, remotes and public-directory submission remain deferred.
+Windows, Intel Macs, web/mobile clients and universal-directory publication are not supported by this release. Connected remote execution was previously reported working by the maintainer, but is not independently verified for this release.
 
 ## Development
 
@@ -172,28 +172,14 @@ checksum is verified. Run `swift test` and the Python suites at repository root
 for native compatibility. The ZIP contains only bundled runtime, built server/UI,
 manifest, hooks, notices and release documentation/inventory.
 
-## Private account installation
+## Public release installation
 
-The release ZIP is a standalone private desktop plugin with `.codex-plugin/plugin.json`,
-`.mcp.json`, bundled runtimes, all six metadata hooks, and the original TokenMonitor
-logo. This compatibility manifest format is required for command-hook discovery in
-Codex 0.163.0-alpha.10.2; a root Agent Plugins manifest silently suppresses those
-hooks in that runtime. The account installation does not require a marketplace. Upload the ZIP through Plugin Creator to create a private account/workspace
-plugin. Install that plugin on each supported Mac using the same account/workspace;
-review and trust its hooks there, then start a fresh local chat. Account upload does
-not verify availability or execution on a connected remote Mac.
+Use the prebuilt macOS arm64 release package and installation instructions in the
+[repository README](https://github.com/ACB-prgm/TokenMonitor#installation).
+The source marketplace contains source files; it does not contain compiled
+runtimes and is not an end-user installer. The compatibility manifest is retained
+because the tested Codex build discovers its six hooks correctly.
 
-When switching from the development installation, disable its copy before enabling
-the uploaded copy so hooks do not run twice. Existing telemetry state is retained.
-The ZIP does
-not contain a marketplace or depend on this repository's installation path.
-
-For development only, install/update through the local `token-monitor-development` marketplace:
-
-```sh
-codex plugin add token-monitor-embedded@token-monitor-development
-```
-
-The install copies the built source into a versioned cache. Start a fresh local
-chat to get the new connection/UI. Current validation and remaining host checks
-are recorded in [VALIDATION.md](VALIDATION.md).
+See [LICENSE](LICENSE) and [NOTICE](NOTICE) for the original software license.
+Bundled Node and other dependencies retain their licenses in runtime notices
+and THIRD-PARTY-NOTICES.txt. No account-specific plugin is required.

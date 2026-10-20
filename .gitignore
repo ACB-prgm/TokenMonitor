@@ -8,3 +8,20 @@ dist/
 plugins/token-monitor-embedded/runtime/
 plugins/token-monitor-embedded/server/dist/
 plugins/token-monitor-embedded/ui/dist/
+
+# Local credentials, telemetry and captures
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+auth.json
+credentials.json
+sessions/
+archived_sessions/
+*.jsonl
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.log
+.swiftpm/

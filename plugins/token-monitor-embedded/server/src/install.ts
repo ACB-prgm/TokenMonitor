@@ -69,7 +69,8 @@ export async function installRelease(pluginRoot:string,options:{verifyOnly?:bool
   let recovered=false;
   if(changed&&previous){try{try{run(['marketplace','remove','tokenmonitor']);}catch{}run(['marketplace','add',previous]);run(['add','token-monitor-embedded@tokenmonitor']);recovered=true;}catch{/* Journal retains both paths for explicit recovery. */}}
   atomicJSON(journal,{phase:'failed',source,previous,recovered,version:release.version});
-  throw Error(`Installation failed${recovered?'; previous source restored':''}. Keep both extracted directories. Re-run the installer, or restore the previous source recorded in ${journal}.`,{cause:error});
+  const detail=error instanceof Error?error.message.slice(0,2000):'Codex installation command failed';
+  throw Error(`${detail}\nInstallation failed${recovered?'; previous source restored':''}. Keep both extracted directories. Re-run the installer, or restore the previous source recorded in ${journal}.`,{cause:error});
  }finally{await handle.close();await rm(lock,{force:true});}
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)) {

@@ -68,7 +68,7 @@ The same Codex commands apply in PowerShell with a Windows absolute path. Retain
 
 ## Git marketplace limitation
 
-The development repository's `.agents/plugins/marketplace.json` points at source that lacks built assets and a bundled runtime; its source MCP launcher uses `/bin/sh`. Do not install `ACB-prgm/TokenMonitor` as a working cross-platform Git marketplace. Use the release ZIP's generated local marketplace instead. Stable releases, rather than development commits, determine available downloads.
+The development repository's `.agents/plugins/marketplace.json` points at source that lacks built assets and a bundled runtime; its source MCP launcher uses `/bin/sh`. Do not install `ACB-prgm/TokenMonitor` as a working cross-platform Git marketplace. Use the release ZIP's generated local marketplace instead. The source catalog is marked `NOT_AVAILABLE`; the shared packager enables `AVAILABLE` only inside complete release ZIPs. Stable releases, rather than development commits, determine available downloads.
 
 `codex plugin marketplace upgrade tokenmonitor` refreshes Git marketplace snapshots. This is not the update command for an extracted local release. The automated disposable Git probe records whether a tested CLI also refreshes an installed plugin's files; existing running processes still need reload/restart. GitHub publication alone does not update running plugins or account deployments. Universal public directory submission excludes lifecycle-hook plugins; TokenMonitor retains all six hooks. See [official plugin packaging and hook requirements](https://developers.openai.com/plugins/build/plugins).
 

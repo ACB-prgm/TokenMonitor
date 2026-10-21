@@ -15,7 +15,7 @@ async function fixture(t){
  'runtime/node.gz':gzipSync(Buffer.from('synthetic runtime')),'runtime/node.sha256':hash(Buffer.from('synthetic runtime')),'server/dist/index.mjs':'fixture','server/dist/install.mjs':'fixture','ui/dist/panel.html':'fixture','scripts/launch.sh':'fixture'};
  const release={version:'1.5.0',target:'macos-arm64',dirty:false,commit:'a'.repeat(40),files:[]};
  for(const [name,bytes]of Object.entries(files)){await mkdir(path.dirname(path.join(plugin,name)),{recursive:true});await writeFile(path.join(plugin,name),bytes);release.files.push({path:name,sha256:hash(Buffer.from(bytes))});}
- await writeFile(path.join(plugin,'release.json'),JSON.stringify(release));await mkdir(path.join(source,'.agents/plugins'),{recursive:true});await writeFile(path.join(source,'.agents/plugins/marketplace.json'),JSON.stringify({name:'tokenmonitor',plugins:[{name:'token-monitor-embedded',source:{source:'local',path:'./plugins/token-monitor-embedded'}}]}));
+ await writeFile(path.join(plugin,'release.json'),JSON.stringify(release));await mkdir(path.join(source,'.agents/plugins'),{recursive:true});await writeFile(path.join(source,'.agents/plugins/marketplace.json'),JSON.stringify({name:'tokenmonitor',plugins:[{name:'token-monitor-embedded',policy:{installation:'AVAILABLE'},source:{source:'local',path:'./plugins/token-monitor-embedded'}}]}));
  const calls=[];let active,fail=false;
  const run=args=>{calls.push(args);if(args[0]==='marketplace'&&args[1]==='list')return JSON.stringify({marketplaces:active?[{name:'tokenmonitor',root:active,marketplaceSource:{sourceType:'local'}}]:[]});
   if(args[0]==='marketplace'&&args[1]==='add'){active=args[2];return '';}
@@ -39,4 +39,9 @@ test('Codex npm entry point runs on the bundled Node without shell interpretatio
  const result=codexCommand({CODEX_CLI_PATH:entry});assert.equal(result.command,process.execPath);assert.deepEqual(result.prefix,[await import('node:fs/promises').then(fs=>fs.realpath(entry))]);
  await assert.rejects(async()=>codexCommand({PATH:''}),/Codex CLI not found/);
  const shim=path.join(f.root,'codex.cmd');await writeFile(shim,'fixture');assert.throws(()=>codexCommand({CODEX_CLI_PATH:shim}),/native codex.exe/);
+});
+test('installer refuses an unavailable development catalog',async t=>{
+ const f=await fixture(t),file=path.join(f.source,'.agents/plugins/marketplace.json'),catalog=JSON.parse(await readFile(file,'utf8'));
+ catalog.plugins[0].policy.installation='NOT_AVAILABLE';await writeFile(file,JSON.stringify(catalog));
+ await assert.rejects(installRelease(f.plugin,f.options),/Invalid release marketplace/);assert.equal(f.calls.length,0);
 });

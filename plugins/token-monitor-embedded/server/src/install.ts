@@ -35,7 +35,7 @@ export async function installRelease(pluginRoot:string,options:{verifyOnly?:bool
  const source=await realpath(path.resolve(pluginRoot,'../..'));
  if(path.relative(source,await realpath(pluginRoot)).split(path.sep).join('/')!=='plugins/token-monitor-embedded')throw Error('Use the complete token-monitor marketplace ZIP');
  const catalog=JSON.parse(await readFile(path.join(source,'.agents/plugins/marketplace.json'),'utf8'));
- if(catalog.name!=='tokenmonitor'||catalog.plugins?.length!==1||catalog.plugins[0].name!=='token-monitor-embedded'||catalog.plugins[0].source?.source!=='local'||catalog.plugins[0].source?.path!=='./plugins/token-monitor-embedded')throw Error('Invalid release marketplace');
+ if(catalog.name!=='tokenmonitor'||catalog.plugins?.length!==1||catalog.plugins[0].name!=='token-monitor-embedded'||catalog.plugins[0].policy?.installation!=='AVAILABLE'||catalog.plugins[0].source?.source!=='local'||catalog.plugins[0].source?.path!=='./plugins/token-monitor-embedded')throw Error('Invalid release marketplace');
  if(options.verifyOnly)return {version:release.version,source,verified:true};
  const run=options.run??(args=>{const cli=codexCommand();return execFileSync(cli.command,[...cli.prefix,'plugin',...args],{cwd:source,encoding:'utf8',timeout:60000,stdio:['ignore','pipe','pipe'],windowsHide:true});});
  const data=options.dataRoot??stateRoot();await mkdir(data,{recursive:true,mode:0o700});

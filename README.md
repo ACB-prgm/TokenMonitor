@@ -24,7 +24,7 @@ Download a complete `token-monitor-VERSION-TARGET.zip` and its `.sha256` compani
 
 See [installation, updating, recovery, rollback, and uninstall instructions](docs/INSTALL.md) for copy/paste commands. Keep previous extracted releases for rollback. Preferences, dismissals and historical telemetry remain outside the installation directory.
 
-The smaller `token-monitor-embedded-VERSION-TARGET.zip` is the plugin-only package for direct/account deployments. Update those through their original host entry. The development source marketplace lacks built assets and runtimes and is not a supported cross-platform Git installation.
+The smaller `token-monitor-embedded-VERSION-TARGET.zip` is the plugin-only package for direct/account deployments. Update those through their original host entry. The development source marketplace lacks built assets and runtimes and is not a supported cross-platform Git installation. Its catalog is marked `NOT_AVAILABLE`; only complete generated release catalogs enable installation.
 
 ## Updates
 

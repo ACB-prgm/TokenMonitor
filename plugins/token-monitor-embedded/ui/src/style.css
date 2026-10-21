@@ -28,3 +28,8 @@ progress::-webkit-progress-bar{background:var(--line)}progress::-webkit-progress
 .latest-body h2{font-size:1em}
 .latest-compaction{border-top:1px solid var(--line);margin-top:.8em;padding-top:.7em}
 @media(max-width:480px){.latest-call{font-size:.75em}.latest-bar{gap:.3em}.latest-call>summary{gap:.3em;padding:.55em .4em}.latest-bar .wide-label{display:none}.narrow-label{display:inline}}
+
+/* Anchored to the existing version label; never occupies a dashboard row. */
+.updates{position:relative;max-width:100%;font-size:inherit;margin:0;padding:0;border:0}.updates>summary{cursor:pointer;list-style:none}.updates>summary::-webkit-details-marker{display:none}.updates.has-update>summary{color:var(--health-amber)}
+.update-menu{position:absolute;z-index:20;top:calc(100% + 6px);left:0;width:min(310px,calc(100vw - 44px));box-sizing:border-box;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:12px;box-shadow:0 6px 22px #0003;font-size:12px;max-height:70vh;overflow:auto}
+.update-menu p{margin:8px 0}.update-menu label{display:flex;gap:6px;align-items:center;margin:10px 0;flex-wrap:wrap}.update-menu select{max-width:100%}.update-actions{display:flex;flex-wrap:wrap;gap:6px}.update-menu button{font-size:inherit}.update-error{color:var(--health-red)}

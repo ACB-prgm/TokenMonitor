@@ -5,7 +5,7 @@ import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 const root=fileURLToPath(new URL('..',import.meta.url));
-const result=await build({stdin:{resolveDir:root,contents:`import React from 'react'; import {renderToStaticMarkup} from 'react-dom/server'; import {MonitorView} from './ui/src/view'; export {percent,money,migrateLayout,composition,threadAllowanceEstimate} from './ui/src/analytics'; export const render=(s,expanded=false,interactive=false)=>renderToStaticMarkup(React.createElement(MonitorView,{s,expanded,scale:1,onAction:interactive?()=>{}:undefined}));`},bundle:true,platform:'node',format:'cjs',write:false});
+const result=await build({stdin:{resolveDir:root,contents:`import React from 'react'; import {renderToStaticMarkup} from 'react-dom/server'; import {MonitorView} from './ui/src/view'; export {percent,money,migrateLayout,composition,threadAllowanceEstimate} from './ui/src/analytics'; export const render=(s,expanded=false,interactive=false,updates)=>renderToStaticMarkup(React.createElement(MonitorView,{s,expanded,scale:1,onAction:interactive?()=>{}:undefined,updates,onUpdate:interactive?()=>{}:undefined}));`},bundle:true,platform:'node',format:'cjs',write:false});
 const mod={exports:{}};new Function('require','module','exports',result.outputFiles[0].text)(createRequire(path.join(root,'package.json')),mod,mod.exports);
 const {percent,money,migrateLayout,composition,threadAllowanceEstimate,render}=mod.exports;
 test('small nonzero and near-full percentages never round to false zero or 100',()=>{
@@ -85,3 +85,13 @@ test('interactive refresh and task controls remain enabled and omit the global e
  assert.doesNotMatch(header,/disabled|>Expand<|>Compact</);
  assert.doesNotMatch(picker,/select disabled/);
 });
+
+ test('update options occupy the version position and reflect available, dismissed and unknown states',()=>{
+  const updates={installedVersion:'1.5.0',latestVersion:'1.6.0',status:'available',automatic:true,dismissed:false,checking:false,stale:false,downloadURL:'https://github.com/ACB-prgm/TokenMonitor/releases/download/v1.6.0/package.zip',checksumURL:'https://github.com/ACB-prgm/TokenMonitor/releases/download/v1.6.0/package.zip.sha256',releaseURL:'https://github.com/ACB-prgm/TokenMonitor/releases/tag/v1.6.0'};
+  const html=render({panelId:'p',status:'Monitoring'},false,true,updates);
+  assert.match(html,/<header>[\s\S]*v1.6.0 available[\s\S]*<\/header>/);
+  assert.match(html,/Download Update/);assert.match(html,/Download SHA-256/);assert.match(html,/Check at each panel opening/);assert.match(html,/Update package platform and architecture/);
+  const dismissed=render({panelId:'p',status:'Monitoring'},false,true,{...updates,dismissed:true});assert.doesNotMatch(dismissed,/has-update/);assert.match(dismissed,/Update dismissed/);
+  const unknown=render({panelId:'p',status:'Monitoring'},false,true,{...updates,status:'unknown',error:'Unable to check for updates.'});assert.match(unknown,/Unable to check/);assert.doesNotMatch(unknown,/Up to date/);
+  const missing=render({panelId:'p',status:'Monitoring'},false,true,{...updates,downloadURL:undefined});assert.doesNotMatch(missing,/Download Update/);assert.match(missing,/No verified package/);
+ });

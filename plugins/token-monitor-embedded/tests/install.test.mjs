@@ -36,7 +36,7 @@ test('live installer lock prevents concurrent installation; dead owner can recov
 test('Codex npm entry point runs on the bundled Node without shell interpretation',async t=>{
  const f=await fixture(t),entry=path.join(f.root,'codex.js');await writeFile(entry,'#!/usr/bin/env node\n');
  const {codexCommand}=await import('../server/dist/install-platform.mjs');
- const result=codexCommand({CODEX_CLI_PATH:entry});assert.equal(result.command,process.execPath);assert.deepEqual(result.prefix,[await import('node:fs/promises').then(fs=>fs.realpath(entry))]);
+ const result=codexCommand({CODEX_CLI_PATH:entry});assert.equal(result.command,process.execPath);const {realpath}=await import('node:fs/promises');assert.deepEqual(await Promise.all(result.prefix.map(p=>realpath(p))),[await realpath(entry)]);
  await assert.rejects(async()=>codexCommand({PATH:''}),/Codex CLI not found/);
  const shim=path.join(f.root,'codex.cmd');await writeFile(shim,'fixture');assert.throws(()=>codexCommand({CODEX_CLI_PATH:shim}),/native codex.exe/);
 });

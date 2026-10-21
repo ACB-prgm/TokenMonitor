@@ -4,7 +4,7 @@ Local verification on October 20, 2026, using macOS ARM64 and the existing Codex
 
 ## Passed locally
 
-- TypeScript build and typecheck; 94 automated tests, including SemVer, release validation, all target mappings, request deadlines, failures, rate limits, ETag/304, cache age, preference persistence, cross-process request coordination, concurrent preference writes, dismissal, and disabled automatic checks.
+- TypeScript build and typecheck; 96 automated tests, including SemVer, release validation, all target mappings, request deadlines, failures, rate limits, ETag/304, cache age, preference persistence, cross-process request coordination, concurrent preference writes, dismissal, and disabled automatic checks.
 - UI tests leave an update request pending while telemetry refresh and task selection complete. Unchanged telemetry responses independently update release status. Inline summary cards and normal polling do not initiate checks.
 - Actual bundled UI inspected in light/dark themes and at 600/320-pixel panel widths using synthetic telemetry and a synthetic available release. The version-position menu stays within the narrow panel, remains open while settings change, and records zero messages/model-context updates in the fixture host.
 - Live public GitHub API smoke test: check returned while fetching, then identified published 1.4.0 as older than development 1.5.0; correct macOS ARM64 package/checksum metadata was resolved. No user telemetry was sent.
@@ -26,3 +26,7 @@ Local verification on October 20, 2026, using macOS ARM64 and the existing Codex
 Use the generated platform-specific release marketplace ZIPs for this release. The source catalog points at unbuilt files, and the source MCP manifest selects `/bin/sh`; no verified universal package is being claimed. All packages share the same application and packaging code. Universal public directory publication is unsuitable while TokenMonitor retains its six lifecycle hooks. Installers use documented CLI operations and do not edit managed cache files or hook trust.
 
 The development source catalog is marked `NOT_AVAILABLE` and labeled as requiring a build. The shared packager changes that policy to `AVAILABLE` only inside complete release marketplace ZIPs.
+
+## Maintainer macOS confirmation
+
+On October 20, 2026, the maintainer confirmed that the locally installed 1.5.0 panel and updated version control look correct and explicitly authorized pushing, promotion through a PR to main, and release publication. The installed package reports 1.5.0, includes all six hooks, and has automatic opening checks enabled. The clickable version control and default-enabled behavior have focused regression coverage. Windows desktop interaction remains unverified locally; release automation must execute each target natively before publishing.

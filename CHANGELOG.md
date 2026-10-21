@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.5.0 (unreleased)
+## 1.5.0
 
 - Check stable GitHub releases on each live-panel opening without waiting on network responses.
 - Add compact version-label update controls, platform selection, persistence, and per-version dismissal.

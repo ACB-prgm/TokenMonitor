@@ -4,7 +4,7 @@ Use the complete `token-monitor-VERSION-TARGET.zip` package from [GitHub Release
 
 ## macOS
 
-Download the ZIP and its matching `.zip.sha256` file into the same directory. For the planned 1.5.0 Apple silicon package:
+Download the ZIP and its matching `.zip.sha256` file into the same directory. For the 1.5.0 Apple silicon package:
 
 ```sh
 cd "$HOME/Downloads"
@@ -15,7 +15,7 @@ unzip token-monitor-1.5.0-macos-arm64.zip -d TokenMonitor-1.5.0-macos-arm64
 /bin/sh TokenMonitor-1.5.0-macos-arm64/TokenMonitor/install.sh
 ```
 
-Stop if checksum verification fails. Intel users substitute `macos-x64`. Check that this version is actually published before using the example; 1.5.0 is under development until the release is published.
+Stop if checksum verification fails. Intel users substitute `macos-x64`.
 
 ## Windows PowerShell
 

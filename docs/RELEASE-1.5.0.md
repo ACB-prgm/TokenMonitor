@@ -1,9 +1,9 @@
 # TokenMonitor 1.5.0
 
-Planned release; do not publish until platform validation is complete.
+Background update discovery and guided cross-platform installation, with all six lifecycle hooks preserved.
 
 - Check stable GitHub releases in the background whenever the live panel opens. Checks default to enabled and can be disabled; manual checks remain available.
-- Open update options from the existing version label: release notes, matching platform download and checksum, architecture override, and per-version dismissal.
+- Open update options from the button beside the version number: release notes, matching platform download and checksum, architecture override, and per-version dismissal.
 - Preserve monitoring responsiveness, direct refreshes without model turns, and cached/incremental telemetry collection.
 - Include `d9f1fe6`: remove Expand/Compact, retain enabled refresh/selector controls, and queue task changes made during a poll.
 - Add a shared verified installer with macOS/Windows entry points, retained previous sources, installation journal, and recovery through Codex's CLI.
@@ -13,4 +13,4 @@ Download the complete `token-monitor-1.5.0-TARGET.zip` and its `.sha256` compani
 
 The source Git marketplace is not a self-contained cross-platform installation. Use generated release marketplaces. Packages include pinned, verified Node runtimes and require no user-installed Node, Python, npm, or compiler. The Codex CLI is required for the guided installer.
 
-Release sequence: commit and validate on `dev`; PR to protected `main`; tag the validated `main` commit; build that tag in the four-platform release workflow; inspect the draft and complete desktop validation before publishing. Do not modify the existing 1.4.0 release.
+The maintainer confirmed the local macOS panel and update-menu changes. Native package, installation, rollback, and hook-discovery checks run in the four-target release workflow. Windows desktop rendering and trusted event delivery remain separate from automated launcher checks. Restart Codex after installation and review hook trust if prompted.

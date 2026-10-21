@@ -16,9 +16,10 @@ function savedLayout(): Layout {
 function Panel() {
   const [state,setState] = useState<Monitor>({panelId:'',status:'Connecting to local telemetry…'});
   const [layout,setLayout] = useState(savedLayout);
-  const [busy,setBusy] = useState(false), [error,setError] = useState('');
+  const [error,setError] = useState('');
   const current = useRef(state), active = useRef(true), serial = useRef(0), fetching = useRef(false);
   const retry = useRef({at:0,failures:0});
+  const pendingSelection = useRef<string | undefined>(undefined);
   function apply(value: Monitor) {
     if (!active.current) return;
     if (value.unchanged) { setError(''); return; }
@@ -26,8 +27,12 @@ function Panel() {
   }
   async function refresh(action?: 'select', taskId?: string) {
     const now = Date.now();
-    if (!active.current || !current.current.panelId || fetching.current || (!action && now < retry.current.at)) return;
-    const request = ++serial.current; fetching.current = true; setBusy(true);
+    if (!active.current || !current.current.panelId || (!action && now < retry.current.at)) return;
+    if (fetching.current) {
+      if (action === 'select') pendingSelection.current = taskId;
+      return;
+    }
+    const request = ++serial.current; fetching.current = true;
     try {
       const result = await app.callServerTool({name:'get_monitor_state',arguments:{panelId:current.current.panelId,revision:current.current.revision,action,taskId}});
       if (result.isError) throw new Error('Task unavailable. Refresh or choose another local task.');
@@ -41,7 +46,14 @@ function Panel() {
         setError(error instanceof Error ? error.message : 'Disconnected · retaining last snapshot');
         retry.current.at = Date.now()+Math.min(30000,1000*2**Math.min(retry.current.failures++,5));
       }
-    } finally { if (request === serial.current && active.current) { fetching.current=false; setBusy(false); } }
+    } finally {
+      if (request === serial.current && active.current) {
+        fetching.current=false;
+        const selected = pendingSelection.current;
+        pendingSelection.current=undefined;
+        if (selected) void refresh('select',selected);
+      }
+    }
   }
   function changeLayout(expanded: boolean, scale: number) {
     const next = {expanded,scale,layoutVersion:2}; setLayout(next);
@@ -61,7 +73,7 @@ function Panel() {
     const interval=summary ? undefined : setInterval(()=>{if(document.visibilityState==='visible')void refresh();},2000);
     return ()=>{active.current=false;serial.current++;clearInterval(interval);document.removeEventListener('visibilitychange',visible);app.close();};
   },[]);
-  return <MonitorView s={state} expanded={layout.expanded} scale={layout.scale} busy={busy} error={error}
+  return <MonitorView s={state} expanded={layout.expanded} scale={layout.scale} error={error}
     onAction={summary ? undefined : (action,id)=>{retry.current.at=0;void refresh(action,id);}} onLayout={changeLayout}
     storage={legacy()?.setWidgetState ? 'host widget state' : 'frame session storage (host state API unavailable)'} />;
 }

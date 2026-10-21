@@ -4,7 +4,7 @@ A local Codex token monitor with a React panel and an in-process TypeScript coll
 
 The panel shows recorded input, cache reads and writes, output and reasoning, context capacity, account allowances, call history, tool attribution estimates, and API-equivalent costs. These estimates are not a bill or an exact measure of subscription consumption.
 
-Open the monitor through `open_monitor`, or enable its first-prompt hook. UI refreshes call the local MCP server directly without additional model turns. Session hooks record only selected metadata. Compaction temporarily clears cache/fresh readings until another measured call arrives.
+Open the monitor through `open_monitor`, or enable its first-prompt hook. UI refreshes call the local MCP server directly without additional model turns. Each poll checks task metadata and incrementally reads appended transcript bytes into a cached parser, then compares revisions; unchanged responses retain the current view. File replacement, truncation or rewriting resets the parser. Polling keeps the task selector and refresh control enabled, and selections made during a pending poll are processed afterward. Session hooks record only selected metadata. Compaction temporarily clears cache/fresh readings until another measured call arrives.
 
 Install the package matching your OS and processor. macOS packages use a shell bootstrap; Windows packages use Windows PowerShell. Both verify and unpack the included Node runtime into private plugin storage. Collection, SQLite metadata reads, parsing, calculations and hooks share the same TypeScript implementation. Runtime operation requires no downloads.
 

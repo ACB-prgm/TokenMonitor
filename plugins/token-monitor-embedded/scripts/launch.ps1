@@ -43,6 +43,8 @@ if (!(Test-Path -LiteralPath $nodePath)) {
 }
 switch ($Mode) {
     'node-version' { $nodeArguments = '--version' }
+    'install' { $nodeArguments = '"' + (Join-Path $pluginRoot 'server/dist/install.mjs') + '"' }
+    'verify-install' { $nodeArguments = '"' + (Join-Path $pluginRoot 'server/dist/install.mjs') + '" --verify-only' }
     'hook' { $nodeArguments = '"' + (Join-Path $pluginRoot 'server/dist/hook.mjs') + '"' }
     'startup-hook' { $nodeArguments = '"' + (Join-Path $pluginRoot 'server/dist/startup-hook.mjs') + '"' }
     '' { $nodeArguments = '"' + (Join-Path $pluginRoot 'server/dist/index.mjs') + '"' }

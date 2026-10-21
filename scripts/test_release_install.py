@@ -2,6 +2,7 @@
 """Exercise packaged installs and actual Git marketplace refresh in disposable profiles.
 The prior version is a synthetic runnable package, not the published 1.4.0 release.
 """
+from contextlib import contextmanager
 import hashlib
 import http.server
 import json
@@ -20,6 +21,14 @@ REPO = Path(__file__).resolve().parents[1]
 TARGET = os.environ.get('TOKENMONITOR_TEST_TARGET') or ('windows' if os.name == 'nt' else 'macos') + '-' + ('arm64' if platform.machine().lower() in ('arm64', 'aarch64') else 'x64')
 VERSION = (REPO / 'VERSION').read_text().strip()
 PRIOR = '0.0.0-install-fixture'
+
+
+def codex_cli():
+    cli = Path(shutil.which('codex')).resolve()
+    if cli.suffix.lower() == '.cmd':
+        cli = cli.parent / 'node_modules/@openai/codex/bin/codex.js'
+    prefix = [shutil.which('node'), str(cli)] if cli.suffix == '.js' else [str(cli)]
+    return cli, prefix
 
 
 def unpack(root):
@@ -47,7 +56,8 @@ def prior_package(source, destination):
     f.write_text(json.dumps(release))
 
 
-def mcp_version(plugin, env):
+@contextmanager
+def mcp_connection(plugin, env):
     config = json.loads((plugin / '.mcp.json').read_text())['mcpServers']['token-monitor-embedded']
     args = [str(plugin / a) if a.startswith('./') else a for a in config['args']]
     p = subprocess.Popen([config['command'], *args], cwd=plugin.parent.parent, env=env,
@@ -55,12 +65,22 @@ def mcp_version(plugin, env):
     lines = queue.Queue()
     reader = threading.Thread(target=lambda: [lines.put(line) for line in p.stdout], daemon=True)
     reader.start()
-    try:
-        p.stdin.write(json.dumps({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {
-            'protocolVersion': '2025-11-25', 'capabilities': {}, 'clientInfo': {'name': 'release-install-test', 'version': '1'}}}) + '\n')
+    identifier = 0
+    def request(method, params):
+        nonlocal identifier
+        identifier += 1
+        p.stdin.write(json.dumps({'jsonrpc': '2.0', 'id': identifier, 'method': method, 'params': params}) + '\n')
         p.stdin.flush()
-        response = json.loads(lines.get(timeout=15))
-        return response['result']['serverInfo']['version']
+        while True:
+            response = json.loads(lines.get(timeout=15))
+            if response.get('id') == identifier:
+                assert 'error' not in response, response
+                return response['result']
+    try:
+        info = request('initialize', {'protocolVersion': '2025-11-25', 'capabilities': {}, 'clientInfo': {'name': 'release-install-test', 'version': '1'}})
+        p.stdin.write(json.dumps({'jsonrpc': '2.0', 'method': 'notifications/initialized'}) + '\n')
+        p.stdin.flush()
+        yield info['serverInfo']['version'], request
     finally:
         p.stdin.close()
         try:
@@ -73,17 +93,18 @@ def mcp_version(plugin, env):
         p.stderr.close()
 
 
+def mcp_version(plugin, env):
+    with mcp_connection(plugin, env) as (version, _):
+        return version
+
+
 @unittest.skipUnless(shutil.which('codex'), 'Codex CLI required; desktop rendering/trust is a separate test')
 class ReleaseInstallTests(unittest.TestCase):
     def setup_profile(self, root):
         home = root / 'profile'
         home.mkdir()
-        cli = Path(shutil.which('codex')).resolve()
-        if cli.suffix.lower() == '.cmd':
-            cli = cli.parent / 'node_modules/@openai/codex/bin/codex.js'
+        cli, prefix = codex_cli()
         env = {**os.environ, 'CODEX_HOME': str(home), 'CODEX_CLI_PATH': str(cli)}
-        # Test commands may use the development Node; the packaged helper uses its bundled Node.
-        prefix = [shutil.which('node'), str(cli)] if cli.suffix == '.js' else [str(cli)]
         def codex(*args):
             r = subprocess.run([*prefix, 'plugin', *args], cwd=root, env=env, capture_output=True, text=True, timeout=60)
             self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
@@ -173,19 +194,24 @@ class ReleaseInstallTests(unittest.TestCase):
                 codex('add', 'token-monitor-embedded@tokenmonitor')
                 plugin = next(p for p, v in self.installed(home) if v == PRIOR)
                 self.assertEqual(mcp_version(plugin, env), PRIOR)
-                shutil.copytree(source / 'plugins', work / 'plugins', dirs_exist_ok=True)
-                git('add', '.')
-                git('-c', 'user.name=Package Test', '-c', 'user.email=test@example.invalid', 'commit', '-m', 'Current package')
-                git('--git-dir', str(bare), 'fetch', str(work), 'stable:stable', cwd=root)
-                git('--git-dir', str(bare), 'update-server-info', cwd=root)
-                result = codex('marketplace', 'upgrade', 'tokenmonitor', '--json')
-                versions = {v for p, v in self.installed(home)}
-                refreshed = VERSION in versions
-                if not refreshed:
-                    codex('add', 'token-monitor-embedded@tokenmonitor')
-                plugin = next(p for p, v in self.installed(home) if v == VERSION)
-                self.assertEqual(mcp_version(plugin, env), VERSION)
-                print(f'Git refresh observation: refresh_installed_current={refreshed}; new MCP connection={VERSION}; CLI={subprocess.check_output([shutil.which("codex"), "--version"], text=True).strip()}; result={result.strip()}')
+                with mcp_connection(plugin, env) as (running_version, running_request):
+                    self.assertEqual(running_version, PRIOR)
+                    shutil.copytree(source / 'plugins', work / 'plugins', dirs_exist_ok=True)
+                    git('add', '.')
+                    git('-c', 'user.name=Package Test', '-c', 'user.email=test@example.invalid', 'commit', '-m', 'Current package')
+                    git('--git-dir', str(bare), 'fetch', str(work), 'stable:stable', cwd=root)
+                    git('--git-dir', str(bare), 'update-server-info', cwd=root)
+                    result = codex('marketplace', 'upgrade', 'tokenmonitor', '--json')
+                    versions = {v for p, v in self.installed(home)}
+                    refreshed = VERSION in versions
+                    if not refreshed:
+                        codex('add', 'token-monitor-embedded@tokenmonitor')
+                    plugin = next(p for p, v in self.installed(home) if v == VERSION)
+                    self.assertEqual(mcp_version(plugin, env), VERSION)
+                    old_tools = running_request('tools/list', {})['tools']
+                    old_panel = next(t for t in old_tools if t['name'] == 'open_monitor')
+                    self.assertIn(PRIOR, old_panel['_meta']['ui']['resourceUri'])
+                print(f'Git refresh observation: refresh_installed_current={refreshed}; running connection retained={PRIOR}; new MCP connection={VERSION}; CLI={subprocess.check_output([*codex_cli()[1], "--version"], text=True).strip()}; result={result.strip()}')
             finally:
                 server.shutdown()
                 server.server_close()

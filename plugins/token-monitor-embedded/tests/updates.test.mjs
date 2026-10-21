@@ -88,3 +88,8 @@ test('separate MCP services share an in-flight request lease',async t=>{
  const other=new Updates('1.4.0',f.settings);await other.check();await other.settled();assert.equal(f.requests.length,1);
  resolve(response());await f.u.settled();assert.equal((await other.status()).latestVersion,'1.5.0');
 });
+test('concurrent panels preserve independent preference changes',async t=>{
+ const f=await fixture(t);const other=new Updates('1.4.0',f.settings);
+ await Promise.all([f.u.configure({automatic:false}),other.configure({target:'windows-arm64'})]);
+ const s=await f.u.status();assert.equal(s.automatic,false);assert.equal(s.target,'windows-arm64');
+});

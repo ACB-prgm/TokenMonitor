@@ -7,7 +7,8 @@ const archive=path.join(repo,'dist',`token-monitor-embedded-${version}-${target}
 const temp=await mkdtemp(path.join(tmpdir(),'TokenMonitor package test '));
 try{
  execFileSync(process.platform==='win32'?'python':'python3',['-c',`import pathlib,sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as z:\n assert z.testzip() is None\n for n in z.namelist():\n  assert not n.startswith('/') and '..' not in pathlib.PurePosixPath(n).parts\n z.extractall(sys.argv[2])`,archive,temp]);
- const plugin=path.join(temp,'token-monitor-embedded'),release=JSON.parse(await readFile(path.join(plugin,'release.json'),'utf8'));assert.equal(release.version,version);assert.equal(release.target,target);
+ const plugin=path.join(temp,'token-monitor-embedded'),release=JSON.parse(await readFile(path.join(plugin,'release.json'),'utf8'));assert.equal(release.version,version);assert.equal(release.target,target);assert.equal(release.dirty,false,'Commit source before final package verification');assert.equal(release.commit,execFileSync('git',['rev-parse','HEAD'],{cwd:repo,encoding:'utf8'}).trim(),'Package must match the validated source commit');
+ const panelHTML=await readFile(path.join(plugin,'ui/dist/panel.html'),'utf8');assert.match(panelHTML,/Check at each panel opening/);assert.match(panelHTML,/Update package platform and architecture/);
  for(const entry of release.files){assert.equal(digest(await readFile(path.join(plugin,entry.path))),entry.sha256);assert.doesNotMatch(entry.path,/\.swift$|TokenMonitorCollector|CodexUsageMonitor|node_modules/);}
  const compressed=await readFile(path.join(plugin,'runtime/node.gz'));const {gunzipSync}=await import('node:zlib');const binary=gunzipSync(compressed);const expected=(await readFile(path.join(plugin,'runtime/node.sha256'),'utf8')).trim();assert.equal(digest(binary),expected);
  // Verify executable format and CPU type even when it cannot run on this host.

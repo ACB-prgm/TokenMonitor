@@ -1,7 +1,8 @@
 import {readFile,writeFile,mkdir,rename,rm,open,stat} from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {stateRoot} from './platform.js';
+import {readFileSync} from 'node:fs';
+import {stateRoot,atomicJSON,withStateLock} from './platform.js';
 export const releasesURL='https://api.github.com/repos/ACB-prgm/TokenMonitor/releases/latest';
 export const targets=['macos-arm64','macos-x64','windows-x64','windows-arm64'] as const;
 export type Target=typeof targets[number];
@@ -74,10 +75,18 @@ export class Updates {
    checkedAt:cache?.checkedAt,stale:!cache||!!error||this.now()-cache.checkedAt>86400000,error,retryAt};
  }
  async configure(change:{automatic?:boolean;target?:Target|'auto';dismissVersion?:string}){
-  const prefs=await this.preferences();if(change.automatic!==undefined)prefs.automatic=change.automatic;
-  if(change.target!==undefined)prefs.target=change.target==='auto'?undefined:change.target;
-  if(change.dismissVersion!==undefined){if((await this.cache())?.release.version!==change.dismissVersion)throw Error('Only the displayed release can be dismissed');prefs.dismissedVersion=change.dismissVersion;}
-  await atomic(this.file('preferences'),prefs);return this.status();
+  if(change.dismissVersion!==undefined&&(await this.cache())?.release.version!==change.dismissVersion)throw Error('Only the displayed release can be dismissed');
+  // Separate preference lock: concurrent panels cannot lose each other's settings.
+  const written=await withStateLock(path.join(this.root,'preferences-lock'),()=>{
+   let raw:any;try{raw=JSON.parse(readFileSync(this.file('preferences'),'utf8'));}catch{}
+   const prefs:Preferences={automatic:raw?.automatic!==false,dismissedVersion:typeof raw?.dismissedVersion==='string'?raw.dismissedVersion:undefined,target:targets.includes(raw?.target)?raw.target:undefined};
+   if(change.automatic!==undefined)prefs.automatic=change.automatic;
+   if(change.target!==undefined)prefs.target=change.target==='auto'?undefined:change.target;
+   if(change.dismissVersion!==undefined)prefs.dismissedVersion=change.dismissVersion;
+   atomicJSON(this.file('preferences'),prefs);return true;
+  });
+  if(!written)throw Error('Update settings are busy; retry shortly.');
+  return this.status();
  }
  async check(automatic=false):Promise<UpdateStatus>{
   const s=await this.status(),backoff=await json(this.file('backoff'));

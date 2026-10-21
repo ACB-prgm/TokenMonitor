@@ -12,6 +12,7 @@ import tempfile
 import time
 import unittest
 import zipfile
+from test_release_install import codex_cli
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -40,7 +41,7 @@ class EmbeddedHookDiscoveryTests(unittest.TestCase):
                 'name': 'hook-test', 'plugins': [{'name': name, 'source': {'source': 'local', 'path': './fixture'}}]}))
             (home / 'config.toml').write_text(f'[features]\nhooks = true\nplugins = true\n[plugins."{name}@hook-test"]\nenabled = true\n')
             with (root / 'stderr.log').open('w+') as errors:
-                process = subprocess.Popen(['codex', 'app-server', '--stdio'], cwd=root,
+                process = subprocess.Popen([*codex_cli()[1], 'app-server', '--stdio'], cwd=root,
                     env={**os.environ, 'CODEX_HOME': str(home)}, stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE, stderr=errors, text=True)
                 lines = queue.Queue()

@@ -1,7 +1,7 @@
 {
   "name": "tokenmonitor",
   "interface": {
-    "displayName": "TokenMonitor"
+    "displayName": "TokenMonitor (source; build required)"
   },
   "plugins": [
     {
@@ -11,7 +11,7 @@
         "path": "./plugins/token-monitor-embedded"
       },
       "policy": {
-        "installation": "AVAILABLE",
+        "installation": "NOT_AVAILABLE",
         "authentication": "ON_INSTALL"
       },
       "category": "Productivity"

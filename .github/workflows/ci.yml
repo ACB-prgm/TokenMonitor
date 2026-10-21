@@ -23,6 +23,8 @@ jobs:
             target: windows-arm64
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      TOKENMONITOR_TEST_TARGET: ${{ matrix.target }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -34,8 +36,11 @@ jobs:
           python-version: '3.12'
       - run: npm ci
         working-directory: plugins/token-monitor-embedded
+      - run: npm install --global @openai/codex@0.163.0
       - run: node scripts/build-release.mjs --target ${{ matrix.target }}
       - run: node scripts/test-package.mjs --target ${{ matrix.target }}
+      - run: python scripts/test_release_install.py
+      - run: python scripts/test_embedded_hook_discovery.py
   report:
     needs: validate
     if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)

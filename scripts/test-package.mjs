@@ -7,7 +7,8 @@ const archive=path.join(repo,'dist',`token-monitor-embedded-${version}-${target}
 const temp=await mkdtemp(path.join(tmpdir(),'TokenMonitor package test '));
 try{
  execFileSync(process.platform==='win32'?'python':'python3',['-c',`import pathlib,sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as z:\n assert z.testzip() is None\n for n in z.namelist():\n  assert not n.startswith('/') and '..' not in pathlib.PurePosixPath(n).parts\n z.extractall(sys.argv[2])`,archive,temp]);
- const plugin=path.join(temp,'token-monitor-embedded'),release=JSON.parse(await readFile(path.join(plugin,'release.json'),'utf8'));assert.equal(release.version,version);assert.equal(release.target,target);
+ const plugin=path.join(temp,'token-monitor-embedded'),release=JSON.parse(await readFile(path.join(plugin,'release.json'),'utf8'));assert.equal(release.version,version);assert.equal(release.target,target);assert.equal(release.dirty,false,'Commit source before final package verification');assert.equal(release.commit,execFileSync('git',['rev-parse','HEAD'],{cwd:repo,encoding:'utf8'}).trim(),'Package must match the validated source commit');
+ const panelHTML=await readFile(path.join(plugin,'ui/dist/panel.html'),'utf8');assert.match(panelHTML,/Check at each panel opening/);assert.match(panelHTML,/Update package platform and architecture/);
  for(const entry of release.files){assert.equal(digest(await readFile(path.join(plugin,entry.path))),entry.sha256);assert.doesNotMatch(entry.path,/\.swift$|TokenMonitorCollector|CodexUsageMonitor|node_modules/);}
  const compressed=await readFile(path.join(plugin,'runtime/node.gz'));const {gunzipSync}=await import('node:zlib');const binary=gunzipSync(compressed);const expected=(await readFile(path.join(plugin,'runtime/node.sha256'),'utf8')).trim();assert.equal(digest(binary),expected);
  // Verify executable format and CPU type even when it cannot run on this host.
@@ -37,7 +38,7 @@ try{
   const request=(method,params)=>new Promise((resolve,reject)=>{const id=++counter,timer=setTimeout(()=>reject(new Error('MCP timeout '+method)),10000);pending.set(id,{resolve,reject,timer});child.stdin.write(JSON.stringify({jsonrpc:'2.0',id,method,params})+'\n');});
   try{
    const init=await request('initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'package-test',version:'1'}});assert.equal(init.serverInfo.version,version);child.stdin.write(JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})+'\n');
-   const tools=(await request('tools/list',{})).tools;assert.equal(tools.length,4);
+   const tools=(await request('tools/list',{})).tools;assert.equal(tools.length,5);assert.deepEqual(tools.find(t=>t.name==='manage_updates')._meta.ui.visibility,['app']);
    const result=await request('tools/call',{name:'open_monitor',arguments:{}});const s=result._meta.monitor;assert.equal(s.input,100000);assert.equal(s.usage.pricedCalls,1);assert.ok(Math.abs(s.usage.cost-.049)<1e-12);assert.match(s.status,/Session ended/);assert.deepEqual(result.content,[]);assert.doesNotMatch(JSON.stringify(result),/PRIVATE_PROMPT|transcript_path|\.jsonl/);
    const next=await request('tools/call',{name:'get_monitor_state',arguments:{panelId:s.panelId,revision:s.revision}});assert.equal(next._meta.monitor.unchanged,true);
    const exited=new Promise(resolve=>child.once('exit',resolve));child.stdin.end();assert.equal(await Promise.race([exited,new Promise((_,reject)=>setTimeout(()=>reject(new Error('MCP did not exit after stdin closure')),5000))]),0);

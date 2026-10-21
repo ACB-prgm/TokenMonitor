@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing annotated version tag on main
+        description: Existing annotated version tag on validated main
         required: true
         type: string
 permissions:
@@ -12,23 +12,17 @@ concurrency:
   group: release-${{ inputs.tag }}
   cancel-in-progress: false
 jobs:
-  prepare:
-    runs-on: macos-15
-    timeout-minutes: 30
-    permissions:
-      contents: write
+  source:
+    outputs:
+      commit: ${{ steps.verify.outputs.commit }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ inputs.tag }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: '24.21.0'
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-      - name: Verify annotated release source
+      - name: Verify annotated release source on main
+        id: verify
         env:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
@@ -38,21 +32,91 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse "$RELEASE_TAG^{}")"
           git merge-base --is-ancestor HEAD origin/main
           test "$(git cat-file -t "$RELEASE_TAG")" = tag
+          test -f "docs/RELEASE-$(cat VERSION).md"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+  packages:
+    needs: source
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            target: macos-arm64
+          - os: macos-15-intel
+            target: macos-x64
+          - os: windows-2025
+            target: windows-x64
+          - os: windows-11-arm
+            target: windows-arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      TOKENMONITOR_TEST_TARGET: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24.21.0'
+          architecture: ${{ endsWith(matrix.target, 'arm64') && 'arm64' || 'x64' }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
       - run: npm ci
         working-directory: plugins/token-monitor-embedded
-      - run: node scripts/build-release.mjs --target all
-      - name: Inspect every target and execute the host package
+      - run: npm install --global @openai/codex@0.163.0
+      - run: node scripts/build-release.mjs --target ${{ matrix.target }}
+      - run: node scripts/test-package.mjs --target ${{ matrix.target }}
+      - run: python scripts/test_release_install.py
+      - run: python scripts/test_embedded_hook_discovery.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: |
+            dist/*.zip
+            dist/*.zip.sha256
+          if-no-files-found: error
+  prepare:
+    needs: [source, packages]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.source.outputs.commit }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - name: Verify source identity and archive checksums
         run: |
-          for target in macos-arm64 macos-x64 windows-x64 windows-arm64; do
-            node scripts/test-package.mjs --target "$target"
-          done
+          python3 - <<'PY'
+          import hashlib, json, pathlib, subprocess, zipfile
+          root = pathlib.Path('.')
+          version = (root / 'VERSION').read_text().strip()
+          commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+          for target in ['macos-arm64', 'macos-x64', 'windows-x64', 'windows-arm64']:
+              for prefix in ['token-monitor', 'token-monitor-embedded']:
+                  archive = root / 'dist' / f'{prefix}-{version}-{target}.zip'
+                  assert hashlib.sha256(archive.read_bytes()).hexdigest() == archive.with_suffix('.zip.sha256').read_text().split()[0]
+                  with zipfile.ZipFile(archive) as z:
+                      name = 'TokenMonitor/plugins/token-monitor-embedded/release.json' if prefix == 'token-monitor' else 'token-monitor-embedded/release.json'
+                      metadata = json.loads(z.read(name))
+                      assert metadata['commit'] == commit and metadata['dirty'] is False
+                      assert metadata['version'] == version and metadata['target'] == target
+          PY
       - name: Prepare draft only
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
+          git fetch --force origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "$RELEASE_TAG^{}")"
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo 'Refusing to replace an existing release.' >&2
             exit 1
           fi
-          gh release create "$RELEASE_TAG" dist/*.zip dist/*.zip.sha256 --verify-tag --draft --title "TokenMonitor ${RELEASE_TAG#v}" --notes-file docs/RELEASE-1.4.0.md
+          gh release create "$RELEASE_TAG" dist/*.zip dist/*.zip.sha256 --verify-tag --draft --title "TokenMonitor ${RELEASE_TAG#v}" --notes-file "docs/RELEASE-$(cat VERSION).md"

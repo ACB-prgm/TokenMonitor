@@ -12,6 +12,7 @@ $pluginRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $expected = [IO.File]::ReadAllText((Join-Path $pluginRoot 'runtime/node.sha256')).Trim()
 if ($expected -notmatch '^[0-9a-f]{64}$') { throw 'Invalid bundled runtime digest' }
 $nodePath = Join-Path $pluginRoot 'runtime/node.exe'
+if ((Test-Path -LiteralPath $nodePath) -and (Get-RuntimeDigest $nodePath) -ne $expected) { throw 'Bundled runtime checksum mismatch' }
 if (!(Test-Path -LiteralPath $nodePath)) {
     $dataRoot = $env:PLUGIN_DATA
     if (!$dataRoot) {
@@ -43,6 +44,8 @@ if (!(Test-Path -LiteralPath $nodePath)) {
 }
 switch ($Mode) {
     'node-version' { $nodeArguments = '--version' }
+    'install' { $nodeArguments = '"' + (Join-Path $pluginRoot 'server/dist/install.mjs') + '"' }
+    'verify-install' { $nodeArguments = '"' + (Join-Path $pluginRoot 'server/dist/install.mjs') + '" --verify-only' }
     'hook' { $nodeArguments = '"' + (Join-Path $pluginRoot 'server/dist/hook.mjs') + '"' }
     'startup-hook' { $nodeArguments = '"' + (Join-Path $pluginRoot 'server/dist/startup-hook.mjs') + '"' }
     '' { $nodeArguments = '"' + (Join-Path $pluginRoot 'server/dist/index.mjs') + '"' }

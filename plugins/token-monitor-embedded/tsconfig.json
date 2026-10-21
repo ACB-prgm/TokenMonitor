@@ -5,6 +5,7 @@
     "moduleResolution": "NodeNext",
     "jsx": "react-jsx",
     "strict": true,
+    "resolveJsonModule": true,
     "esModuleInterop": true,
     "noEmit": true,
     "types": ["node", "react", "react-dom"]

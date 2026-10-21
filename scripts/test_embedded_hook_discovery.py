@@ -3,13 +3,16 @@
 import json
 import os
 from pathlib import Path
-import selectors
+import queue
+import platform
+import threading
 import shutil
 import subprocess
 import tempfile
 import time
 import unittest
 import zipfile
+from test_release_install import codex_cli
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -18,7 +21,8 @@ class EmbeddedHookDiscoveryTests(unittest.TestCase):
     def test_release_hooks_are_discovered_as_untrusted_plugin_hooks(self):
         manifest = json.loads((REPO / 'plugins/token-monitor-embedded/.codex-plugin/plugin.json').read_text())
         name, version = manifest['name'], manifest['version']
-        archive = REPO / 'dist' / f'{name}-{version}-macos-arm64.zip'
+        target = os.environ.get('TOKENMONITOR_TEST_TARGET') or ('windows' if os.name == 'nt' else 'macos') + '-' + ('arm64' if platform.machine().lower() in ('arm64', 'aarch64') else 'x64')
+        archive = REPO / 'dist' / f'{name}-{version}-{target}.zip'
         self.assertTrue(archive.is_file(), 'Build the release archive first')
         with tempfile.TemporaryDirectory(prefix='embedded-hook-discovery-') as directory:
             root = Path(directory)
@@ -37,20 +41,22 @@ class EmbeddedHookDiscoveryTests(unittest.TestCase):
                 'name': 'hook-test', 'plugins': [{'name': name, 'source': {'source': 'local', 'path': './fixture'}}]}))
             (home / 'config.toml').write_text(f'[features]\nhooks = true\nplugins = true\n[plugins."{name}@hook-test"]\nenabled = true\n')
             with (root / 'stderr.log').open('w+') as errors:
-                process = subprocess.Popen(['codex', 'app-server', '--stdio'], cwd=root,
+                process = subprocess.Popen([*codex_cli()[1], 'app-server', '--stdio'], cwd=root,
                     env={**os.environ, 'CODEX_HOME': str(home)}, stdin=subprocess.PIPE,
                     stdout=subprocess.PIPE, stderr=errors, text=True)
+                lines = queue.Queue()
+                reader = threading.Thread(target=lambda: [lines.put(line) for line in process.stdout], daemon=True)
+                reader.start()
                 try:
                     def call(identifier, method, params):
                         process.stdin.write(json.dumps({'id': identifier, 'method': method, 'params': params}) + '\n')
                         process.stdin.flush()
                         deadline = time.monotonic() + 15
                         while time.monotonic() < deadline:
-                            with selectors.DefaultSelector() as ready:
-                                ready.register(process.stdout, selectors.EVENT_READ)
-                                if not ready.select(timeout=1):
-                                    continue
-                            line = process.stdout.readline()
+                            try:
+                                line = lines.get(timeout=1)
+                            except queue.Empty:
+                                continue
                             self.assertTrue(line, 'Codex app-server exited')
                             response = json.loads(line)
                             if response.get('id') == identifier:
@@ -75,6 +81,7 @@ class EmbeddedHookDiscoveryTests(unittest.TestCase):
                         process.kill()
                         process.wait(timeout=3)
                     process.stdin.close()
+                    reader.join(timeout=2)
                     process.stdout.close()
 
 if __name__ == '__main__':

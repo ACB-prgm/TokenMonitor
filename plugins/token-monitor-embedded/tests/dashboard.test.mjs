@@ -95,3 +95,9 @@ test('interactive refresh and task controls remain enabled and omit the global e
   const unknown=render({panelId:'p',status:'Monitoring'},false,true,{...updates,status:'unknown',error:'Unable to check for updates.'});assert.match(unknown,/Unable to check/);assert.doesNotMatch(unknown,/Up to date/);
   const missing=render({panelId:'p',status:'Monitoring'},false,true,{...updates,downloadURL:undefined});assert.doesNotMatch(missing,/Download Update/);assert.match(missing,/No verified package/);
  });
+test('automatic update checkbox starts checked and respects an explicit opt-out',()=>{
+ const checkbox=updates=>render({panelId:'p',status:'Monitoring'},false,true,updates).match(/<label class="automatic-check">([\s\S]*?)<\/label>/)[1];
+ assert.match(checkbox(undefined),/checked=""/);
+ assert.match(checkbox({automatic:true,status:'unknown'}),/checked=""/);
+ assert.doesNotMatch(checkbox({automatic:false,status:'unknown'}),/checked=""/);
+});

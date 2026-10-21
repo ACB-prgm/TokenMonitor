@@ -93,3 +93,8 @@ test('concurrent panels preserve independent preference changes',async t=>{
  await Promise.all([f.u.configure({automatic:false}),other.configure({target:'windows-arm64'})]);
  const s=await f.u.status();assert.equal(s.automatic,false);assert.equal(s.target,'windows-arm64');
 });
+test('a fresh installation enables automatic checks and performs its opening check',async t=>{
+ const f=await fixture(t);assert.equal((await f.u.status()).automatic,true);
+ await f.u.check(true);const status=await f.u.settled();
+ assert.equal(f.requests.length,1);assert.equal(status.automatic,true);assert.equal(status.status,'available');
+});

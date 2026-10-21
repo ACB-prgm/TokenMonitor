@@ -45,3 +45,13 @@ test('installer refuses an unavailable development catalog',async t=>{
  catalog.plugins[0].policy.installation='NOT_AVAILABLE';await writeFile(file,JSON.stringify(catalog));
  await assert.rejects(installRelease(f.plugin,f.options),/Invalid release marketplace/);assert.equal(f.calls.length,0);
 });
+for(const sourceType of ['local','git',undefined])test(`missing marketplace metadata uses verified plugin origin: ${sourceType}`,async t=>{
+ const f=await fixture(t);f.setActive(f.source);
+ const run=args=>{
+  if(args[0]==='marketplace'&&args[1]==='list')return JSON.stringify({marketplaces:[{name:'tokenmonitor',root:f.source}]});
+  if(args[0]==='list')return JSON.stringify({installed:[{pluginId:'token-monitor-embedded@tokenmonitor',marketplaceSource:{sourceType,source:f.source}}],available:[]});
+  return f.options.run(args);
+ };
+ if(sourceType==='local')await installRelease(f.plugin,{...f.options,run});
+ else{await assert.rejects(installRelease(f.plugin,{...f.options,run}),/original Git marketplace/);assert.equal(f.calls.length,0);}
+});

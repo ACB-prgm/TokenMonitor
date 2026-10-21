@@ -54,7 +54,18 @@ export async function installRelease(pluginRoot:string,options:{verifyOnly?:bool
   const listed=JSON.parse(run(['marketplace','list','--json']));
   if(!Array.isArray(listed.marketplaces))throw Error('Unsupported Codex marketplace response');
   const existing=listed.marketplaces.find((m:any)=>m.name==='tokenmonitor');
-  if(existing){if(existing.marketplaceSource?.sourceType!=='local')throw Error('Use the original Git marketplace update workflow or explicitly remove that source before switching to release packages.');previous=existing.root;}
+  if(existing){
+   let origin=existing.marketplaceSource;
+   // Codex's root-keyed marketplace listing can omit source metadata on Windows
+   // when canonical and display paths differ. Its plugin listing keys by name.
+   if(!origin){
+    const plugins=JSON.parse(run(['list','--marketplace','tokenmonitor','--json','--available']));
+    const entry=[...(plugins.installed??[]),...(plugins.available??[])].find((p:any)=>p.pluginId==='token-monitor-embedded@tokenmonitor');
+    if(entry?.marketplaceSource?.sourceType==='local'&&await realpath(entry.marketplaceSource.source)===await realpath(existing.root))origin=entry.marketplaceSource;
+   }
+   if(origin?.sourceType!=='local')throw Error('Use the original Git marketplace update workflow or explicitly remove that source before switching to release packages.');
+   previous=existing.root;
+  }
   const activeSource=previous;
   // A retry after interruption retains the original rollback source.
   try{const prior=JSON.parse(await readFile(journal,'utf8'));if(prior.source===source&&prior.phase!=='installed'&&typeof prior.previous==='string')previous=prior.previous;}catch{}

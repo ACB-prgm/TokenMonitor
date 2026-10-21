@@ -1,4 +1,4 @@
-import {existsSync,readFileSync,realpathSync} from 'node:fs';
+import {existsSync,openSync,readSync,closeSync,realpathSync} from 'node:fs';
 import path from 'node:path';
 /** Resolve native Codex or its installed npm entry point without a shell or system Node. */
 export function codexCommand(env:NodeJS.ProcessEnv=process.env,platform:string=process.platform):{command:string;prefix:string[]} {
@@ -10,7 +10,9 @@ export function codexCommand(env:NodeJS.ProcessEnv=process.env,platform:string=p
   if(!existsSync(candidate))continue;
   const resolved=realpathSync(candidate);
   if(/\.(cmd|bat)$/i.test(resolved))throw Error('Set CODEX_CLI_PATH to the native codex.exe or installed codex.js entry point.');
-  if(resolved.endsWith('.js')||readFileSync(resolved).subarray(0,100).toString().match(/^#!.*\bnode\b/))return {command:process.execPath,prefix:[resolved]};
+  const fd=openSync(resolved,'r'),header=Buffer.alloc(100);
+  let length;try{length=readSync(fd,header,0,100,0);}finally{closeSync(fd);}
+  if(resolved.endsWith('.js')||header.subarray(0,length).toString().match(/^#!.*\bnode\b/))return {command:process.execPath,prefix:[resolved]};
   return {command:resolved,prefix:[]};
  }
  throw Error('Codex CLI not found. Add Codex to PATH or set CODEX_CLI_PATH to its existing executable.');

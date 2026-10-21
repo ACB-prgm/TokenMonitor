@@ -47,7 +47,7 @@ async function atomic(file:string,value:unknown){
  try{await writeFile(temp,JSON.stringify(value)+'\n',{flag:'wx',mode:0o600});await rename(temp,file);}finally{await rm(temp,{force:true});}
 }
 export class Updates {
- private pending?:Promise<void>;private error?:string;private retryAt?:number;readonly root:string;
+ private pending?:Promise<void>;private error?:string;private retryAt?:number;private rateLimited=false;readonly root:string;
  constructor(readonly version:string,readonly options:{root?:string;fetch?:typeof fetch;now?:()=>number;target?:Target;timeoutMs?:number}={}){
   this.root=options.root??path.join(process.env.PLUGIN_DATA||stateRoot(),'updates');
  }
@@ -80,7 +80,8 @@ export class Updates {
   await atomic(this.file('preferences'),prefs);return this.status();
  }
  async check(automatic=false):Promise<UpdateStatus>{
-  const s=await this.status();if((automatic&&!s.automatic)||(s.retryAt&&s.retryAt>this.now()))return s;
+  const s=await this.status(),backoff=await json(this.file('backoff'));
+  if((automatic&&!s.automatic)||(s.retryAt&&s.retryAt>this.now()&&(automatic||this.rateLimited||backoff?.rateLimited===true)))return s;
   if(!this.pending)this.pending=this.run().catch(()=>{this.error='Unable to check for updates.';}).finally(()=>{this.pending=undefined;});
   return this.status();
  }
@@ -93,20 +94,21 @@ export class Updates {
   let handle;try{handle=await open(lock,'wx',0o600);}catch(e){if((e as NodeJS.ErrnoException).code==='EEXIST')return;throw e;}
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),this.options.timeoutMs??5000);
   try{
+   this.retryAt=undefined;this.rateLimited=false;
    const cache=await this.cache(),headers:Record<string,string>={Accept:'application/vnd.github+json','User-Agent':'TokenMonitor-update-check','X-GitHub-Api-Version':'2022-11-28'};
    if(cache?.etag)headers['If-None-Match']=cache.etag;
    const response=await(this.options.fetch??fetch)(releasesURL,{headers,signal:controller.signal,redirect:'error'});
    if(response.status===304&&cache)await atomic(this.file('cache'),{...cache,checkedAt:this.now()});
    else{
-    if(!response.ok){const after=response.headers.get('retry-after'),seconds=after===null?NaN:Number(after),reset=Number(response.headers.get('x-ratelimit-reset'))*1000;
+    if(!response.ok){this.rateLimited=response.status===403||response.status===429;const after=response.headers.get('retry-after'),seconds=after===null?NaN:Number(after),reset=Number(response.headers.get('x-ratelimit-reset'))*1000;
      this.retryAt=Math.min(this.now()+86400000,Math.max(this.now()+60000,Number.isFinite(seconds)?this.now()+seconds*1000:Date.parse(after??'')||0,reset||0));throw Error('GitHub unavailable');}
     const reader=response.body?.getReader();if(!reader)throw Error('Empty response');const chunks:Uint8Array[]=[];let size=0;
     while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>1024*1024){await reader.cancel();throw Error('Response too large');}chunks.push(value);}
     const release=parseRelease(JSON.parse(Buffer.concat(chunks).toString('utf8')));
     await atomic(this.file('cache'),{release,checkedAt:this.now(),etag:response.headers.get('etag')??undefined});
    }
-   this.error=undefined;this.retryAt=undefined;await rm(this.file('backoff'),{force:true});
-  }catch{this.error='Unable to check for updates. Last known release retained.';this.retryAt??=this.now()+60000;await atomic(this.file('backoff'),{retryAt:this.retryAt});}
+   this.error=undefined;this.retryAt=undefined;this.rateLimited=false;await rm(this.file('backoff'),{force:true});
+  }catch{this.error='Unable to check for updates. Last known release retained.';this.retryAt??=this.now()+60000;await atomic(this.file('backoff'),{retryAt:this.retryAt,rateLimited:this.rateLimited});}
   finally{clearTimeout(timer);await handle.close();await rm(lock,{force:true});}
  }
 }

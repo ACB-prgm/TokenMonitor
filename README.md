@@ -18,24 +18,19 @@ Costs are estimates using the bundled rate table, not invoices. Subscription all
 
 Packages target macOS Apple silicon (`macos-arm64`), macOS Intel (`macos-x64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop behavior is pending user verification for 1.4.0.
 
-Version 1.4.0 passed maintainer testing on macOS on October 20, 2026: the registry and running service report 1.4.0, and a fresh chat opens the panel automatically. The GitHub release remains a draft pending Windows desktop validation. The old Swift-based release is superseded.
+Version 1.4.0 is publicly released. Version 1.5.0 is under development; its release will include the refresh-control fix from `d9f1fe6` and background update discovery. Platform validation results must distinguish native launcher tests from desktop hook and rendering checks.
 
-Once the matching release is available:
+Download a complete `token-monitor-VERSION-TARGET.zip` and its `.sha256` companion from [Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Verify the checksum before extraction, then run the included macOS `install.sh` or Windows `install.ps1`. Restart Codex and review hook trust. The installer requires the existing Codex CLI, but uses the bundled Node runtime.
 
-1. Download `token-monitor-VERSION-PLATFORM.zip` and its `.sha256` companion from [Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Verify its SHA-256 checksum and extract the archive.
-2. Register the extracted `TokenMonitor` directory with `codex plugin marketplace add "ABSOLUTE_PATH_TO_TokenMonitor"`.
-3. Install with `codex plugin add token-monitor-embedded@tokenmonitor`. Enable and trust the six plugin hooks through Codex's normal controls if you want automatic startup and lifecycle updates.
-4. Reload the plugin or restart Codex when requested by the host. Open TokenMonitor in a local chat. The first-prompt instruction opens it once per chat when enabled; subsequent updates happen directly in the panel.
+See [installation, updating, recovery, rollback, and uninstall instructions](docs/INSTALL.md) for copy/paste commands. Keep previous extracted releases for rollback. Preferences, dismissals and historical telemetry remain outside the installation directory.
 
-The smaller `token-monitor-embedded-VERSION-PLATFORM.zip` contains the plugin alone for account deployment or a host's direct plugin installation. The source checkout does not include its bundled runtime or compiled assets; build a package before installing.
+The smaller `token-monitor-embedded-VERSION-TARGET.zip` is the plugin-only package for direct/account deployments. Update those through their original host entry. The development source marketplace lacks built assets and runtimes and is not a supported cross-platform Git installation.
 
-No system Node, Python, development tools, or API key is needed by an installed plugin. Platform launchers unpack a checksum-verified runtime already inside the package. Runtime operation requires no network downloads.
+## Updates
 
-## Update and removal
+Open update options from the existing version label. A background check runs at every live-panel opening by default; it never gates rendering or telemetry collection. Disable automatic checks or run a manual check from the menu. The menu offers release notes, a platform-specific ZIP and checksum, architecture selection, and dismissal for a particular version. Downloads do not execute or install updates.
 
-For a marketplace installation, register the newly extracted directory and reinstall/update `token-monitor-embedded@tokenmonitor` through Codex. Reload the host connection so the new server replaces the running version. For an account installation, update the existing plugin through its original account entry.
-
-Remove with `codex plugin remove token-monitor-embedded@tokenmonitor`, then `codex plugin marketplace remove tokenmonitor`. Account installations can be removed through Codex's plugin controls. Plugin telemetry state and runtime caches remain under `CODEX_HOME/token-monitor-embedded` unless explicitly removed; Codex chat data remains intact.
+Checks use only public GitHub release metadata, with a five-second timeout, bounded responses, caching and rate-limit backoff. Offline or failed checks report unknown status. Polls, lifecycle hooks and inline summary cards do not initiate checks; update discovery adds no model turns or model-context updates.
 
 ## Privacy and behavior
 

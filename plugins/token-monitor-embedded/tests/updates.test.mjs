@@ -78,3 +78,13 @@ test('oversized and non-JSON responses fail gracefully',async t=>{
  const f=await fixture(t);f.fetch(async()=>new Response('x'.repeat(1024*1024+1)));await f.u.check();assert.equal((await f.u.settled()).status,'unknown');
  f.advance(60001);f.fetch(async()=>new Response('not json'));await f.u.check();assert.equal((await f.u.settled()).status,'unknown');
 });
+test('manual check retries a transient failure immediately; automatic opens honor backoff',async t=>{
+ const f=await fixture(t);f.fetch(async()=>{throw Error('offline');});await f.u.check();await f.u.settled();
+ await f.u.check(true);assert.equal(f.requests.length,1);f.fetch(async()=>response());await f.u.check();assert.equal((await f.u.settled()).status,'available');assert.equal(f.requests.length,2);
+});
+test('separate MCP services share an in-flight request lease',async t=>{
+ const f=await fixture(t);let resolve;const blocked=new Promise(r=>{resolve=r;});f.fetch(()=>blocked);
+ await f.u.check();while(f.requests.length===0)await new Promise(r=>setImmediate(r));
+ const other=new Updates('1.4.0',f.settings);await other.check();await other.settled();assert.equal(f.requests.length,1);
+ resolve(response());await f.u.settled();assert.equal((await other.status()).latestVersion,'1.5.0');
+});

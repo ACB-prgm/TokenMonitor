@@ -7,4 +7,6 @@ const hooks=JSON.parse(await readFile(path.join(plugin,'hooks/hooks.json'),'utf8
 assert.ok((await readFile(path.join(repo,'LICENSE'),'utf8')).startsWith('# PolyForm Noncommercial License 1.0.0'));
 const ignored=new Set(['.git','.build','build','dist','node_modules','runtime']);
 async function scan(dir){for(const f of await readdir(dir,{withFileTypes:true})){if(ignored.has(f.name))continue;assert.ok(!f.name.endsWith('.swift'),'Unexpected retired source '+f.name);assert.ok(f.name!=='Package.swift');if(f.isDirectory())await scan(path.join(dir,f.name));}}await scan(repo);
+assert.ok((await readFile(path.join(plugin,'shared/version.ts'),'utf8')).includes("import metadata from '../package.json'"));
+assert.ok((await readFile(path.join(repo,'docs',`RELEASE-${version}.md`),'utf8')).includes(`TokenMonitor ${version}`));
 console.log('Release metadata, hooks, license and source inventory verified: '+version);

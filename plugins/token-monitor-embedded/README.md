@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 1.4.0
+# TokenMonitor Embedded 1.5.0
 
 A local Codex token monitor with a React panel and an in-process TypeScript collector. Platform packages bundle Node; no system Node, Python, compiler, telemetry daemon, or API key is required.
 
@@ -15,3 +15,9 @@ If a task disappears, its last cached snapshot remains available until the idle 
 This release retains the existing Codex-compatible manifest layout because the tested host discovers its six command hooks through that layout. Trust and enable hooks through Codex's normal controls.
 
 License: PolyForm Noncommercial 1.0.0. See LICENSE, NOTICE, THIRD-PARTY-NOTICES.txt, and runtime/NODE-LICENSE.txt in the package.
+
+## Release updates
+
+The version label opens the update menu. Stable GitHub release checks run in the background at every live-panel opening by default; they do not gate telemetry, run from hooks, or add model turns. Disable automatic checks, check manually, select a package, or dismiss a version from the menu. Offline failures remain unknown. Update settings and cached release metadata use `PLUGIN_DATA/updates`, falling back to `CODEX_HOME/token-monitor-embedded/updates`.
+
+Download the complete marketplace ZIP and its checksum, verify before extracting, then run its root `install.sh` or `install.ps1`. The helper uses this bundled runtime and the existing Codex CLI, verifies package integrity, and preserves previous release sources for rollback. Restart Codex and review hook trust after installation. Direct/account deployments should update through their original host entry. See the repository's `docs/INSTALL.md` for commands and recovery details. The development source Git marketplace is not a self-contained cross-platform installation.

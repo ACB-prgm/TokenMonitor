@@ -30,11 +30,11 @@ test('panel and inline summary are callable by the model; refresh tools remain a
   const { client } = await connectedClient();
   try {
     const { tools } = await client.listTools();
-    assert.deepEqual(tools.map(tool => tool.name), ['open_monitor', 'get_monitor_state', 'list_tasks', 'show_turn_summary']);
+    assert.deepEqual(tools.map(tool => tool.name), ['open_monitor', 'get_monitor_state', 'manage_updates', 'list_tasks', 'show_turn_summary']);
     for (const tool of tools) {
       assert.deepEqual(tool._meta.ui.visibility, ['open_monitor', 'show_turn_summary'].includes(tool.name) ? ['model', 'app'] : ['app']);
-      assert.equal(tool.annotations.readOnlyHint, true);
-      assert.equal(tool.annotations.openWorldHint, false);
+      assert.equal(tool.annotations.readOnlyHint, tool.name !== 'manage_updates');
+      assert.equal(tool.annotations.openWorldHint, tool.name === 'manage_updates');
     }
     assert.deepEqual(tools[0]._meta['openai/ui'].entrypoints, [{ type: 'thread' }]);
     assert.equal(tools.filter(tool => tool._meta.ui.resourceUri).length, 2);

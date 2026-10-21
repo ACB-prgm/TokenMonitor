@@ -6,16 +6,19 @@ import path from 'node:path';
 import { z } from 'zod';
 import { recordRouting } from './routing-trace.js';
 import { acknowledgeStartup, startupState } from './startup.js';
+import {installedVersion} from '../../shared/version.js';
+import {Updates, targets} from './updates.js';
 import { Panels } from './panels.js';
 import { Collector } from './collector.js';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const resourceUri = 'ui://token-monitor-embedded/panel-v1.4.0.html';
-const summaryUri = 'ui://token-monitor-embedded/turn-summary-v1.4.0.html';
-const server = new McpServer({ name: 'token-monitor-embedded', version: '1.4.0' });
+const resourceUri = `ui://token-monitor-embedded/panel-v${installedVersion}.html`;
+const summaryUri = `ui://token-monitor-embedded/turn-summary-v${installedVersion}.html`;
+const server = new McpServer({ name: 'token-monitor-embedded', version: installedVersion });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 const collector = new Collector();
 const panels = new Panels(collector);
+const updates = new Updates(installedVersion);
 process.on('exit', () => collector.close());
 process.stdin.on('end', () => { collector.close(); void server.close(); });
 process.on('SIGTERM', () => { collector.close(); process.exit(0); });
@@ -68,8 +71,21 @@ server.registerTool('get_monitor_state', {
     action: z.enum(['select']).optional(), revision: z.string().max(500).optional() },
   annotations, _meta: { ui: { visibility: ['app'] } },
 }, async (args, extra) => {
-  try { return { content: [], _meta: { monitor: await panels.state(args.panelId, args, hostID(extra)) } }; }
+  try { return { content: [], _meta: { monitor: await panels.state(args.panelId, args, hostID(extra)), updates: await updates.status() } }; }
   catch { return { isError: true, content: [], _meta: { error: 'Task unavailable. Refresh the local task list.' } }; }
+});
+server.registerTool('manage_updates', {
+  title: 'TokenMonitor updates', description: 'Panel-only release checks and local update preferences; never installs software.',
+  inputSchema: { action: z.enum(['opening','check','configure','dismiss']), automatic: z.boolean().optional(),
+    target: z.enum(['auto',...targets]).optional(), version: z.string().max(200).optional() },
+  annotations: {readOnlyHint:false, destructiveHint:false, openWorldHint:true}, _meta: { ui: { visibility: ['app'] } },
+}, async args => {
+  try {
+    const status = args.action === 'opening' || args.action === 'check'
+      ? await updates.check(args.action === 'opening')
+      : await updates.configure(args.action === 'dismiss' ? {dismissVersion:args.version ?? ''} : {automatic:args.automatic,target:args.target});
+    return {content:[],_meta:{updates:status}};
+  } catch { return {isError:true,content:[],_meta:{error:'Unable to access update settings.'}}; }
 });
 server.registerTool('list_tasks', {
   title: 'List monitored tasks', description: 'List recent local tasks for the panel picker.',

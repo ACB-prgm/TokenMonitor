@@ -138,7 +138,29 @@ class ReleaseInstallTests(unittest.TestCase):
             updates = state / 'updates'
             updates.mkdir(exist_ok=True)
             (updates / 'preferences.json').write_text(json.dumps({'automatic': False, 'dismissedVersion': '9.0.0'}))
-            install(source)
+            # Exercise the panel's verified download/extraction/installation pipeline.
+            # Network transport is a local fixture; verification and the real Codex CLI are unchanged.
+            updater = source / 'plugins/token-monitor-embedded/server/dist/auto-update.mjs'
+            runner = root / 'panel-update.mjs'
+            runner.write_text("import {readFile} from 'node:fs/promises';\n"
+                              f"import {{installUpdate}} from {json.dumps(updater.as_uri())};\n"
+                              "const version=process.env.TEST_VERSION,target=process.env.TEST_TARGET;\n"
+                              "const name=`token-monitor-${version}-${target}.zip`;\n"
+                              "const url=`https://github.com/ACB-prgm/TokenMonitor/releases/download/v${version}/${name}`;\n"
+                              "await installUpdate({id:'native-test',pid:process.pid,phase:'downloading',version,target,downloadURL:url,checksumURL:url+'.sha256'},"
+                              "{root:process.env.TEST_JOB_ROOT,fetch:async url=>new Response(await readFile(process.env.TEST_ARCHIVE+(url.endsWith('.sha256')?'.sha256':'')))});\n")
+            runtime_hash = (source / 'plugins/token-monitor-embedded/runtime/node.sha256').read_text().strip()
+            runtime = state / 'runtime' / runtime_hash / ('node.exe' if os.name == 'nt' else 'node')
+            update_env = {**env, 'TEST_VERSION': VERSION, 'TEST_TARGET': TARGET,
+                          'TEST_JOB_ROOT': str(updates / 'installer'),
+                          'TEST_ARCHIVE': str(REPO / 'dist' / f'token-monitor-{VERSION}-{TARGET}.zip')}
+            with mcp_connection(plugin, env) as (running_version, running_request):
+                r = subprocess.run([str(runtime), str(runner)], cwd=root, env=update_env,
+                                   capture_output=True, text=True, timeout=120)
+                self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+                self.assertEqual(running_version, PRIOR)
+                self.assertTrue(running_request('tools/list', {})['tools'])
+            self.assertEqual(json.loads((updates / 'installer/job.json').read_text())['phase'], 'installed')
             plugin = next(p for p, v in self.installed(home) if v == VERSION)
             self.assertEqual(mcp_version(plugin, env), VERSION)
             # Execute all six installed hook commands, without trusting hooks or creating a model turn.

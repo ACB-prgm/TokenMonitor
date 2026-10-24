@@ -84,7 +84,7 @@ export async function installRelease(pluginRoot:string,options:{verifyOnly?:bool
   throw Error(`${detail}\nInstallation failed${recovered?'; previous source restored':''}. Keep both extracted directories. Re-run the installer, or restore the previous source recorded in ${journal}.`,{cause:error});
  }finally{await handle.close();await rm(lock,{force:true});}
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
+if(process.argv[1]&&path.basename(process.argv[1])==='install.mjs'&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
  try{
   const root=fileURLToPath(new URL('../..',import.meta.url));
   const result=await installRelease(root,{verifyOnly:process.argv.includes('--verify-only')});

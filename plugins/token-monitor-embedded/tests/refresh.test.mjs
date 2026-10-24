@@ -76,3 +76,12 @@ test('polls retain unchanged views and queue selections made in flight',async()=
  test('inline summary never schedules update checks or telemetry polls',()=>{
   const p=panel(true);p.deliver({panelId:'s',status:'Snapshot'});assert.equal(p.opening.length,0);assert.equal(p.calls.length,0);assert.equal(p.render().onUpdate,undefined);
  });
+test('install action pins the requested version, reports progress through unchanged polls, and keeps refresh responsive',async()=>{
+ const p=panel(),state={panelId:'p',revision:'r1',status:'Monitoring'};p.deliver(state);await p.settle({...state,unchanged:true});
+ p.render().onUpdate({action:'install',version:'1.7.0'});const install=p.calls.at(-1);
+ assert.deepEqual(install.request,{name:'manage_updates',arguments:{action:'install',version:'1.7.0'}});
+ p.poll();await p.settle({...state,unchanged:true});assert.equal(p.render().s.status,'Monitoring');
+ install.resolve({_meta:{updates:{installation:{phase:'downloading',version:'1.7.0'}}}});await new Promise(r=>setImmediate(r));
+ p.poll();await p.settle({...state,unchanged:true},{installation:{phase:'installed',version:'1.7.0'}});assert.equal(p.render().updates.installation.phase,'installed');
+ p.render().onUpdate({action:'install',version:'1.7.0'});p.calls.at(-1).resolve({isError:true,_meta:{error:'Choose the package for this computer.'}});await new Promise(r=>setImmediate(r));assert.match(p.render().updateError,/package for this computer/);
+});

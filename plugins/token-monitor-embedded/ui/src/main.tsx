@@ -42,7 +42,7 @@ function Panel() {
         if(result.isError)throw new Error('Codex could not open this link.');
       } else {
         const result=await app.callServerTool({name:'manage_updates',arguments:action});
-        if(result.isError)throw new Error('Unable to access update settings.');
+        if(result.isError)throw new Error((result._meta as any)?.error??'Unable to access update settings.');
         if(active.current&&request===updateSerial.current) {
           const value=(result._meta as any)?.updates as UpdateStatus|undefined;
           if(value)setUpdates(value);

@@ -28,7 +28,7 @@ The smaller `token-monitor-embedded-VERSION-TARGET.zip` is the plugin-only packa
 
 ## Updates
 
-Open update options from the existing version label. A background check runs at every live-panel opening by default; it never gates rendering or telemetry collection. Disable automatic checks or run a manual check from the menu. The menu offers release notes, a platform-specific ZIP and checksum, architecture selection, and dismissal for a particular version. Downloads do not execute or install updates.
+Open update options from the existing version label. A background check runs at every live-panel opening by default; it never gates rendering or telemetry collection. Disable automatic checks or run a manual check from the menu. **Update and install** downloads the native package, verifies its checksum and inventory, and updates an existing local release marketplace installation through Codex. Progress appears in the panel; restart Codex when complete. Account and Git installations retain their original update mechanism. Release notes, architecture selection, and per-version dismissal remain available.
 
 Checks use only public GitHub release metadata, with a five-second timeout, bounded responses, caching and rate-limit backoff. Offline or failed checks report unknown status. Polls, lifecycle hooks and inline summary cards do not initiate checks; update discovery adds no model turns or model-context updates.
 

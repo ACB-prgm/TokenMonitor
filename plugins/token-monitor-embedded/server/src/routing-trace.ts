@@ -2,8 +2,9 @@ import { constants } from 'node:fs';
 import { lstat, mkdir, open, readFile, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import {pluginName} from '../../shared/identity.js';
 
-const stateRoot = path.join(process.env.CODEX_HOME || path.join(homedir(), '.codex'), 'token-monitor-embedded');
+const stateRoot = path.join(process.env.CODEX_HOME || path.join(homedir(), '.codex'), pluginName);
 const directory = path.join(stateRoot, 'diagnostics');
 const controlFile = path.join(directory, 'routing-capture.json');
 const maxFileBytes = 256 * 1024;

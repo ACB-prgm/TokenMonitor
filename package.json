@@ -1,0 +1,10 @@
+{
+  "name": "token-monitor-workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs --install",
+    "dev:build": "node scripts/dev.mjs",
+    "dev:test": "node --test scripts/dev.test.mjs"
+  }
+}

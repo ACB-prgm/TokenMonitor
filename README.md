@@ -40,6 +40,12 @@ UI refreshes do not request model turns or update model context. The optional fi
 
 ## Development
 
+For everyday local development, run `npm run dev` from the repository root. It
+builds and installs a separate **Token Monitor DEV** plugin alongside the release.
+Restart Codex, review DEV hook trust, then ask to open Token Monitor DEV. Run the
+same command after edits to rebuild and refresh the local installation. See
+[the DEV workflow](docs/DEVELOPMENT.md) for setup, build-only, and removal commands.
+
 Use Node 24 LTS and Python 3.12+ for build-time archive extraction only. Run `npm ci` in `plugins/token-monitor-embedded`, followed by `node scripts/build-release.mjs --target macos-arm64` from the repository root. Supported `--target` values are the four platform names above and `all`. Archives and SHA-256 files are written to `dist/`.
 
 See [Contributing](CONTRIBUTING.md) for tests and the staged release process. The shared TypeScript collector runs inside the MCP server. Platform adapters cover path validation, data locations, safe writes and runtime launch. Linux packaging is deferred.

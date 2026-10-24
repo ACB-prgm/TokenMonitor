@@ -7,14 +7,15 @@ import { z } from 'zod';
 import { recordRouting } from './routing-trace.js';
 import { acknowledgeStartup, startupState } from './startup.js';
 import {installedVersion} from '../../shared/version.js';
+import {pluginName,serverDisplayName} from '../../shared/identity.js';
 import {Updates, targets} from './updates.js';
 import { Panels } from './panels.js';
 import { Collector } from './collector.js';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const resourceUri = `ui://token-monitor-embedded/panel-v${installedVersion}.html`;
-const summaryUri = `ui://token-monitor-embedded/turn-summary-v${installedVersion}.html`;
-const server = new McpServer({ name: 'token-monitor-embedded', version: installedVersion });
+const resourceUri = `ui://${pluginName}/panel-v${installedVersion}.html`;
+const summaryUri = `ui://${pluginName}/turn-summary-v${installedVersion}.html`;
+const server = new McpServer({ name: pluginName, version: installedVersion });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 const collector = new Collector();
 const panels = new Panels(collector);
@@ -53,7 +54,7 @@ const hookInput = {
   turnId: z.string().min(1).max(200).nullable().optional(),
 };
 server.registerTool('open_monitor', {
-  title: 'TokenMonitor Embedded',
+  title: serverDisplayName,
   description: 'Open the expanded local TokenMonitor panel when requested by the user or by the enabled first-prompt startup instruction. Call once per chat for automatic startup; do not reopen on subsequent turns unless the user requests it. Attaching or mentioning the plugin alone does not open it. After opening, the panel refreshes directly without further model calls.',
   inputSchema: hookInput, annotations,
   _meta: { ui: { resourceUri, visibility: ['model', 'app'] },

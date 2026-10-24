@@ -3,8 +3,9 @@ import {homedir} from 'node:os';
 import {constants,closeSync,existsSync,fstatSync,lstatSync,mkdirSync,openSync,readSync,realpathSync,renameSync,rmSync,statSync,writeFileSync} from 'node:fs';
 import {randomUUID} from 'node:crypto';
 import {setTimeout as delay} from 'node:timers/promises';
+import {pluginName} from '../../shared/identity.js';
 export const codexHome=()=>path.resolve(process.env.CODEX_HOME||path.join(homedir(),'.codex'));
-export const stateRoot=(home=codexHome())=>path.join(home,'token-monitor-embedded');
+export const stateRoot=(home=codexHome())=>path.join(home,pluginName);
 export const validID=(value:unknown):value is string=>typeof value==='string'&&/^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$/.test(value);
 export function contained(root:string,candidate:string,flavor: 'win32'|'posix'=process.platform==='win32'?'win32':'posix') {
   const p=path[flavor];if(!p.isAbsolute(candidate))return false;const relative=p.relative(p.resolve(root),p.resolve(candidate));return !!relative&&relative!=='..'&&!relative.startsWith('..'+p.sep)&&!p.isAbsolute(relative);

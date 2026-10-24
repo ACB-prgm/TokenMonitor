@@ -18,7 +18,7 @@ Costs are estimates using the bundled rate table, not invoices. Subscription all
 
 Packages target macOS Apple silicon (`macos-arm64`), macOS Intel (`macos-x64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop behavior is pending user verification for 1.4.0.
 
-Version 1.5.0 adds background update discovery, a clickable version menu, guided release installation, and the refresh-control fix from `d9f1fe6`. Platform validation results must distinguish native launcher tests from desktop hook and rendering checks.
+Version 1.6.0 adds themed, selectable recent-call details with bounded Activity excerpts and file targets, revised compaction value labels, and an isolated local DEV workflow. Platform validation results distinguish native launcher tests from desktop hook and rendering checks.
 
 Download a complete `token-monitor-VERSION-TARGET.zip` and its `.sha256` companion from [Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Verify the checksum before extraction, then run the included macOS `install.sh` or Windows `install.ps1`. Restart Codex and review hook trust. The installer requires the existing Codex CLI, but uses the bundled Node runtime.
 

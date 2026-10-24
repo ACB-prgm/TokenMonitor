@@ -98,7 +98,7 @@ export function compactionValue(currentInput?:number, postCompactionInput?:numbe
   if(currentInput==null||currentInput<=0||(postCompactionInput!=null&&postCompactionInput<0))return;
   const reduced=postCompactionInput??Math.max(currentInput*.3,40000),raw=currentInput>reduced?Math.floor(1+(reduced+3600)/(.1*(currentInput-reduced)))+1:undefined;
   const breakEvenCalls=raw!=null&&Number.isSafeInteger(raw)?raw:undefined;
-  const category=breakEvenCalls==null?'VERY LOW':breakEvenCalls<=2?'VERY HIGH':breakEvenCalls<=4?'HIGH':breakEvenCalls<=7?'MEDIUM':breakEvenCalls<=12?'LOW':'VERY LOW';
+  const category=breakEvenCalls==null?'VERY LOW':breakEvenCalls<=6?'VERY HIGH':breakEvenCalls<=8?'HIGH':breakEvenCalls<=12?'MEDIUM':breakEvenCalls<=20?'LOW':'VERY LOW';
   return {currentInput,estimatedInput:Math.round(reduced),breakEvenCalls,category,level:category==='VERY HIGH'?3:category==='HIGH'?2:category==='MEDIUM'?1:0};
 }
 export function apiBreakEven(input?:number,model?:string,tier?:string) {

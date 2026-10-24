@@ -18,7 +18,7 @@ Costs are estimates using the bundled rate table, not invoices. Subscription all
 
 Packages target macOS Apple silicon (`macos-arm64`), macOS Intel (`macos-x64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop behavior is pending user verification for 1.4.0.
 
-Version 1.6.0 adds themed, selectable recent-call details with bounded Activity excerpts and file targets, revised compaction value labels, and an isolated local DEV workflow. Platform validation results distinguish native launcher tests from desktop hook and rendering checks.
+Version 1.7.0 adds **Update and install** in the version menu, with verified native packages, background installation, and progress reporting. Platform validation results distinguish native launcher tests from desktop hook and rendering checks.
 
 Download a complete `token-monitor-VERSION-TARGET.zip` and its `.sha256` companion from [Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Verify the checksum before extraction, then run the included macOS `install.sh` or Windows `install.ps1`. Restart Codex and review hook trust. The installer requires the existing Codex CLI, but uses the bundled Node runtime.
 
@@ -28,7 +28,7 @@ The smaller `token-monitor-embedded-VERSION-TARGET.zip` is the plugin-only packa
 
 ## Updates
 
-Open update options from the existing version label. A background check runs at every live-panel opening by default; it never gates rendering or telemetry collection. Disable automatic checks or run a manual check from the menu. The menu offers release notes, a platform-specific ZIP and checksum, architecture selection, and dismissal for a particular version. Downloads do not execute or install updates.
+Open update options from the existing version label. A background check runs at every live-panel opening by default; it never gates rendering or telemetry collection. Disable automatic checks or run a manual check from the menu. **Update and install** downloads the native package, verifies its checksum and inventory, and updates an existing local release marketplace installation through Codex. Progress appears in the panel; restart Codex when complete. Account and Git installations retain their original update mechanism. Release notes, architecture selection, and per-version dismissal remain available.
 
 Checks use only public GitHub release metadata, with a five-second timeout, bounded responses, caching and rate-limit backoff. Offline or failed checks report unknown status. Polls, lifecycle hooks and inline summary cards do not initiate checks; update discovery adds no model turns or model-context updates.
 

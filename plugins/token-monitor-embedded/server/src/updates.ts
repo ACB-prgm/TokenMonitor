@@ -3,6 +3,7 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {stateRoot,atomicJSON,withStateLock} from './platform.js';
+import type {Installation} from './auto-update.js';
 export const releasesURL='https://api.github.com/repos/ACB-prgm/TokenMonitor/releases/latest';
 export const targets=['macos-arm64','macos-x64','windows-x64','windows-arm64'] as const;
 export type Target=typeof targets[number];
@@ -31,7 +32,7 @@ type Preferences={automatic:boolean;dismissedVersion?:string;target?:Target};
 type Cache={release:Release;checkedAt:number;etag?:string};
 export type UpdateStatus={installedVersion:string;status:'unknown'|'current'|'available'|'ahead';checking:boolean;
  automatic:boolean;dismissed:boolean;target?:Target;detectedTarget?:Target;latestVersion?:string;releaseURL?:string;
- publishedAt?:string;downloadURL?:string;checksumURL?:string;checkedAt?:number;stale:boolean;error?:string;retryAt?:number};
+ publishedAt?:string;downloadURL?:string;checksumURL?:string;checkedAt?:number;stale:boolean;error?:string;retryAt?:number;installation?:Installation};
 function safeURL(value:unknown,prefix:string):value is string {
  if(typeof value!=='string')return false;
  try{const u=new URL(value);return u.protocol==='https:'&&u.hostname==='github.com'&&!u.username&&!u.password&&!u.port&&u.pathname.startsWith(`/ACB-prgm/TokenMonitor/releases/${prefix}/`);}catch{return false;}

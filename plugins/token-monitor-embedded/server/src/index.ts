@@ -7,8 +7,9 @@ import { z } from 'zod';
 import { recordRouting } from './routing-trace.js';
 import { acknowledgeStartup, startupState } from './startup.js';
 import {installedVersion} from '../../shared/version.js';
-import {pluginName,serverDisplayName} from '../../shared/identity.js';
-import {Updates, targets} from './updates.js';
+import {pluginName,serverDisplayName,isDev} from '../../shared/identity.js';
+import {AutoUpdater} from './auto-update.js';
+import {Updates, targets,compareVersions} from './updates.js';
 import { Panels } from './panels.js';
 import { Collector } from './collector.js';
 
@@ -20,6 +21,9 @@ const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint:
 const collector = new Collector();
 const panels = new Panels(collector);
 const updates = new Updates(installedVersion);
+const installer = new AutoUpdater();
+const installationState = async()=>{const value=await installer.status();return value?.phase==='installed'&&compareVersions(installedVersion,value.version)>=0?undefined:value;};
+const updateState = async()=>({...await updates.status(),installation:await installationState()});
 process.on('exit', () => collector.close());
 process.stdin.on('end', () => { collector.close(); void server.close(); });
 process.on('SIGTERM', () => { collector.close(); process.exit(0); });
@@ -72,21 +76,26 @@ server.registerTool('get_monitor_state', {
     action: z.enum(['select']).optional(), revision: z.string().max(500).optional() },
   annotations, _meta: { ui: { visibility: ['app'] } },
 }, async (args, extra) => {
-  try { return { content: [], _meta: { monitor: await panels.state(args.panelId, args, hostID(extra)), updates: await updates.status() } }; }
+  try { return { content: [], _meta: { monitor: await panels.state(args.panelId, args, hostID(extra)), updates: await updateState() } }; }
   catch { return { isError: true, content: [], _meta: { error: 'Task unavailable. Refresh the local task list.' } }; }
 });
 server.registerTool('manage_updates', {
-  title: 'TokenMonitor updates', description: 'Panel-only release checks and local update preferences; never installs software.',
-  inputSchema: { action: z.enum(['opening','check','configure','dismiss']), automatic: z.boolean().optional(),
+  title: 'TokenMonitor updates', description: 'Panel-only release checks, preferences, and explicitly requested verified installation through Codex.',
+  inputSchema: { action: z.enum(['opening','check','configure','dismiss','install']), automatic: z.boolean().optional(),
     target: z.enum(['auto',...targets]).optional(), version: z.string().max(200).optional() },
-  annotations: {readOnlyHint:false, destructiveHint:false, openWorldHint:true}, _meta: { ui: { visibility: ['app'] } },
+  annotations: {readOnlyHint:false, destructiveHint:true, openWorldHint:true}, _meta: { ui: { visibility: ['app'] } },
 }, async args => {
   try {
+    if(args.action==='install'){
+      if(isDev)throw Error('DEV cannot replace the release installation.');
+      await installer.start(await updates.status(),args.version??'');
+      return {content:[],_meta:{updates:await updateState()}};
+    }
     const status = args.action === 'opening' || args.action === 'check'
       ? await updates.check(args.action === 'opening')
       : await updates.configure(args.action === 'dismiss' ? {dismissVersion:args.version ?? ''} : {automatic:args.automatic,target:args.target});
-    return {content:[],_meta:{updates:status}};
-  } catch { return {isError:true,content:[],_meta:{error:'Unable to access update settings.'}}; }
+    return {content:[],_meta:{updates:{...status,installation:await installationState()}}};
+  } catch(error) { return {isError:true,content:[],_meta:{error:error instanceof Error?error.message:'Unable to access update settings.'}}; }
 });
 server.registerTool('list_tasks', {
   title: 'List monitored tasks', description: 'List recent local tasks for the panel picker.',

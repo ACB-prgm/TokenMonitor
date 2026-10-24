@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.0
+
+- Replace ZIP and SHA download buttons with **Update and install** for existing local release marketplace installations.
+- Download and verify the native release in a background worker, report progress and failures in the panel, and preserve existing rollback and hook-trust behavior.
+
 ## 1.6.0
 
 - Restyle recent-call details to match the panel and remove the duplicate bar tooltip.

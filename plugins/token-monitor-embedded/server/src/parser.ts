@@ -1,3 +1,4 @@
+import {ActivityCollector} from './activity.js';
 import {createHash} from 'node:crypto';
 import {AttributionEstimator,BoundedSet,ThreadUsage,apiBreakEven,bounded,cacheTemperature,cleanTitle,compactionValue,date,emptyAttribution,health,integer,nonnegative,price,type Attribution,type RecordValue,type Sample} from './metrics.js';
 const object=(x:any):x is RecordValue=>x!=null&&typeof x==='object'&&!Array.isArray(x);
@@ -7,6 +8,7 @@ export class TelemetryParser {
   awaitingPostCompactionCall=false; compactedContext?:number; compactions:{timestamp:string;callPosition:number}[]=[];
   samples:Sample[]=[]; contextLimit?:number; fiveHour?:{used:number;reset?:string}; weekly?:{used:number;reset?:string};
   model?:string; effort?:string; title?:string; lastCallModel?:string; lastCallEffort?:string; lastEvent?:string; callCount=0;
+  private activity=new ActivityCollector();
   private reportedOutput?:number; private reportedReasoning?:number; private summedOutput=0; private summedReasoning=0; private outputComplete=true;private reasoningComplete=true;
   readonly attribution=new AttributionEstimator(); contextAttribution=emptyAttribution(); private pendingAttribution?:Attribution;
   readonly usage=new ThreadUsage(); private serviceTier?:string;private regionalProcessing?:boolean;
@@ -15,6 +17,7 @@ export class TelemetryParser {
   consume(line:string|Buffer|RecordValue) {
     let r:RecordValue;try{r=typeof line==='string'||Buffer.isBuffer(line)?JSON.parse(line.toString()):line;}catch{return;}
     if(!object(r)||!object(r.payload))return;const p=r.payload,type=r.type,time=date(r.timestamp);
+    this.activity.consume(type,p);
     if(type==='compacted'&&time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp)){this.awaitingPostCompactionCall=true;this.compactedContext=undefined;this.pendingAttribution=undefined;this.contextAttribution=emptyAttribution();}
     const response=['reasoning','function_call','custom_tool_call'].includes(p.type)||(p.type==='message'&&p.role==='assistant');
     if(type==='response_item'&&!this.pendingAttribution&&response)this.pendingAttribution=this.attribution.snapshot();
@@ -48,6 +51,7 @@ export class TelemetryParser {
       cachedRecorded:u.cached_input_tokens!=null,cacheWriteRecorded:nonnegative(u.cache_write_input_tokens)&&u.cache_write_input_tokens<=input-cached};
     s.price=price(s);
     if(!this.seenIdentities.add(fingerprint([r.timestamp,s.input,s.cached,s.output,s.total??-1])))return;
+    const activity=this.activity.take();if(activity)s.activity=activity;
     this.awaitingPostCompactionCall=false;this.compactedContext=undefined;this.contextAttribution=bounded(this.pendingAttribution??this.attribution.snapshot(),input);this.pendingAttribution=undefined;
     this.usage.add(s);if(cumulative){if(integer(cumulative.input_tokens))this.usage.cumulativeMismatch=cumulative.input_tokens!==this.usage.input;if(integer(cumulative.output_tokens)&&cumulative.output_tokens!==this.usage.output)this.usage.cumulativeMismatch=true;}
     this.lastCallModel=s.model;this.lastCallEffort=this.effort;this.callCount++;

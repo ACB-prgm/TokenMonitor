@@ -1,7 +1,8 @@
-// Telemetry values are deliberately separate from transcript text and file paths.
+// Bounded visible activity is separate from numeric telemetry.
+import type {CallActivity} from './activity.js';
 export type RecordValue = Record<string, any>;
 export type Rates = {input: number; cached: number; write?: number; output: number};
-export type Sample = {timestamp: string; input: number; cached: number; cacheWrite: number; output: number; reasoning: number; total?: number; ordinal?: number; outputRecorded: boolean; reasoningRecorded: boolean; model?: string; serviceTier?: string; regionalProcessing?: boolean; cachedRecorded: boolean; cacheWriteRecorded: boolean; price?: ReturnType<typeof price>};
+export type Sample = {activity?: CallActivity; timestamp: string; input: number; cached: number; cacheWrite: number; output: number; reasoning: number; total?: number; ordinal?: number; outputRecorded: boolean; reasoningRecorded: boolean; model?: string; serviceTier?: string; regionalProcessing?: boolean; cachedRecorded: boolean; cacheWriteRecorded: boolean; price?: ReturnType<typeof price>};
 const standard: Record<string, number[]> = {
   'gpt-6.1-sol':[2,.1,2.5,10], 'gpt-6-astra':[10,1,12.5,50], 'gpt-6-sol':[2,.2,2.5,10], 'gpt-6-luna':[.1,.01,.125,.5],
   'gpt-5.6-sol':[4,.4,5,20], 'gpt-5.6-terra':[2,.2,2.5,12], 'gpt-5.6-luna':[.2,.02,.25,1.2],

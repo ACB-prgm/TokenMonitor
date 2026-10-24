@@ -34,7 +34,7 @@ Checks use only public GitHub release metadata, with a five-second timeout, boun
 
 ## Privacy and behavior
 
-The server reads local Codex JSONL telemetry and schema-checked SQLite thread metadata. It opens databases read-only and does not modify chats. It returns aggregate metrics and task labels to the panel; raw transcripts, prompts and absolute transcript paths are not returned. Runtime state uses the configured Codex home, with private plugin storage preferred for runtime caches when supplied by the host.
+The server reads local Codex JSONL telemetry and schema-checked SQLite thread metadata. It opens databases read-only and does not modify chats. It returns aggregate metrics, task labels, and bounded call activity to the panel. Activity includes visible assistant excerpts (up to 600 characters), up to six tool requests with short command/query descriptions, and up to eight file targets from explicit edit requests. Activity is associated with the next recorded call usage event; file targets do not confirm successful edits. Raw transcripts, user prompts, reasoning, tool-result dumps and absolute transcript paths are not returned. Activity stays in UI-only tool metadata and does not request model turns or update model context. Runtime state uses the configured Codex home, with private plugin storage preferred for runtime caches when supplied by the host.
 
 UI refreshes do not request model turns or update model context. The optional first-prompt hook emits one startup instruction. Other lifecycle hooks record bounded metadata and do not launch a window. Diagnostics are off unless explicitly enabled locally.
 

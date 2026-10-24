@@ -6895,7 +6895,15 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:01Z"
+          "timestamp": "2026-10-19T12:00:01Z",
+          "activity": {
+            "tools": [
+              {
+                "name": "exec_command"
+              }
+            ],
+            "files": []
+          }
         }
       ],
       "status": "Monitoring selected task",

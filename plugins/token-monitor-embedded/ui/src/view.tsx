@@ -2,10 +2,11 @@ import React, {useState} from 'react';
 import {installedVersion} from '../../shared/version.js';
 import {displayName,isDev} from '../../shared/identity.js';
 import {UpdateMenu,type UpdateAction} from './updates.js';
+import type {CallActivity} from '../../server/src/activity.js';
 import type {UpdateStatus} from '../../server/src/updates.js';
 import {categories, composition, number, exact, percent, money, threadAllowanceEstimate, type Price, type Usage} from './analytics.js';
 export {number} from './analytics.js';
-export type Sample = { model?: string; serviceTier?: string; cachedRecorded?: boolean; cacheWriteRecorded?: boolean; price?: Price; ordinal?: number; timestamp: string; input: number; cached: number; output: number; reasoning: number; cacheWrite?: number; outputRecorded?: boolean; reasoningRecorded?: boolean };
+export type Sample = { activity?: CallActivity; model?: string; serviceTier?: string; cachedRecorded?: boolean; cacheWriteRecorded?: boolean; price?: Price; ordinal?: number; timestamp: string; input: number; cached: number; output: number; reasoning: number; cacheWrite?: number; outputRecorded?: boolean; reasoningRecorded?: boolean };
 export type Task = { id: string; title: string; workspace?: string };
 export type Monitor = { panelId: string; revision?: string; unchanged?: boolean; task?: Task; selectedId?: string;
   status: string; selectionSource?: string; followingMode?: string; disconnected?: boolean;
@@ -124,6 +125,12 @@ function History({s}: {s: Monitor}) {
         {selected.price?.rates&&<p className="inspect-rates">USD / 1M tokens · Input {selected.price.rates.input} · Read {selected.price.rates.cached} · Write {selected.price.rates.write??'—'} · Output {selected.price.rates.output}</p>}
         {selected.price?.issue&&<p className="warning">{selected.price.issue}</p>}
         {compactions.some(m=>Math.abs(m.callPosition-(start+inspect))<=.5)&&<p className="inspect-rates">Near compaction boundary</p>}
+        <div className="inspect-activity" aria-label="Call activity"><h3>Activity</h3>
+          {selected.activity?.response&&<p className="activity-response">{selected.activity.response}</p>}
+          {!!selected.activity?.tools.length&&<div className="activity-tools">{selected.activity.tools.map((tool,i)=><p key={i}><strong>{tool.name}</strong>{tool.detail&&<span>{tool.detail}</span>}</p>)}</div>}
+          {!!selected.activity?.files.length&&<div className="activity-files"><h4>File targets</h4>{selected.activity.files.map(file=><code key={file}>{file}</code>)}<p className="inspect-rates">From edit requests; successful changes are not verified here.</p></div>}
+          {!selected.activity&&<p className="inspect-rates">No visible response or tool activity recorded for this call.</p>}
+        </div>
       </div>}
       <p className="hint">{mode==='Context'?'Blue: input · Orange: fresh. ':''}Dotted: compaction. {mode==='Cost'?'×: unpriced call. ':''}Hover or focus for details. Click or press Enter to pin; repeat to clear.</p>
     </>}

@@ -1,7 +1,8 @@
-// Telemetry values are deliberately separate from transcript text and file paths.
+// Bounded visible activity is separate from numeric telemetry.
+import type {CallActivity} from './activity.js';
 export type RecordValue = Record<string, any>;
 export type Rates = {input: number; cached: number; write?: number; output: number};
-export type Sample = {timestamp: string; input: number; cached: number; cacheWrite: number; output: number; reasoning: number; total?: number; ordinal?: number; outputRecorded: boolean; reasoningRecorded: boolean; model?: string; serviceTier?: string; regionalProcessing?: boolean; cachedRecorded: boolean; cacheWriteRecorded: boolean; price?: ReturnType<typeof price>};
+export type Sample = {activity?: CallActivity; timestamp: string; input: number; cached: number; cacheWrite: number; output: number; reasoning: number; total?: number; ordinal?: number; outputRecorded: boolean; reasoningRecorded: boolean; model?: string; serviceTier?: string; regionalProcessing?: boolean; cachedRecorded: boolean; cacheWriteRecorded: boolean; price?: ReturnType<typeof price>};
 const standard: Record<string, number[]> = {
   'gpt-6.1-sol':[2,.1,2.5,10], 'gpt-6-astra':[10,1,12.5,50], 'gpt-6-sol':[2,.2,2.5,10], 'gpt-6-luna':[.1,.01,.125,.5],
   'gpt-5.6-sol':[4,.4,5,20], 'gpt-5.6-terra':[2,.2,2.5,12], 'gpt-5.6-luna':[.2,.02,.25,1.2],
@@ -98,7 +99,7 @@ export function compactionValue(currentInput?:number, postCompactionInput?:numbe
   if(currentInput==null||currentInput<=0||(postCompactionInput!=null&&postCompactionInput<0))return;
   const reduced=postCompactionInput??Math.max(currentInput*.3,40000),raw=currentInput>reduced?Math.floor(1+(reduced+3600)/(.1*(currentInput-reduced)))+1:undefined;
   const breakEvenCalls=raw!=null&&Number.isSafeInteger(raw)?raw:undefined;
-  const category=breakEvenCalls==null?'VERY LOW':breakEvenCalls<=2?'VERY HIGH':breakEvenCalls<=4?'HIGH':breakEvenCalls<=7?'MEDIUM':breakEvenCalls<=12?'LOW':'VERY LOW';
+  const category=breakEvenCalls==null?'VERY LOW':breakEvenCalls<=6?'VERY HIGH':breakEvenCalls<=8?'HIGH':breakEvenCalls<=12?'MEDIUM':breakEvenCalls<=20?'LOW':'VERY LOW';
   return {currentInput,estimatedInput:Math.round(reduced),breakEvenCalls,category,level:category==='VERY HIGH'?3:category==='HIGH'?2:category==='MEDIUM'?1:0};
 }
 export function apiBreakEven(input?:number,model?:string,tier?:string) {

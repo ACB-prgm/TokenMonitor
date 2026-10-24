@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.0
+
+- Restyle recent-call details to match the panel and remove the duplicate bar tooltip.
+- Pin call details by clicking a bar; click the same bar again to clear the selection, with equivalent keyboard controls.
+- Add bounded Activity excerpts, tool requests, and explicit file targets to call details.
+- Set latest-call normal text to 12px at the default scale.
+- Recalibrate compaction value labels to reachable break-even ranges without changing the estimate.
+- Add an isolated Token Monitor DEV build and local installation workflow.
+
 ## 1.5.0
 
 - Check stable GitHub releases on each live-panel opening without waiting on network responses.

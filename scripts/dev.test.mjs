@@ -1,0 +1,77 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,readFile,rm,mkdir} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import path from 'node:path';
+import {createRequire} from 'node:module';
+import {execFileSync} from 'node:child_process';
+import {pathToFileURL} from 'node:url';
+import {buildDev,installDev,selector} from './dev.mjs';
+
+const require=createRequire(new URL('../plugins/token-monitor-embedded/package.json',import.meta.url));
+const {Client}=require('@modelcontextprotocol/sdk/client/index.js');
+const {StdioClientTransport}=require('@modelcontextprotocol/sdk/client/stdio.js');
+const json=async file=>JSON.parse(await readFile(file,'utf8'));
+
+test('DEV builds have isolated identity/state and serve the real panel over MCP',async()=>{
+  const temp=await mkdtemp(path.join(tmpdir(),'tokenmonitor-dev-'));
+  const marketplaceRoot=path.join(temp,'marketplace with spaces');
+  const home=path.join(temp,'codex');await mkdir(home);
+  const stableManifest=new URL('../plugins/token-monitor-embedded/.codex-plugin/plugin.json',import.meta.url);
+  const original=await readFile(stableManifest,'utf8');
+  let client;
+  try {
+    const first=await buildDev({marketplaceRoot});
+    const manifest=await json(path.join(first.pluginRoot,'.codex-plugin/plugin.json'));
+    assert.equal(manifest.name,'token-monitor-dev');assert.equal(manifest.interface.displayName,'Token Monitor DEV');
+    assert.match(manifest.version,/^\d+\.\d+\.\d+-dev\.\d+\.\d+$/);
+    const config=await json(path.join(first.pluginRoot,'.mcp.json'));
+    assert.deepEqual(Object.keys(config.mcpServers),['token-monitor-dev']);
+    assert.equal(config.mcpServers['token-monitor-dev'].command,process.execPath);
+    const {hooks}=await json(path.join(first.pluginRoot,'hooks/hooks.json'));
+    assert.equal(hooks.UserPromptSubmit,undefined);assert.equal(Object.keys(hooks).length,5);
+    const {stateRoot}=await import(pathToFileURL(path.join(first.pluginRoot,'server/dist/platform.mjs')));
+    assert.equal(stateRoot(home),path.join(home,'token-monitor-dev'));
+    execFileSync(process.execPath,[path.join(first.pluginRoot,'server/dist/startup-hook.mjs')],{
+      env:{...process.env,CODEX_HOME:home},input:JSON.stringify({hook_event_name:'UserPromptSubmit',session_id:'test-session'})
+    });
+    await readFile(path.join(home,'token-monitor-dev/startup/test-session.json'));
+    await assert.rejects(readFile(path.join(home,'token-monitor-embedded/startup/test-session.json')));
+    client=new Client({name:'dev-test',version:'1'});
+    await client.connect(new StdioClientTransport({command:process.execPath,args:[path.join(first.pluginRoot,'server/dist/index.mjs')],cwd:first.pluginRoot,env:{...process.env,CODEX_HOME:home},stderr:'pipe'}));
+    assert.equal(client.getServerVersion().name,'token-monitor-dev');
+    assert.equal(client.getServerVersion().version,first.version);
+    const tools=await client.listTools();const open=tools.tools.find(tool=>tool.name==='open_monitor');
+    assert.equal(open.title,'Token Monitor DEV');
+    assert.match(open._meta.ui.resourceUri,/^ui:\/\/token-monitor-dev\//);
+    const result=await client.callTool({name:'open_monitor',arguments:{}});
+    assert.ok(result._meta.monitor.panelId);
+    const panel=await client.readResource({uri:open._meta.ui.resourceUri});
+    assert.match(panel.contents[0].text,/<title>Token Monitor DEV<\/title>/);
+    assert.match(panel.contents[0].text,/Token Monitor DEV/);
+    assert.doesNotMatch(panel.contents[0].text,/process\.env\.TOKEN_MONITOR/);
+    const second=await buildDev({marketplaceRoot});
+    assert.notEqual(first.version,second.version);
+    await readFile(path.join(first.pluginRoot,'ui/dist/panel.html'));
+    const catalog=await json(path.join(marketplaceRoot,'.agents/plugins/marketplace.json'));
+    assert.equal(catalog.name,'tokenmonitor-dev');
+    assert.equal(path.resolve(marketplaceRoot,catalog.plugins[0].source.path),second.pluginRoot);
+    assert.equal(await readFile(stableManifest,'utf8'),original);
+  } finally {await client?.close();await rm(temp,{recursive:true,force:true});}
+});
+
+test('DEV installation and refresh only address the DEV marketplace and plugin',async()=>{
+  const temp=await mkdtemp(path.join(tmpdir(),'tokenmonitor-dev-install-'));
+  try {
+    const calls=[];
+    const run=existing=>args=>{calls.push(args);return args.includes('--json')?JSON.stringify({marketplaces:existing}):'Installed';};
+    await installDev({marketplaceRoot:temp},run([{name:'tokenmonitor',root:'/release'}]));
+    assert.deepEqual(calls,[['marketplace','list','--json'],['marketplace','add',temp],['add',selector]]);
+    calls.length=0;
+    await installDev({marketplaceRoot:temp},run([{name:'tokenmonitor-dev',root:temp}]));
+    assert.deepEqual(calls,[['marketplace','list','--json'],['add',selector]]);
+    calls.length=0;
+    await assert.rejects(installDev({marketplaceRoot:temp},run([{name:'tokenmonitor-dev',root:path.dirname(temp)}])),/another checkout/);
+    assert.equal(calls.length,1);
+  } finally {await rm(temp,{recursive:true,force:true});}
+});

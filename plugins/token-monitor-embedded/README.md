@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 1.5.0
+# TokenMonitor Embedded 1.6.0
 
 A local Codex token monitor with a React panel and an in-process TypeScript collector. Platform packages bundle Node; no system Node, Python, compiler, telemetry daemon, or API key is required.
 

@@ -1,10 +1,12 @@
 import React, {useState} from 'react';
 import {installedVersion} from '../../shared/version.js';
+import {displayName,isDev} from '../../shared/identity.js';
 import {UpdateMenu,type UpdateAction} from './updates.js';
+import type {CallActivity} from '../../server/src/activity.js';
 import type {UpdateStatus} from '../../server/src/updates.js';
 import {categories, composition, number, exact, percent, money, threadAllowanceEstimate, type Price, type Usage} from './analytics.js';
 export {number} from './analytics.js';
-export type Sample = { model?: string; serviceTier?: string; cachedRecorded?: boolean; cacheWriteRecorded?: boolean; price?: Price; ordinal?: number; timestamp: string; input: number; cached: number; output: number; reasoning: number; cacheWrite?: number; outputRecorded?: boolean; reasoningRecorded?: boolean };
+export type Sample = { activity?: CallActivity; model?: string; serviceTier?: string; cachedRecorded?: boolean; cacheWriteRecorded?: boolean; price?: Price; ordinal?: number; timestamp: string; input: number; cached: number; output: number; reasoning: number; cacheWrite?: number; outputRecorded?: boolean; reasoningRecorded?: boolean };
 export type Task = { id: string; title: string; workspace?: string };
 export type Monitor = { panelId: string; revision?: string; unchanged?: boolean; task?: Task; selectedId?: string;
   status: string; selectionSource?: string; followingMode?: string; disconnected?: boolean;
@@ -87,25 +89,50 @@ function LatestCall({s, expanded}: {s: Monitor; expanded: boolean}) {
 }
 function History({s}: {s: Monitor}) {
   const [mode,setMode] = useState<'Cost'|'Tokens'|'Context'>('Cost');
-  const [inspect,setInspect] = useState<number|null>(null);
+  const [hovered,setHovered] = useState<string|null>(null);
+  const [focused,setFocused] = useState<string|null>(null);
+  const [pinned,setPinned] = useState<string|null>(null);
   const samples=s.samples??[], compactions=s.compactions??[];
   const start=(s.callCount??samples.length)-samples.length;
+  const callKey=(c:Sample,i:number)=>`${start+i}:${c.timestamp}`;
+  const activeKey=hovered??focused??pinned;
+  const inspect=samples.findIndex((c,i)=>callKey(c,i)===activeKey);
+  const selected=inspect>=0?samples[inspect]:undefined;
+  const clearInspection=()=>{setPinned(null);setHovered(null);setFocused(null);};
+  const toggleInspection=(key:string)=>{if(pinned===key)clearInspection();else setPinned(key);};
   const end=Math.max(start+1,(s.callCount??samples.length)-1,...compactions.map(c=>c.callPosition));
   const values=samples.map(c=>mode==='Cost'?c.price?.categories:sampleTokens(c));
   const max=Math.max(.000001,...samples.map((c,i)=>mode==='Context'?c.input:values[i]?.reduce((a,b)=>a+b,0)??0));
   const x=(i:number)=>45+(i-start)/(end-start)*510, y=(n:number)=>130-n/max*110;
   const describe=(c:Sample,i:number)=>`Call ${start+i+1}${c.ordinal!=null?` · ordinal ${c.ordinal}`:''} · ${c.model??'Unknown model'} · ${time(c.timestamp)}\nInput ${exact(c.input)} · Cached ${exact(c.cachedRecorded===false?undefined:c.cached)} · Cache write ${exact(c.cacheWriteRecorded===false?undefined:c.cacheWrite)}\nOutput ${exact(c.outputRecorded===false?undefined:c.output)} · Thinking ${exact(c.reasoningRecorded===false?undefined:c.reasoning)}\nAPI equivalent ${c.price?.total==null?'—':`$${c.price.total.toFixed(6)}`}${c.price?.rates?` · USD/1M input ${c.price.rates.input}, read ${c.price.rates.cached}, write ${c.price.rates.write??'—'}, output ${c.price.rates.output}`:''} · ${c.serviceTier??'Standard assumed'}${c.price?.issue?` · ${c.price.issue}`:''}${compactions.some(m=>Math.abs(m.callPosition-(start+i))<=.5)?' · Near compaction boundary':''}`;
-  return <section className="history" aria-label="Recent call history"><div className="section-title"><h2>Recent calls</h2><div className="segmented" role="group" aria-label="History view">{(['Cost','Tokens','Context'] as const).map(m=><button key={m} title={`${m} per recorded call`} aria-pressed={mode===m} onClick={()=>{setMode(m);setInspect(null);}}>{m}</button>)}</div></div>
+  return <section className="history" aria-label="Recent call history"><div className="section-title"><h2>Recent calls</h2><div className="segmented" role="group" aria-label="History view">{(['Cost','Tokens','Context'] as const).map(m=><button key={m} title={`${m} per recorded call`} aria-pressed={mode===m} onClick={()=>setMode(m)}>{m}</button>)}</div></div>
     {!samples.length?<p className="muted">Waiting for the first recorded call.</p>:<>
       <svg viewBox="0 0 580 155" role="group" aria-label={`${mode} for latest ${samples.length} calls; dotted lines mark compaction.`}>
         <text x="0" y="24">{mode==='Cost'?money(max):number(max)}</text><text x="22" y="133">0</text><line x1="45" x2="565" y1="130" y2="130" className="axis"/>
         {compactions.map(c=><g key={c.timestamp}><title>Context compacted · {time(c.timestamp)}</title><line x1={x(c.callPosition)} x2={x(c.callPosition)} y1="12" y2="130" className="compaction-line"/></g>)}
         {mode==='Context' && (['input','fresh'] as const).map(series=><polyline key={series} className={`series ${series}`} points={samples.map((c,i)=>`${x(start+i)},${y(series==='input'?c.input:c.input-c.cached)}`).join(' ')}/>)}
-        {samples.map((c,i)=>{let below=0; const parts=values[i];return <g key={i} tabIndex={0} role="img" aria-label={describe(c,i)} onMouseEnter={()=>setInspect(i)} onMouseLeave={()=>setInspect(null)} onFocus={()=>setInspect(i)} onBlur={()=>setInspect(null)}><title>{describe(c,i)}</title>{mode==='Context'?<circle cx={x(start+i)} cy={y(c.input)} r="3" className="point"/>:parts?parts.map((n,j)=>{const bottom=below;below+=n;return n>0?<rect key={j} x={x(start+i)-Math.min(8,230/samples.length)} width={Math.min(16,460/samples.length)} y={y(below)} height={n/max*110} fill={categories[j].color}/>:null;}):<text x={x(start+i)} y="127" textAnchor="middle">×</text>}<rect x={x(start+i)-Math.min(8,230/samples.length)} width={Math.min(16,460/samples.length)} y="12" height="118" fill="transparent"/></g>;})}
+        {samples.map((c,i)=>{let below=0; const parts=values[i];const key=callKey(c,i);return <g key={key} className="history-call" tabIndex={0} role="button" aria-label={describe(c,i)} aria-pressed={pinned===key} onMouseEnter={()=>setHovered(key)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setFocused(key)} onBlur={()=>setFocused(null)} onClick={()=>toggleInspection(key)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleInspection(key);}else if(e.key==='Escape'){clearInspection();}}}>
+          {activeKey===key&&<rect className="call-highlight" x={x(start+i)-Math.min(8,230/samples.length)-2} width={Math.min(16,460/samples.length)+4} y="12" height="118" rx="3"/>}{mode==='Context'?<circle cx={x(start+i)} cy={y(c.input)} r="3" className="point"/>:parts?parts.map((n,j)=>{const bottom=below;below+=n;return n>0?<rect key={j} x={x(start+i)-Math.min(8,230/samples.length)} width={Math.min(16,460/samples.length)} y={y(below)} height={n/max*110} fill={categories[j].color}/>:null;}):<text x={x(start+i)} y="127" textAnchor="middle">×</text>}<rect x={x(start+i)-Math.min(8,230/samples.length)} width={Math.min(16,460/samples.length)} y="12" height="118" fill="transparent"/></g>;})}
         <text x="45" y="150">Call {start+1}</text><text x="565" y="150" textAnchor="end">{s.callCount}</text>
       </svg>
-      {inspect!=null && samples[inspect] && <output className="chart-inspect" role="status">{describe(samples[inspect],inspect)}</output>}
-      <p className="hint">{mode==='Context'?'Blue: input · Orange: fresh. ':''}Dotted: compaction. {mode==='Cost'?'×: unpriced call. ':''}Hover or focus a call for exact values.</p>
+      {selected && <div className="chart-inspect" role="status" aria-label={`Call ${start+inspect+1} details`}>
+        <div className="inspect-header"><div><strong>Call {start+inspect+1}</strong>{selected.ordinal!=null&&<span className="inspect-ordinal">Ordinal {selected.ordinal}</span>}<span className="inspect-state">{activeKey===pinned?'Pinned':'Preview'}</span></div>{pinned&&<button className="inspect-clear" onClick={clearInspection}>Clear selection</button>}</div>
+        <div className="inspect-meta"><span>{selected.model??'Unknown model'} · {selected.serviceTier??'Standard assumed'}</span><time dateTime={selected.timestamp}>{time(selected.timestamp)}</time></div>
+        <dl className="inspect-values">{[
+          ['Input',selected.input],['Cached',selected.cachedRecorded===false?undefined:selected.cached],['Cache write',selected.cacheWriteRecorded===false?undefined:selected.cacheWrite],
+          ['Output',selected.outputRecorded===false?undefined:selected.output],['Thinking',selected.reasoningRecorded===false?undefined:selected.reasoning]
+        ].map(([label,value])=><div key={label as string}><dt>{label}</dt><dd>{exact(value as number|undefined)}</dd></div>)}<div className="inspect-cost"><dt>API equivalent</dt><dd>{selected.price?.total==null?'—':`$${selected.price.total.toFixed(6)}`}</dd></div></dl>
+        {selected.price?.rates&&<p className="inspect-rates">USD / 1M tokens · Input {selected.price.rates.input} · Read {selected.price.rates.cached} · Write {selected.price.rates.write??'—'} · Output {selected.price.rates.output}</p>}
+        {selected.price?.issue&&<p className="warning">{selected.price.issue}</p>}
+        {compactions.some(m=>Math.abs(m.callPosition-(start+inspect))<=.5)&&<p className="inspect-rates">Near compaction boundary</p>}
+        <div className="inspect-activity" aria-label="Call activity"><h3>Activity</h3>
+          {selected.activity?.response&&<p className="activity-response">{selected.activity.response}</p>}
+          {!!selected.activity?.tools.length&&<div className="activity-tools">{selected.activity.tools.map((tool,i)=><p key={i}><strong>{tool.name}</strong>{tool.detail&&<span>{tool.detail}</span>}</p>)}</div>}
+          {!!selected.activity?.files.length&&<div className="activity-files"><h4>File targets</h4>{selected.activity.files.map(file=><code key={file}>{file}</code>)}<p className="inspect-rates">From edit requests; successful changes are not verified here.</p></div>}
+          {!selected.activity&&<p className="inspect-rates">No visible response or tool activity recorded for this call.</p>}
+        </div>
+      </div>}
+      <p className="hint">{mode==='Context'?'Blue: input · Orange: fresh. ':''}Dotted: compaction. {mode==='Cost'?'×: unpriced call. ':''}Hover or focus for details. Click or press Enter to pin; repeat to clear.</p>
     </>}
     {!!samples.length && <details><summary title="Inspect retained call records">Exact call values ({samples.length})</summary><div className="table-scroll"><table><thead><tr><th>Call / model</th><th>Input</th><th>Read</th><th>Write</th><th>Output</th><th>Thinking</th><th>USD</th></tr></thead><tbody>{samples.map((c,i)=><tr key={i} title={describe(c,i)}><th>{start+i+1}<small>{c.model??'—'}</small></th><td>{exact(c.input)}</td><td>{exact(c.cachedRecorded===false?undefined:c.cached)}</td><td>{exact(c.cacheWriteRecorded===false?undefined:c.cacheWrite)}</td><td>{exact(c.outputRecorded===false?undefined:c.output)}</td><td>{exact(c.reasoningRecorded===false?undefined:c.reasoning)}</td><td>{money(c.price?.total)}</td></tr>)}</tbody></table></div></details>}
   </section>;
@@ -115,12 +142,12 @@ export function MonitorView({s, expanded, scale, error='', onAction, onLayout, s
   const a=s.attribution, attributed=a?.contributors.reduce((sum,c)=>sum+c.tokens,0)??0;
   const tasks=[...(s.tasks??[])];if(s.task&&!tasks.some(t=>t.id===s.task?.id))tasks.unshift(s.task);
   return <main className={`monitor ${expanded?'expanded':'compact'}`} style={{fontSize:`${scale*85}%`}}>
-    <header><div className="brand"><strong>TokenMonitor</strong><UpdateMenu value={updates} onAction={onUpdate} error={updateError}/></div><div className="header-controls"><label title="Scale dashboard text and spacing">Scale <select aria-label="Layout scale" value={scale} onChange={e=>onLayout?.(expanded,Number(e.target.value))}><option value="0.85">85%</option><option value="1">100%</option><option value={1/.85}>118%</option><option value={1.15/.85}>135%</option></select></label><button disabled={!onAction} onClick={()=>onAction?.()} aria-label="Refresh monitor" title="Refresh local metrics and task list">↻</button></div></header>
+    <header><div className="brand"><strong>{displayName}</strong>{isDev?<span className="version">{installedVersion}</span>:<UpdateMenu value={updates} onAction={onUpdate} error={updateError}/>}</div><div className="header-controls"><label title="Scale dashboard text and spacing">Scale <select aria-label="Layout scale" value={scale} onChange={e=>onLayout?.(expanded,Number(e.target.value))}><option value="0.85">85%</option><option value="1">100%</option><option value={1/.85}>118%</option><option value={1.15/.85}>135%</option></select></label><button disabled={!onAction} onClick={()=>onAction?.()} aria-label="Refresh monitor" title="Refresh local metrics and task list">↻</button></div></header>
     <div className="task-controls"><label className="task-picker"><span className="sr-only">Monitored task</span><select disabled={!onAction||!tasks.length} value={s.selectedId??''} onChange={e=>onAction?.('select',e.target.value)} title={`Select monitored thread: ${s.task?.title??'Waiting'}`}><option value="" disabled>Waiting for local task…</option>{tasks.map(t=><option key={t.id} value={t.id}>{t.title} · {t.id.slice(-8)}</option>)}</select></label></div>
     <section className="capacity" aria-label="Thread capacity and account allowances"><div className="section-title"><h2 title="Selected thread's latest reported context occupancy; not cumulative usage">Context window{s.awaitingPostCompactionCall?' ≈':''}</h2><span style={{color:health(s.contextHealth)}} title={`${exact(s.input)} / ${exact(s.contextLimit)} tokens`}>{number(s.input)} / {number(s.contextLimit)} · {percent(s.contextPercent)}</span></div><progress aria-label="Context window used" value={Math.min(100,Math.max(0,s.contextPercent??0))} max="100" style={{'--context-color':health(s.contextHealth)} as React.CSSProperties}/><div className="allowances" aria-label="Account subscription allowances">{[['5 Hour',s.fiveHour],['Weekly',s.weekly]].map(([label,v])=>{const q=v as Monitor['fiveHour'];return <div key={label as string} title="Account-level subscription allowance; last observed in selected thread telemetry"><div><b>{label as string}:</b> {quota(q)} remaining</div><small>Resets {time(q?.reset)}</small></div>;})}</div></section>
     <div className="following"><span className={s.disconnected||s.available===false?'offline':'live'}/>{s.followingMode==='host-chat'?'Following this chat':'Following latest hook activity'}{s.selectionSource==='manual'?' · inspecting another task':''}<span className="model" title={`${s.model??'Model unknown'} · ${s.effort??'Effort unknown'}`}>{s.model??'Model unknown'} · {s.effort??'—'}</span></div>
     {(error||s.disconnected||s.available===false||!s.task||s.isCompacting)&&<p className="status" role="status">{error||s.status}</p>}
-    <ThreadSummary u={s.usage} calls={s.callCount??0} reported={s.outputTotals}/><LatestCall s={s} expanded={expanded}/><History s={s}/>
+    <ThreadSummary u={s.usage} calls={s.callCount??0} reported={s.outputTotals}/><LatestCall s={s} expanded={expanded}/><History key={s.selectedId??s.task?.id??s.panelId} s={s}/>
     <details className="attribution" open={expanded}><summary title={attributionHelp}>Skills &amp; tools · {a?.skillCount??0} skills · {a?.callCount??0} calls · ≈{number(a?attributed:undefined)} ({s.input&&a?percent(attributed/s.input*100):'—'} of context)</summary><p>{attributionHelp}</p><ul>{a?.contributors.map(c=><li key={c.name}><span title={c.name}>{c.name}</span><span>{c.calls} calls · ≈{number(c.tokens)} · {s.input?percent(c.tokens/s.input*100):'—'}</span></li>)}</ul><p>{a?.afterCompaction?'Since compaction; summary attribution unavailable.':'Estimated contribution; actual retained context may differ.'}</p></details>
     <details><summary title="Selected local task metadata">Task details</summary><dl className="details-grid"><dt>Session</dt><dd>{s.task?.id??'—'}</dd><dt>Workspace</dt><dd>{s.task?.workspace??'—'}</dd><dt>Last call</dt><dd>{time(s.lastCall)}</dd><dt>Last event</dt><dd>{time(s.lastEvent)}</dd><dt>Status</dt><dd>{s.status}</dd></dl></details>
     <footer><span>{s.isCompacting?'Compacting…':s.awaitingPostCompactionCall?'Compacted · waiting for next call':`Call ${s.callCount??0}`}</span><time title={time(s.lastCall)}>{s.lastCall?new Date(s.lastCall).toLocaleTimeString():'No call yet'}</time></footer>

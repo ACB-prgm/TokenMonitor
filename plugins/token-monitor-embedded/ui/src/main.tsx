@@ -4,15 +4,17 @@ import { App } from '@modelcontextprotocol/ext-apps';
 import {migrateLayout, type Layout} from './analytics.js';
 import { MonitorView, type Monitor } from './view.js';
 import {installedVersion} from '../../shared/version.js';
+import {isDev,pluginName,serverDisplayName} from '../../shared/identity.js';
 import type {UpdateStatus} from '../../server/src/updates.js';
 import type {UpdateAction} from './updates.js';
 
-const app = new App({ name: 'TokenMonitor Embedded', version: installedVersion });
+const app = new App({ name: serverDisplayName, version: installedVersion });
+const layoutKey = isDev ? `${pluginName}-layout` : 'token-monitor-layout';
 const summary = document.documentElement.dataset.monitorView === 'summary';
 const legacy = () => (window as any).openai as {widgetState?: Layout; setWidgetState?: (s: Layout)=>void} | undefined;
 function savedLayout(): Layout {
   try {
-    const saved = legacy()?.widgetState ?? JSON.parse(sessionStorage.getItem('token-monitor-layout') ?? '{}');
+    const saved = legacy()?.widgetState ?? JSON.parse(sessionStorage.getItem(layoutKey) ?? '{}');
     return migrateLayout(saved);
   } catch { return {expanded:false,scale:1}; }
 }
@@ -84,7 +86,7 @@ function Panel() {
   }
   function changeLayout(expanded: boolean, scale: number) {
     const next = {expanded,scale,layoutVersion:2}; setLayout(next);
-    try { if (legacy()?.setWidgetState) legacy()!.setWidgetState!(next); else sessionStorage.setItem('token-monitor-layout',JSON.stringify(next)); } catch { /* Layout remains usable without host persistence. */ }
+    try { if (legacy()?.setWidgetState) legacy()!.setWidgetState!(next); else sessionStorage.setItem(layoutKey,JSON.stringify(next)); } catch { /* Layout remains usable without host persistence. */ }
   }
   useEffect(()=>{
     active.current=true;
@@ -96,7 +98,7 @@ function Panel() {
         serial.current++; fetching.current=false; apply(value);
         if(!summary) {
           void refresh();
-          if(openedPanel.current!==value.panelId) {
+          if(!isDev && openedPanel.current!==value.panelId) {
             openedPanel.current=value.panelId;
             // Yield rendering first; opening checks never gate telemetry or the bridge.
             setTimeout(()=>{if(active.current)void manageUpdate({action:'opening'});},0);

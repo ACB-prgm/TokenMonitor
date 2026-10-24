@@ -67,3 +67,12 @@ test('attribution deduplicates text and rebuilds surviving compaction history',(
  e.consume('compacted',{replacement_history:[{type:'function_call',call_id:'kept',name:'search',arguments:''},{type:'function_call_output',call_id:'kept',output:'12345678'}]});assert.equal(e.snapshot().contributors[0].tokens,2);assert.equal(e.snapshot().afterCompaction,true);
 });
 test('collector is in-process and close releases all entries',async()=>{const f=fixture(),c=new Collector(f.home);await c.request('state',{taskId:f.id});assert.equal(c.store.activeCollectorCount,1);assert.equal('child' in c,false);c.close();assert.equal(c.store.activeCollectorCount,0);});
+
+test('compaction labels cover reachable payoff ranges and preserve no-savings cases',()=>{
+ for(const [input,label] of [[40000,'VERY LOW'],[60000,'VERY LOW'],[77000,'LOW'],[100000,'MEDIUM'],[120000,'HIGH'],[150000,'VERY HIGH'],[475000,'VERY HIGH']])assert.equal(compactionValue(input).category,label);
+ for(const [calls,label] of [[6,'VERY HIGH'],[7,'HIGH'],[8,'HIGH'],[9,'MEDIUM'],[12,'MEDIUM'],[13,'LOW'],[20,'LOW'],[21,'VERY LOW']]){
+  // Choose a retained size and current size whose formula lands halfway inside each bucket.
+  const retained=40000,input=retained+436000/(calls-1.5);
+  assert.equal(compactionValue(input,retained).breakEvenCalls,calls);assert.equal(compactionValue(input,retained).category,label);
+ }
+});

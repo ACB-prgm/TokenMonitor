@@ -18,7 +18,7 @@ Costs are estimates using the bundled rate table, not invoices. Subscription all
 
 Packages target macOS Apple silicon (`macos-arm64`), macOS Intel (`macos-x64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop behavior is pending user verification for 1.4.0.
 
-Version 1.5.0 adds background update discovery, a clickable version menu, guided release installation, and the refresh-control fix from `d9f1fe6`. Platform validation results must distinguish native launcher tests from desktop hook and rendering checks.
+Version 1.6.0 adds themed, selectable recent-call details with bounded Activity excerpts and file targets, revised compaction value labels, and an isolated local DEV workflow. Platform validation results distinguish native launcher tests from desktop hook and rendering checks.
 
 Download a complete `token-monitor-VERSION-TARGET.zip` and its `.sha256` companion from [Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Verify the checksum before extraction, then run the included macOS `install.sh` or Windows `install.ps1`. Restart Codex and review hook trust. The installer requires the existing Codex CLI, but uses the bundled Node runtime.
 
@@ -34,11 +34,17 @@ Checks use only public GitHub release metadata, with a five-second timeout, boun
 
 ## Privacy and behavior
 
-The server reads local Codex JSONL telemetry and schema-checked SQLite thread metadata. It opens databases read-only and does not modify chats. It returns aggregate metrics and task labels to the panel; raw transcripts, prompts and absolute transcript paths are not returned. Runtime state uses the configured Codex home, with private plugin storage preferred for runtime caches when supplied by the host.
+The server reads local Codex JSONL telemetry and schema-checked SQLite thread metadata. It opens databases read-only and does not modify chats. It returns aggregate metrics, task labels, and bounded call activity to the panel. Activity includes visible assistant excerpts (up to 600 characters), up to six tool requests with short command/query descriptions, and up to eight file targets from explicit edit requests. Activity is associated with the next recorded call usage event; file targets do not confirm successful edits. Raw transcripts, user prompts, reasoning, tool-result dumps and absolute transcript paths are not returned. Activity stays in UI-only tool metadata and does not request model turns or update model context. Runtime state uses the configured Codex home, with private plugin storage preferred for runtime caches when supplied by the host.
 
 UI refreshes do not request model turns or update model context. The optional first-prompt hook emits one startup instruction. Other lifecycle hooks record bounded metadata and do not launch a window. Diagnostics are off unless explicitly enabled locally.
 
 ## Development
+
+For everyday local development, run `npm run dev` from the repository root. It
+builds and installs a separate **Token Monitor DEV** plugin alongside the release.
+Restart Codex, review DEV hook trust, then ask to open Token Monitor DEV. Run the
+same command after edits to rebuild and refresh the local installation. See
+[the DEV workflow](docs/DEVELOPMENT.md) for setup, build-only, and removal commands.
 
 Use Node 24 LTS and Python 3.12+ for build-time archive extraction only. Run `npm ci` in `plugins/token-monitor-embedded`, followed by `node scripts/build-release.mjs --target macos-arm64` from the repository root. Supported `--target` values are the four platform names above and `all`. Archives and SHA-256 files are written to `dist/`.
 

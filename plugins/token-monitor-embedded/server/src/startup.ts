@@ -2,10 +2,11 @@ import { link, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promis
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
+import {pluginName,serverDisplayName} from '../../shared/identity.js';
 
 type Startup = { version: 1; sessionId: string; requestedAt?: string; launcherCalledAt?: string };
 const directory = path.join(process.env.CODEX_HOME || path.join(homedir(), '.codex'),
-  'token-monitor-embedded', 'startup');
+  pluginName, 'startup');
 
 function session(value: unknown): string | undefined {
   return typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,199}$/.test(value) ? value : undefined;
@@ -43,7 +44,7 @@ export async function requestStartup(event: unknown): Promise<string | undefined
   // Never request panels from subagents or unrelated lifecycle events.
   if (input.hook_event_name !== 'UserPromptSubmit' || !id || input.agent_id) return;
   if (!await save({ version: 1, sessionId: id, requestedAt: new Date().toISOString() }, true)) return;
-  return `The user has enabled TokenMonitor Embedded automatic opening. Before working on this first prompt, call TokenMonitor Embedded's open_monitor tool once (MCP server: token-monitor-embedded; tool: open_monitor). Discover or load that tool if needed. Pass source: "manual" and sessionId: "${id}". This opens the expanded monitor; its UI handles subsequent refreshes. Then continue the user's request normally without asking for confirmation. If the tool is unavailable or fails, continue the user's request without shell substitutes or retries. Do not reopen on later turns or automatically call show_turn_summary. Reopen only when the user requests it. This startup instruction is issued once per chat.`;
+  return `The user has enabled ${serverDisplayName} automatic opening. Before working on this first prompt, call ${serverDisplayName}'s open_monitor tool once (MCP server: ${pluginName}; tool: open_monitor). Discover or load that tool if needed. Pass source: "manual" and sessionId: "${id}". This opens the expanded monitor; its UI handles subsequent refreshes. Then continue the user's request normally without asking for confirmation. If the tool is unavailable or fails, continue the user's request without shell substitutes or retries. Do not reopen on later turns or automatically call show_turn_summary. Reopen only when the user requests it. This startup instruction is issued once per chat.`;
 }
 
 // This acknowledges tool execution, not successful host rendering. Use only

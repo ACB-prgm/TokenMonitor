@@ -98,6 +98,7 @@ function History({s}: {s: Monitor}) {
   const inspect=samples.findIndex((c,i)=>callKey(c,i)===activeKey);
   const selected=inspect>=0?samples[inspect]:undefined;
   const clearInspection=()=>{setPinned(null);setHovered(null);setFocused(null);};
+  const toggleInspection=(key:string)=>{if(pinned===key)clearInspection();else setPinned(key);};
   const end=Math.max(start+1,(s.callCount??samples.length)-1,...compactions.map(c=>c.callPosition));
   const values=samples.map(c=>mode==='Cost'?c.price?.categories:sampleTokens(c));
   const max=Math.max(.000001,...samples.map((c,i)=>mode==='Context'?c.input:values[i]?.reduce((a,b)=>a+b,0)??0));
@@ -109,7 +110,7 @@ function History({s}: {s: Monitor}) {
         <text x="0" y="24">{mode==='Cost'?money(max):number(max)}</text><text x="22" y="133">0</text><line x1="45" x2="565" y1="130" y2="130" className="axis"/>
         {compactions.map(c=><g key={c.timestamp}><title>Context compacted · {time(c.timestamp)}</title><line x1={x(c.callPosition)} x2={x(c.callPosition)} y1="12" y2="130" className="compaction-line"/></g>)}
         {mode==='Context' && (['input','fresh'] as const).map(series=><polyline key={series} className={`series ${series}`} points={samples.map((c,i)=>`${x(start+i)},${y(series==='input'?c.input:c.input-c.cached)}`).join(' ')}/>)}
-        {samples.map((c,i)=>{let below=0; const parts=values[i];const key=callKey(c,i);return <g key={key} className="history-call" tabIndex={0} role="button" aria-label={describe(c,i)} aria-pressed={pinned===key} onMouseEnter={()=>setHovered(key)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setFocused(key)} onBlur={()=>setFocused(null)} onClick={()=>setPinned(key)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setPinned(key);}else if(e.key==='Escape'){clearInspection();}}}>
+        {samples.map((c,i)=>{let below=0; const parts=values[i];const key=callKey(c,i);return <g key={key} className="history-call" tabIndex={0} role="button" aria-label={describe(c,i)} aria-pressed={pinned===key} onMouseEnter={()=>setHovered(key)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setFocused(key)} onBlur={()=>setFocused(null)} onClick={()=>toggleInspection(key)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleInspection(key);}else if(e.key==='Escape'){clearInspection();}}}>
           {activeKey===key&&<rect className="call-highlight" x={x(start+i)-Math.min(8,230/samples.length)-2} width={Math.min(16,460/samples.length)+4} y="12" height="118" rx="3"/>}{mode==='Context'?<circle cx={x(start+i)} cy={y(c.input)} r="3" className="point"/>:parts?parts.map((n,j)=>{const bottom=below;below+=n;return n>0?<rect key={j} x={x(start+i)-Math.min(8,230/samples.length)} width={Math.min(16,460/samples.length)} y={y(below)} height={n/max*110} fill={categories[j].color}/>:null;}):<text x={x(start+i)} y="127" textAnchor="middle">×</text>}<rect x={x(start+i)-Math.min(8,230/samples.length)} width={Math.min(16,460/samples.length)} y="12" height="118" fill="transparent"/></g>;})}
         <text x="45" y="150">Call {start+1}</text><text x="565" y="150" textAnchor="end">{s.callCount}</text>
       </svg>
@@ -124,7 +125,7 @@ function History({s}: {s: Monitor}) {
         {selected.price?.issue&&<p className="warning">{selected.price.issue}</p>}
         {compactions.some(m=>Math.abs(m.callPosition-(start+inspect))<=.5)&&<p className="inspect-rates">Near compaction boundary</p>}
       </div>}
-      <p className="hint">{mode==='Context'?'Blue: input · Orange: fresh. ':''}Dotted: compaction. {mode==='Cost'?'×: unpriced call. ':''}Hover or focus for details. Click or press Enter to pin.</p>
+      <p className="hint">{mode==='Context'?'Blue: input · Orange: fresh. ':''}Dotted: compaction. {mode==='Cost'?'×: unpriced call. ':''}Hover or focus for details. Click or press Enter to pin; repeat to clear.</p>
     </>}
     {!!samples.length && <details><summary title="Inspect retained call records">Exact call values ({samples.length})</summary><div className="table-scroll"><table><thead><tr><th>Call / model</th><th>Input</th><th>Read</th><th>Write</th><th>Output</th><th>Thinking</th><th>USD</th></tr></thead><tbody>{samples.map((c,i)=><tr key={i} title={describe(c,i)}><th>{start+i+1}<small>{c.model??'—'}</small></th><td>{exact(c.input)}</td><td>{exact(c.cachedRecorded===false?undefined:c.cached)}</td><td>{exact(c.cacheWriteRecorded===false?undefined:c.cacheWrite)}</td><td>{exact(c.outputRecorded===false?undefined:c.output)}</td><td>{exact(c.reasoningRecorded===false?undefined:c.reasoning)}</td><td>{money(c.price?.total)}</td></tr>)}</tbody></table></div></details>}
   </section>;

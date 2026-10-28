@@ -7,7 +7,7 @@ export class InspectionController {
   private inside=false;
   private disposed=false;
   constructor(private changed:(state:Inspection)=>void,private reducedMotion=()=>false,
-    private schedule:(callback:()=>void,ms:number)=>Timer=setTimeout,private cancel:(timer:Timer)=>void=clearTimeout){}
+    private schedule:(callback:()=>void,ms:number)=>Timer=(callback,ms)=>setTimeout(callback,ms),private cancel:(timer:Timer)=>void=timer=>clearTimeout(timer)){}
   get active(){return this.state.hovered??this.state.focused??this.state.pinned;}
   private stop(){if(this.timer!==undefined)this.cancel(this.timer);this.timer=undefined;}
   private emit(){if(!this.disposed)this.changed({...this.state});}

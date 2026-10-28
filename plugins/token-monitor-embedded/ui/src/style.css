@@ -52,6 +52,6 @@ progress::-webkit-progress-bar{background:var(--line)}progress::-webkit-progress
 
 /* Keep the details mounted across columns; animate only the final dismissal. */
 .inspect-shell{display:grid;grid-template-rows:1fr;opacity:1;transition:grid-template-rows 140ms ease,opacity 140ms ease}
-.inspect-shell.closing{grid-template-rows:0fr;opacity:0;pointer-events:none}
+.inspect-shell.closing{grid-template-rows:0fr;opacity:0}
 .inspect-inner{min-height:0;overflow:hidden}
 @media(prefers-reduced-motion:reduce){.inspect-shell{transition:none}}

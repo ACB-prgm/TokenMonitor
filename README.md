@@ -58,3 +58,7 @@ See [Contributing](CONTRIBUTING.md) for tests and the staged release process. Th
 ## Compaction Value
 
 CV estimates net savings as a percentage of avoidable context-processing costs over 20 normal calls, including compaction overhead and per-call long-context pricing. It assumes 40K retained context and warm-prefix reuse. The panel shows observed growth/output or disclosed defaults, a consistent break-even, and context-capacity limitations. Cache temperature remains separate. These are API-equivalent estimates, not subscription charges; financial value does not guarantee context preservation. See [calculation and assumptions](docs/COMPACTION-VALUE.md).
+
+## Account allowances and call previews
+
+Five-hour and weekly allowances refresh from the signed-in Codex account every 30 seconds while the monitor is active, with the newest local catalogue telemetry as fallback. Each window shows its source; help text includes its observation time. Expired readings await refresh rather than assuming a reset. These account requests use the installed Codex CLI and existing authentication without model turns. Call previews switch instantly and dismiss after a short grace period and animation. See [sources, freshness and behavior](docs/ACCOUNT-ALLOWANCES.md).

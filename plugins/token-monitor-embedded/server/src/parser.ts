@@ -1,3 +1,4 @@
+import {normalizeAllowances} from './allowances.js';
 import {ActivityCollector} from './activity.js';
 import {createHash} from 'node:crypto';
 import {AttributionEstimator,BoundedSet,ThreadUsage,estimateCompactionValue,rollingContextGrowth,rollingTypicalOutput,bounded,cacheTemperature,cleanTitle,date,emptyAttribution,health,integer,nonnegative,price,type Attribution,type RecordValue,type Sample} from './metrics.js';
@@ -33,7 +34,9 @@ export class TelemetryParser {
     if(type!=='event_msg')return;
     if(p.type==='user_message'&&!this.title)this.title=cleanTitle(p.message);
     if(p.type!=='token_count')return;
-    if(object(p.rate_limits))for(const name of ['primary','secondary']){const a=p.rate_limits[name];if(object(a)&&typeof a.used_percent==='number'&&Number.isFinite(a.used_percent)){const value={used:a.used_percent,reset:typeof a.resets_at==='number'&&Number.isFinite(a.resets_at)&&Math.abs(a.resets_at)<8640000000000?new Date(a.resets_at*1000).toISOString():undefined};if(a.window_minutes===300)this.fiveHour=value;if(a.window_minutes===10080)this.weekly=value;}}
+    const allowances=normalizeAllowances(p.rate_limits,'catalogue',time??'');
+    if(allowances.fiveHour)this.fiveHour={used:allowances.fiveHour.used,reset:allowances.fiveHour.reset};
+    if(allowances.weekly)this.weekly={used:allowances.weekly.used,reset:allowances.weekly.reset};
     const info=p.info;if(!object(info))return;
     if(typeof r.timestamp==='string'&&!this.seenRecords.add(fingerprint([r.timestamp,info])))return;
     if(integer(info.model_context_window)&&info.model_context_window>0)this.contextLimit=info.model_context_window;

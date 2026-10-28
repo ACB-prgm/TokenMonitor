@@ -1,3 +1,4 @@
+import {AccountLimits,CatalogueAllowances,chooseAllowances} from './allowances.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {readFileSync,readdirSync,lstatSync} from 'node:fs';
 import path from 'node:path';
@@ -69,17 +70,26 @@ export class TelemetryStore {
     const metadata=this.metadata(id)[0]??{},s=entry.session,p=entry.parser;
     return p.snapshot(this.task(s,cleanTitle(s.title)??cleanTitle(metadata.title)??p.title),s,metadata,available,now);
   }
+  allowanceFiles(id:string){
+    const sessions=[this.resolve(id),this.hook()?.session,...this.metadata().map(row=>({session_id:row.id,transcript_path:row.rollout_path}))];
+    return sessions.flatMap(s=>s&&acceptedTranscript(s.transcript_path,s.session_id,this.home)?[s.transcript_path]:[]);
+  }
   close(){this.entries.clear();}
 }
 // In-process replacement for the former subprocess bridge. The request shape
 // stays stable so panel selection and revision handling do not change.
 export class Collector {
-  readonly store:TelemetryStore;constructor(home=codexHome()){this.store=new TelemetryStore(home);}
+  readonly store:TelemetryStore;private catalogue=new CatalogueAllowances();
+  readonly account:AccountLimits;constructor(home=codexHome(),account?:AccountLimits){this.store=new TelemetryStore(home);this.account=account??new AccountLimits(home);}
   async request(method:'catalog'|'state',params:Record<string,unknown>={}):Promise<any> {
     if(method==='catalog'){const host=typeof params.hostId==='string'?this.store.taskMetadata(params.hostId):undefined,tasks=this.store.tasks(),hook=this.store.hook();if(host&&!tasks.some(t=>t.id===host.id))tasks.unshift(host);return {hostMatched:!!host,tasks,...(hook?{latestHook:{id:hook.session.session_id,sequence:hook.sequence,event:hook.session.hook_event_name??''}}:{})};}
     if(typeof params.taskId!=='string'||!validID(params.taskId))return {unavailable:true};
+    this.account.touch();
+    const local=this.catalogue.read(()=>this.store.allowanceFiles(params.taskId as string));
     const state=this.store.snapshot(params.taskId);if(!state)return {unavailable:true};
+    const allowances=chooseAllowances(this.account.snapshot(),local);
+    state.fiveHour=allowances.fiveHour;state.weekly=allowances.weekly;
     const revision=createHash('sha256').update(JSON.stringify(state)).digest('hex');return params.revision===revision?{revision,unchanged:true}:{revision,state};
   }
-  close(){this.store.close();}
+  close(){this.account.close();this.catalogue.close();this.store.close();}
 }

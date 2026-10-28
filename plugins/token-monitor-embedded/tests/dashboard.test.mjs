@@ -113,3 +113,8 @@ test('compaction forecast shows observed estimates, finite-horizon break-even an
  assert.match(limited,/4\/20 calls possible/);assert.match(limited,/Break-even<\/dt><dd>Unavailable/);assert.doesNotMatch(limited,/34\/100/);
  const unknown=render({panelId:'p',status:'Waiting'});assert.match(unknown,/Compaction Value ·/);assert.match(unknown,/Unavailable/);assert.doesNotMatch(unknown,/NaN|undefined/);
 });
+
+ test('account allowances disclose live/fallback age and expired resets without inventing remaining usage',()=>{
+ const html=render({panelId:'p',status:'Monitoring',fiveHour:{used:25,source:'live',observedAt:'2026-10-28T12:00:00Z',stale:true},weekly:{used:40,source:'catalogue',observedAt:'2026-10-28T11:00:00Z',awaitingRefresh:true}});
+ assert.match(html,/Live account · stale/);assert.match(html,/Local fallback/);assert.match(html,/may be incomplete/);assert.match(html,/Observed/);assert.match(html,/75%/);assert.match(html,/Awaiting refresh/);assert.doesNotMatch(html,/60% remaining|last observed in selected thread/);
+ });

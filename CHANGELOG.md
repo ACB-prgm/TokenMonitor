@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Smooth recent-call previews with immediate switching, delayed animated dismissal, keyboard/pinning support and reduced-motion handling.
+- Refresh account allowances from the signed-in Codex account, with bounded cross-chat catalogue fallback and per-window source/freshness indicators.
+
 - Replace compaction heuristics and the secondary break-even with a single numeric, model-priced 20-call forecast and consistent payoff calculation.
 - Measure bounded per-thread rolling context growth and median billed output; disclose defaults, minima and active-model selection.
 - Account for per-call long-context rates, one replacement-context cache write and compaction output; keep cache temperature separate.

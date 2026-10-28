@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+## 1.8.0
+
+- Remove the extra allowance source/status row; retain source and freshness information in hover help.
+- Smooth recent-call previews with immediate switching, delayed animated dismissal, keyboard/pinning support and reduced-motion handling.
+- Refresh account allowances from the signed-in Codex account, with bounded cross-chat catalogue fallback and per-window source/freshness indicators.
+
+- Replace compaction heuristics and the secondary break-even with a single numeric, model-priced 20-call forecast and consistent payoff calculation.
+- Measure bounded per-thread rolling context growth and median billed output; disclose defaults, minima and active-model selection.
+- Account for per-call long-context rates, one replacement-context cache write and compaction output; keep cache temperature separate.
+- Show forecast economics and capacity limitations in compact/expanded layouts, with deterministic pricing and telemetry regression coverage.
+
 ## 1.7.0
 
 - Replace ZIP and SHA download buttons with **Update and install** for existing local release marketplace installations.

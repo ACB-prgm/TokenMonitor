@@ -34,7 +34,7 @@ test('real TypeScript metrics bind exactly to the host, stay UI-only, and return
  const f=await fixture();try{
   const s=await f.open('a');assert.equal(s.followingMode,'host-chat');assert.equal(s.selectedId,'a');
   assert.equal(s.input,100000);assert.equal(s.cached,80000);assert.equal(s.fresh,20000);assert.equal(s.model,'gpt-test');assert.equal(s.contextPercent,50);assert.equal(s.fiveHour.used,25);
-  assert.equal(s.usage.unpricedCalls,1);assert.equal(s.usage.pricedCalls,0);assert.equal(s.usage.input,100000);assert.equal(s.usage.cumulativeMismatch,true);assert.equal(s.samples[0].price.total,undefined);
+  assert.equal(s.usage.unpricedCalls,1);assert.equal(s.usage.pricedCalls,0);assert.equal(s.usage.input,100000);assert.equal(s.usage.cumulativeMismatch,true);assert.equal(s.samples[0].price.total,undefined);assert.equal(s.compactionValue.status,'unavailable');assert.match(s.compactionValue.limitation,/pricing unavailable/);assert.equal('apiCompactionBreakEven' in s,false);
   assert.equal(s.outputTotals.total,1000000);assert.equal(s.outputTotals.reasoning,400000);assert.equal(s.callCount,1);assert.match(s.samples[0].timestamp,/Z$/);
   assert.doesNotMatch(JSON.stringify(s),/SECRET|transcriptPath|transcript_path|\.jsonl/);
   assert.equal((await f.refresh(s.panelId,{revision:s.revision},'a')).unchanged,true);
@@ -60,10 +60,10 @@ test('fallback follows background completion and compaction clears cached/fresh 
  const f=await fixture();try{
   f.hook('a');const s=await f.open();assert.equal(s.selectedId,'a');assert.equal(s.followingMode,'latest-hook');
   f.hook('b','SessionEnd');const next=await f.refresh(s.panelId);assert.equal(next.selectedId,'b');assert.match(next.status,/Session ended/);
-  f.hook('a','PreCompact');const compacting=await f.refresh(s.panelId);assert.equal(compacting.selectedId,'a');assert.equal(compacting.isCompacting,true);
+  f.hook('a','PreCompact');const compacting=await f.refresh(s.panelId);assert.equal(compacting.selectedId,'a');assert.equal(compacting.isCompacting,true);assert.equal(compacting.compactionValue.status,'unavailable');
   const file=path.join(f.home,'a.jsonl');const original=await readFile(file,'utf8');
   await writeFile(file,original+JSON.stringify({type:'compacted',timestamp:new Date(Date.now()+1000).toISOString(),payload:{}})+'\n'+JSON.stringify({type:'event_msg',timestamp:new Date(Date.now()+2000).toISOString(),payload:{type:'token_count',info:{last_token_usage:{input_tokens:0,cached_input_tokens:0,output_tokens:0,total_tokens:40000}}}})+'\n');
-  const completed=await f.refresh(s.panelId);assert.equal(completed.isCompacting,false);assert.equal(completed.awaitingPostCompactionCall,true);assert.equal(completed.input,40000);assert.equal(completed.cached,undefined);assert.equal(completed.compactions.length,1);
+  const completed=await f.refresh(s.panelId);assert.equal(completed.isCompacting,false);assert.equal(completed.awaitingPostCompactionCall,true);assert.equal(completed.input,40000);assert.equal(completed.cached,undefined);assert.equal(completed.compactions.length,1);assert.equal(completed.compactionValue.score,null);assert.match(completed.compactionValue.limitation,/post-compaction/);
  }finally{await f.client.close();}
 });
 test('disconnect retains metrics and recovery reconstructs a host-bound panel',async()=>{

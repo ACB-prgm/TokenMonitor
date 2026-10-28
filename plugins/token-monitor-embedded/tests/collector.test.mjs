@@ -8,7 +8,7 @@ import {TelemetryParser} from '../server/dist/parser.mjs';
 import {TelemetryStore,Collector} from '../server/dist/collector.mjs';
 import {JSONLTail} from '../server/dist/tail.mjs';
 import {contained,acceptedTranscript} from '../server/dist/platform.mjs';
-import {rates,price,compactionValue,cacheTemperature,health,AttributionEstimator,estimateTokens} from '../server/dist/metrics.mjs';
+import {rates,price,cacheTemperature,health,AttributionEstimator,estimateTokens} from '../server/dist/metrics.mjs';
 const temp=mkdtempSync(path.join(tmpdir(),'tm-collector-'));after(()=>rmSync(temp,{recursive:true,force:true}));
 const normalized=x=>JSON.parse(JSON.stringify(x).replaceAll('.000Z','Z'));
 const fixtures=JSON.parse(readFileSync(new URL('fixtures/collector-parity.json',import.meta.url)));
@@ -58,9 +58,8 @@ test('pricing categories, threshold, tier and unavailable accounting match basel
  const s={input:100000,cached:60000,cacheWrite:10000,output:10000,reasoning:4000,model:'gpt-6.1-sol',cachedRecorded:true,cacheWriteRecorded:true,outputRecorded:true,reasoningRecorded:true};
  assert.ok(Math.abs(price(s).total-.191)<1e-12);assert.ok(Math.abs(price(s).cacheSavings-.109)<1e-12);assert.equal(rates(s.model,'priority',272001).input,8);assert.equal(rates('gpt-5.5','fast',300000),undefined);assert.equal(price({...s,cacheWriteRecorded:false}).total,undefined);assert.equal(price({...s,model:'unknown'}).total,undefined);assert.equal(price({...s,reasoningRecorded:false}).categories[5],.1);
 });
-test('compaction strict break-even and cache boundary parity',()=>{
- for(const [input,calls]of [[60000,23],[77000,13],[100000,9],[120000,7],[150000,6],[83600,12],[83601,11]])assert.equal(compactionValue(input).breakEvenCalls,calls);
- assert.equal(compactionValue(40000).breakEvenCalls,undefined);const last='2026-10-19T00:00:00Z',t=Date.parse(last);assert.equal(cacheTemperature(last,t+1800000-1),'WARM');assert.equal(cacheTemperature(last,t+1800000),'UNCERTAIN');assert.equal(cacheTemperature(last,t+7200000),'UNCERTAIN');assert.equal(cacheTemperature(last,t+7200001),'PRES. COLD');assert.equal(health(65,[40,50,65,75]),2);
+test('cache boundary parity',()=>{
+ const last='2026-10-19T00:00:00Z',t=Date.parse(last);assert.equal(cacheTemperature(last,t+1800000-1),'WARM');assert.equal(cacheTemperature(last,t+1800000),'UNCERTAIN');assert.equal(cacheTemperature(last,t+7200000),'UNCERTAIN');assert.equal(cacheTemperature(last,t+7200001),'PRES. COLD');assert.equal(health(65,[40,50,65,75]),2);
 });
 test('attribution deduplicates text and rebuilds surviving compaction history',()=>{
  const e=new AttributionEstimator();const call={type:'function_call',call_id:'a',name:'exec',arguments:'cat pdf/SKILL.md'};e.consume('response_item',call);e.consume('response_item',call);e.consume('response_item',{type:'function_call_output',call_id:'a',output:'abcd'.repeat(100)});assert.equal(e.snapshot().skillCount,1);assert.equal(e.snapshot().callCount,1);assert.equal(e.snapshot(10).contributors[0].tokens,10);assert.equal(estimateTokens('abcde'),2);
@@ -68,11 +67,3 @@ test('attribution deduplicates text and rebuilds surviving compaction history',(
 });
 test('collector is in-process and close releases all entries',async()=>{const f=fixture(),c=new Collector(f.home);await c.request('state',{taskId:f.id});assert.equal(c.store.activeCollectorCount,1);assert.equal('child' in c,false);c.close();assert.equal(c.store.activeCollectorCount,0);});
 
-test('compaction labels cover reachable payoff ranges and preserve no-savings cases',()=>{
- for(const [input,label] of [[40000,'VERY LOW'],[60000,'VERY LOW'],[77000,'LOW'],[100000,'MEDIUM'],[120000,'HIGH'],[150000,'VERY HIGH'],[475000,'VERY HIGH']])assert.equal(compactionValue(input).category,label);
- for(const [calls,label] of [[6,'VERY HIGH'],[7,'HIGH'],[8,'HIGH'],[9,'MEDIUM'],[12,'MEDIUM'],[13,'LOW'],[20,'LOW'],[21,'VERY LOW']]){
-  // Choose a retained size and current size whose formula lands halfway inside each bucket.
-  const retained=40000,input=retained+436000/(calls-1.5);
-  assert.equal(compactionValue(input,retained).breakEvenCalls,calls);assert.equal(compactionValue(input,retained).category,label);
- }
-});

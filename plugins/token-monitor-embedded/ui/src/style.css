@@ -49,3 +49,9 @@ progress::-webkit-progress-bar{background:var(--line)}progress::-webkit-progress
 .updates[open] .update-chevron{transform:rotate(180deg)}
 
 .inspect-activity{border-top:1px solid var(--line);margin-top:.8em;padding-top:.7em}.inspect-activity h3,.inspect-activity h4{font-size:1em;font-weight:600;margin:0 0 .4em}.inspect-activity h4{color:var(--muted);font-size:.9em;margin-top:.75em}.activity-response{white-space:pre-wrap;overflow-wrap:anywhere;max-height:10em;overflow:auto;margin:.4em 0}.activity-tools{display:grid;gap:.4em}.activity-tools p{margin:0;min-width:0}.activity-tools strong{font-weight:500}.activity-tools span{display:block;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}.activity-files code{display:block;font-size:.9em;overflow-wrap:anywhere;margin:.25em 0}
+
+/* Keep the details mounted across columns; animate only the final dismissal. */
+.inspect-shell{display:grid;grid-template-rows:1fr;opacity:1;transition:grid-template-rows 140ms ease,opacity 140ms ease}
+.inspect-shell.closing{grid-template-rows:0fr;opacity:0}
+.inspect-inner{min-height:0;overflow:hidden}
+@media(prefers-reduced-motion:reduce){.inspect-shell{transition:none}}

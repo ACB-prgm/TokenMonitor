@@ -60,7 +60,7 @@ const hookInput = {
 server.registerTool('open_monitor', {
   title: serverDisplayName,
   description: 'Open the expanded local TokenMonitor panel when requested by the user or by the enabled first-prompt startup instruction. Call once per chat for automatic startup; do not reopen on subsequent turns unless the user requests it. Attaching or mentioning the plugin alone does not open it. After opening, the panel refreshes directly without further model calls.',
-  inputSchema: hookInput, annotations,
+  inputSchema: hookInput, annotations: {...annotations,openWorldHint:true},
   _meta: { ui: { resourceUri, visibility: ['model', 'app'] },
     'openai/ui': { entrypoints: [{ type: 'thread' }], preferredModelDisplayMode: 'fullscreen' } },
 }, async (args, extra) => {
@@ -71,10 +71,10 @@ server.registerTool('open_monitor', {
     startup: await startupState(hostID(extra)), metadataShape: metadataShape(extra._meta ?? {}) } } };
 });
 server.registerTool('get_monitor_state', {
-  title: 'Refresh monitor', description: 'Refresh local token metrics without a model turn. Task IDs must be discovered locally.',
+  title: 'Refresh monitor', description: 'Refresh local token metrics and account allowances without a model turn. Account limits may be fetched through the installed Codex CLI. Task IDs must be discovered locally.',
   inputSchema: { panelId: z.string().uuid(), taskId: z.string().min(1).max(200).optional(),
     action: z.enum(['select']).optional(), revision: z.string().max(500).optional() },
-  annotations, _meta: { ui: { visibility: ['app'] } },
+  annotations: {...annotations,openWorldHint:true}, _meta: { ui: { visibility: ['app'] } },
 }, async (args, extra) => {
   try { return { content: [], _meta: { monitor: await panels.state(args.panelId, args, hostID(extra)), updates: await updateState() } }; }
   catch { return { isError: true, content: [], _meta: { error: 'Task unavailable. Refresh the local task list.' } }; }
@@ -110,7 +110,7 @@ server.registerTool('list_tasks', {
 server.registerTool('show_turn_summary', {
   title: 'Turn-end monitor summary',
   description: 'Show the separate inline TokenMonitor snapshot when the user requests the inline widget or an inline rendering test. This uses an inline-only resource and does not request expanded view. Do not call automatically at turn end.',
-  inputSchema: hookInput, annotations,
+  inputSchema: hookInput, annotations: {...annotations,openWorldHint:true},
   _meta: { ui: { resourceUri: summaryUri, visibility: ['model', 'app'] },
     'openai/ui': { preferredModelDisplayMode: 'inline' } },
 }, async (args, extra) => {

@@ -95,17 +95,95 @@ export class AttributionEstimator {
   }
   snapshot(input?:number): Attribution { return bounded({contributors:[...this.totals].map(([name,tokens])=>({name,tokens,calls:this.counts.get(name)??0})).sort((a,b)=>b.tokens-a.tokens||(a.name<b.name?-1:1)),skillCount:this.skills.size,callCount:[...this.counts.values()].reduce((a,b)=>a+b,0),afterCompaction:this.compacted},input); }
 }
-export function compactionValue(currentInput?:number, postCompactionInput?:number) {
-  if(currentInput==null||currentInput<=0||(postCompactionInput!=null&&postCompactionInput<0))return;
-  const reduced=postCompactionInput??Math.max(currentInput*.3,40000),raw=currentInput>reduced?Math.floor(1+(reduced+3600)/(.1*(currentInput-reduced)))+1:undefined;
-  const breakEvenCalls=raw!=null&&Number.isSafeInteger(raw)?raw:undefined;
-  const category=breakEvenCalls==null?'VERY LOW':breakEvenCalls<=6?'VERY HIGH':breakEvenCalls<=8?'HIGH':breakEvenCalls<=12?'MEDIUM':breakEvenCalls<=20?'LOW':'VERY LOW';
-  return {currentInput,estimatedInput:Math.round(reduced),breakEvenCalls,category,level:category==='VERY HIGH'?3:category==='HIGH'?2:category==='MEDIUM'?1:0};
+export const COMPACTION_DEFAULTS = {
+  FORECAST_CALLS:20, POST_COMPACTION_TOKENS:40000, CONTEXT_GROWTH_WINDOW:20,
+  MIN_GROWTH_PER_CALL:2000, OUTPUT_WINDOW:20, MIN_TYPICAL_OUTPUT:1000,
+  DEFAULT_TYPICAL_OUTPUT:3000, COMPACTION_OUTPUT_TOKENS:3600, MIN_VALID_SAMPLES:3,
+} as const;
+const D=COMPACTION_DEFAULTS;
+const finiteNonnegative=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n)&&n>=0;
+export type RollingEstimate = {observed?:number; effective:number; sampleCount:number; minimumApplied:boolean; fallback:boolean};
+export type ForecastObservation = Pick<Sample,'timestamp'|'input'|'output'|'outputRecorded'|'model'> & {segment?:number};
+// Parser supplies unique retained calls. Also deduplicate explicit identities for pure-helper callers.
+function uniqueObservations(samples:readonly ForecastObservation[]) {
+  const seen=new Set<string>();
+  return samples.filter(s=>{const key=JSON.stringify([s.timestamp,s.input,s.output,s.model,s.segment]);if(seen.has(key))return false;seen.add(key);return true;});
 }
-export function apiBreakEven(input?:number,model?:string,tier?:string) {
-  if(!input||input<=0)return;const reduced=Math.max(Math.round(input*.3),40000),a=rates(model,tier,input),b=rates(model,tier,reduced);
-  if(reduced>=input||!a||!b)return;const saving=input*a.cached-reduced*b.cached;if(saving<=0)return;
-  const calls=Math.floor(1+(reduced*b.input+3600*a.output)/saving)+1;return Number.isSafeInteger(calls)?calls:undefined;
+export function rollingContextGrowth(samples:readonly ForecastObservation[]):RollingEstimate {
+  const intervals:number[]=[];let previous:ForecastObservation|undefined;
+  for(const s of uniqueObservations(samples)) {
+    if(!finiteNonnegative(s.input)||!date(s.timestamp)){previous=undefined;continue;}
+    if(previous) {
+      const delta=s.input-previous.input;
+      if(s.segment!==previous.segment||s.model!==previous.model||delta<0||s.timestamp<previous.timestamp)intervals.length=0;
+      else intervals.push(delta);
+    }
+    previous=s;
+  }
+  const recent=intervals.slice(-D.CONTEXT_GROWTH_WINDOW),observed=recent.length?recent.reduce((sum,n)=>sum+n/recent.length,0):undefined;
+  const fallback=recent.length<D.MIN_VALID_SAMPLES;
+  return {observed,effective:fallback?D.MIN_GROWTH_PER_CALL:Math.max(D.MIN_GROWTH_PER_CALL,observed!),sampleCount:recent.length,minimumApplied:!fallback&&observed!<D.MIN_GROWTH_PER_CALL,fallback};
+}
+export function rollingTypicalOutput(samples:readonly ForecastObservation[],model?:string):RollingEstimate & {activeModelOnly:boolean} {
+  const valid=uniqueObservations(samples).filter(s=>s.outputRecorded===true&&finiteNonnegative(s.output)&&!!date(s.timestamp));
+  const active=valid.filter(s=>s.model===model),activeModelOnly=!!model&&active.length>=D.MIN_VALID_SAMPLES;
+  const recent=(activeModelOnly?active:valid).slice(-D.OUTPUT_WINDOW).map(s=>s.output).sort((a,b)=>a-b),n=recent.length;
+  const observed=n?(recent[Math.floor((n-1)/2)]+recent[Math.floor(n/2)])/2:undefined,fallback=n<D.MIN_VALID_SAMPLES;
+  return {observed,effective:fallback?D.DEFAULT_TYPICAL_OUTPUT:Math.max(D.MIN_TYPICAL_OUTPUT,observed!),sampleCount:n,minimumApplied:!fallback&&observed!<D.MIN_TYPICAL_OUTPUT,fallback,activeModelOnly};
+}
+export type CompactionForecastInput = {currentInput?:number;model?:string;serviceTier?:string;regionalProcessing?:boolean;growthPerCall:number;typicalOutput:number;contextLimit?:number};
+export type CompactionForecast = {
+  status:'available'|'unavailable'|'limited';score:number|null;category:string;currentInput?:number;estimatedInput:number;
+  horizonCalls:number;completedCalls:number;growthPerCall:number;observedGrowthPerCall?:number;typicalOutput:number;
+  compactionOutput:number;breakEvenCalls:number|null;netSavingsUsd:number|null;compactionOverheadUsd:number|null;avoidableCostUsd:number|null;
+  projectedBaselineCostUsd:number|null;projectedCompactedCostBeforeOverheadUsd:number|null;grossSavingsUsd:number|null;
+  model?:string;serviceTier?:string;regionalProcessing:boolean;limitation?:string;
+  assumptions:{warmPrefixReuse:boolean;pricingAvailable:boolean;assumedTier:boolean;contextLimitKnown:boolean;growth?:RollingEstimate;output?:ReturnType<typeof rollingTypicalOutput>};
+};
+export function compactionCategory(score:number) {
+  return score===0?'No projected economic benefit':score<=20?'Low':score<=40?'Moderate':score<=60?'High':score<=80?'Very high':'Exceptional';
+}
+export function estimateCompactionValue(input:CompactionForecastInput):CompactionForecast {
+  const {currentInput,model,serviceTier,regionalProcessing=false,growthPerCall,typicalOutput,contextLimit}=input;
+  const result:CompactionForecast={status:'unavailable',score:null,category:'Unavailable',currentInput,estimatedInput:D.POST_COMPACTION_TOKENS,
+    horizonCalls:D.FORECAST_CALLS,completedCalls:0,growthPerCall,typicalOutput,compactionOutput:D.COMPACTION_OUTPUT_TOKENS,
+    breakEvenCalls:null,netSavingsUsd:null,compactionOverheadUsd:null,avoidableCostUsd:null,
+    projectedBaselineCostUsd:null,projectedCompactedCostBeforeOverheadUsd:null,grossSavingsUsd:null,model,serviceTier,regionalProcessing,
+    assumptions:{warmPrefixReuse:true,pricingAvailable:false,assumedTier:serviceTier==null||serviceTier==='auto',contextLimitKnown:contextLimit!=null}};
+  const fail=(reason:string)=>({...result,limitation:reason});
+  if(![currentInput,growthPerCall,typicalOutput].every(finiteNonnegative)||(contextLimit!=null&&(!finiteNonnegative(contextLimit)||contextLimit===0)))return fail('Missing or invalid forecast inputs');
+  const original=rates(model,serviceTier,currentInput!,regionalProcessing),replacement=rates(model,serviceTier,D.POST_COMPACTION_TOKENS,regionalProcessing);
+  if(!original||!replacement||replacement.write==null)return fail('Verified model/tier or replacement cache-write pricing unavailable');
+  result.assumptions.pricingAvailable=true;
+  const overhead=(D.COMPACTION_OUTPUT_TOKENS*original.output+D.POST_COMPACTION_TOKENS*replacement.write)/1e6;
+  if(!Number.isFinite(overhead))return fail('Forecast exceeds finite numeric range');
+  result.compactionOverheadUsd=overhead;
+  // Explicit two-path warm-prefix accounting: Path B reads the original context
+  // during compaction. This cancels Path A's first read. On B's first normal
+  // call, replacement tokens are written once (in overhead), never also read.
+  let baseline=0,compacted=currentInput!*original.cached/1e6,avoidable=0;
+  for(let j=0;j<D.FORECAST_CALLS;j++) {
+    const a=currentInput!+j*growthPerCall,b=D.POST_COMPACTION_TOKENS+j*growthPerCall;
+    if(!Number.isFinite(a)||!Number.isFinite(b))return fail('Forecast exceeds finite numeric range');
+    if(contextLimit!=null&&(a>contextLimit||b>contextLimit)) {
+      result.status='limited';result.category='Forecast limited';
+      return fail(`${a>contextLimit?'Un-compacted':'Compacted'} path exceeds reported context window at call ${j+1}; 20-call financial score unavailable`);
+    }
+    const ar=rates(model,serviceTier,a,regionalProcessing),br=rates(model,serviceTier,b,regionalProcessing);
+    if(!ar||!br)return fail('Verified projected model/tier pricing unavailable');
+    baseline+=(a*ar.cached+typicalOutput*ar.output)/1e6;
+    compacted+=((j===0?0:b*br.cached)+typicalOutput*br.output)/1e6;
+    // Exclude common output costs and the original read common to both paths.
+    avoidable+=((j===0?0:a*ar.cached)+typicalOutput*Math.max(0,ar.output-br.output))/1e6;
+    if(![baseline,compacted,avoidable].every(Number.isFinite))return fail('Forecast exceeds finite numeric range');
+    result.completedCalls=j+1;
+    const savings=baseline-compacted;
+    if(result.breakEvenCalls==null&&savings+Number.EPSILON*Math.max(1,overhead)>=overhead)result.breakEvenCalls=j+1;
+  }
+  const gross=baseline-compacted,net=gross-overhead;
+  const score=currentInput!<=D.POST_COMPACTION_TOKENS?0:Math.round(100*Math.min(1,Math.max(0,avoidable>0?net/avoidable:0)));
+  return {...result,status:'available',score,category:compactionCategory(score),projectedBaselineCostUsd:baseline,
+    projectedCompactedCostBeforeOverheadUsd:compacted,grossSavingsUsd:gross,netSavingsUsd:net,avoidableCostUsd:avoidable};
 }
 export function health(value: number|undefined,stops:number[]) {if(value==null||!Number.isFinite(value)||value<=stops[0])return 0;for(let i=1;i<stops.length;i++)if(value<stops[i])return i-1+(value-stops[i-1])/(stops[i]-stops[i-1]);return 3;}
 export function cacheTemperature(lastCall?:string,now=Date.now()) {if(!lastCall)return;const age=now-Date.parse(lastCall);return age<1800000?'WARM':age<=7200000?'UNCERTAIN':'PRES. COLD';}

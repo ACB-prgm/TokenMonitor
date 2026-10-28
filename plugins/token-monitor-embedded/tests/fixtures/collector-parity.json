@@ -45,7 +45,6 @@
       }
     ],
     "expected": {
-      "apiCompactionBreakEven": 6,
       "attribution": {
         "afterCompaction": false,
         "callCount": 0,
@@ -59,11 +58,47 @@
       "callCount": 2,
       "compactions": [],
       "compactionValue": {
-        "breakEvenCalls": 6,
-        "category": "VERY HIGH",
+        "status": "available",
+        "score": 81,
+        "category": "Exceptional",
         "currentInput": 280000,
-        "estimatedInput": 84000,
-        "level": 3
+        "estimatedInput": 40000,
+        "horizonCalls": 20,
+        "completedCalls": 20,
+        "growthPerCall": 2000,
+        "typicalOutput": 3000,
+        "compactionOutput": 3600,
+        "breakEvenCalls": 4,
+        "netSavingsUsd": 1.1720000000000002,
+        "compactionOverheadUsd": 0.154,
+        "avoidableCostUsd": 1.4400000000000002,
+        "projectedBaselineCostUsd": 2.096,
+        "projectedCompactedCostBeforeOverheadUsd": 0.77,
+        "grossSavingsUsd": 1.326,
+        "model": "gpt-6.1-sol",
+        "regionalProcessing": false,
+        "assumptions": {
+          "warmPrefixReuse": true,
+          "pricingAvailable": true,
+          "assumedTier": true,
+          "contextLimitKnown": true,
+          "growth": {
+            "observed": 180000,
+            "effective": 2000,
+            "sampleCount": 1,
+            "minimumApplied": false,
+            "fallback": true
+          },
+          "output": {
+            "observed": 100,
+            "effective": 3000,
+            "sampleCount": 2,
+            "minimumApplied": false,
+            "fallback": true,
+            "activeModelOnly": false
+          }
+        },
+        "observedGrowthPerCall": 180000
       },
       "contextHealth": 2.5,
       "contextLimit": 400000,
@@ -263,10 +298,45 @@
         }
       ],
       "compactionValue": {
-        "category": "VERY LOW",
-        "currentInput": 22984,
+        "status": "unavailable",
+        "score": null,
+        "category": "Unavailable",
         "estimatedInput": 40000,
-        "level": 0
+        "horizonCalls": 20,
+        "completedCalls": 0,
+        "growthPerCall": 2000,
+        "typicalOutput": 3000,
+        "compactionOutput": 3600,
+        "breakEvenCalls": null,
+        "netSavingsUsd": null,
+        "compactionOverheadUsd": null,
+        "avoidableCostUsd": null,
+        "projectedBaselineCostUsd": null,
+        "projectedCompactedCostBeforeOverheadUsd": null,
+        "grossSavingsUsd": null,
+        "model": "gpt-6.1-sol",
+        "regionalProcessing": false,
+        "assumptions": {
+          "warmPrefixReuse": true,
+          "pricingAvailable": false,
+          "assumedTier": true,
+          "contextLimitKnown": true,
+          "growth": {
+            "effective": 2000,
+            "sampleCount": 0,
+            "minimumApplied": false,
+            "fallback": true
+          },
+          "output": {
+            "observed": 100,
+            "effective": 3000,
+            "sampleCount": 1,
+            "minimumApplied": false,
+            "fallback": true,
+            "activeModelOnly": false
+          }
+        },
+        "limitation": "Waiting for a reliable post-compaction call"
       },
       "contextHealth": 0,
       "contextLimit": 400000,
@@ -2679,10 +2749,47 @@
       "callCount": 135,
       "compactions": [],
       "compactionValue": {
-        "category": "VERY LOW",
+        "status": "available",
+        "score": 0,
+        "category": "No projected economic benefit",
         "currentInput": 10134,
         "estimatedInput": 40000,
-        "level": 0
+        "horizonCalls": 20,
+        "completedCalls": 20,
+        "growthPerCall": 2000,
+        "typicalOutput": 1000,
+        "compactionOutput": 3600,
+        "breakEvenCalls": null,
+        "netSavingsUsd": -0.1927454,
+        "compactionOverheadUsd": 0.136,
+        "avoidableCostUsd": 0.057254599999999996,
+        "projectedBaselineCostUsd": 0.258268,
+        "projectedCompactedCostBeforeOverheadUsd": 0.3150134,
+        "grossSavingsUsd": -0.0567454,
+        "model": "gpt-6.1-sol",
+        "regionalProcessing": false,
+        "assumptions": {
+          "warmPrefixReuse": true,
+          "pricingAvailable": true,
+          "assumedTier": true,
+          "contextLimitKnown": true,
+          "growth": {
+            "observed": 1.0000000000000002,
+            "effective": 2000,
+            "sampleCount": 20,
+            "minimumApplied": true,
+            "fallback": false
+          },
+          "output": {
+            "observed": 100,
+            "effective": 1000,
+            "sampleCount": 20,
+            "minimumApplied": true,
+            "fallback": false,
+            "activeModelOnly": true
+          }
+        },
+        "observedGrowthPerCall": 1.0000000000000002
       },
       "contextHealth": 0,
       "contextLimit": 400000,
@@ -6677,10 +6784,45 @@
       "callCount": 1,
       "compactions": [],
       "compactionValue": {
-        "category": "VERY LOW",
+        "status": "available",
+        "score": 0,
+        "category": "No projected economic benefit",
         "currentInput": 20,
         "estimatedInput": 40000,
-        "level": 0
+        "horizonCalls": 20,
+        "completedCalls": 20,
+        "growthPerCall": 2000,
+        "typicalOutput": 3000,
+        "compactionOutput": 3600,
+        "breakEvenCalls": null,
+        "netSavingsUsd": -0.21196199999999998,
+        "compactionOverheadUsd": 0.136,
+        "avoidableCostUsd": 0.038037999999999995,
+        "projectedBaselineCostUsd": 0.63804,
+        "projectedCompactedCostBeforeOverheadUsd": 0.714002,
+        "grossSavingsUsd": -0.07596199999999997,
+        "model": "gpt-6.1-sol",
+        "regionalProcessing": false,
+        "assumptions": {
+          "warmPrefixReuse": true,
+          "pricingAvailable": true,
+          "assumedTier": true,
+          "contextLimitKnown": true,
+          "growth": {
+            "effective": 2000,
+            "sampleCount": 0,
+            "minimumApplied": false,
+            "fallback": true
+          },
+          "output": {
+            "observed": 100,
+            "effective": 3000,
+            "sampleCount": 1,
+            "minimumApplied": false,
+            "fallback": true,
+            "activeModelOnly": false
+          }
+        }
       },
       "contextHealth": 0,
       "contextLimit": 400000,
@@ -6712,7 +6854,7 @@
             "assumedTier": true,
             "cacheSavings": 0,
             "categories": [
-              4e-05,
+              0.00004,
               0,
               0,
               0.0004,
@@ -6747,7 +6889,7 @@
         "configurationEffectiveDate": "2026-10-19",
         "cost": 0.0010400000000000001,
         "costCategories": [
-          4e-05,
+          0.00004,
           0,
           0,
           0.0004,
@@ -6828,7 +6970,6 @@
       }
     ],
     "expected": {
-      "apiCompactionBreakEven": 21,
       "attribution": {
         "afterCompaction": false,
         "callCount": 0,
@@ -6842,11 +6983,45 @@
       "callCount": 1,
       "compactions": [],
       "compactionValue": {
-        "breakEvenCalls": 9,
-        "category": "MEDIUM",
+        "status": "available",
+        "score": 0,
+        "category": "No projected economic benefit",
         "currentInput": 100000,
         "estimatedInput": 40000,
-        "level": 1
+        "horizonCalls": 20,
+        "completedCalls": 20,
+        "growthPerCall": 2000,
+        "typicalOutput": 3000,
+        "compactionOutput": 3600,
+        "breakEvenCalls": null,
+        "netSavingsUsd": -0.02200000000000013,
+        "compactionOverheadUsd": 0.136,
+        "avoidableCostUsd": 0.228,
+        "projectedBaselineCostUsd": 0.8379999999999999,
+        "projectedCompactedCostBeforeOverheadUsd": 0.724,
+        "grossSavingsUsd": 0.11399999999999988,
+        "model": "gpt-6.1-sol",
+        "regionalProcessing": false,
+        "assumptions": {
+          "warmPrefixReuse": true,
+          "pricingAvailable": true,
+          "assumedTier": true,
+          "contextLimitKnown": true,
+          "growth": {
+            "effective": 2000,
+            "sampleCount": 0,
+            "minimumApplied": false,
+            "fallback": true
+          },
+          "output": {
+            "observed": 100,
+            "effective": 3000,
+            "sampleCount": 1,
+            "minimumApplied": false,
+            "fallback": true,
+            "activeModelOnly": false
+          }
+        }
       },
       "contextHealth": 0,
       "contextLimit": 400000,
@@ -7002,10 +7177,46 @@
       "callCount": 1,
       "compactions": [],
       "compactionValue": {
-        "category": "VERY LOW",
+        "status": "unavailable",
+        "score": null,
+        "category": "Unavailable",
         "currentInput": 1000,
         "estimatedInput": 40000,
-        "level": 0
+        "horizonCalls": 20,
+        "completedCalls": 0,
+        "growthPerCall": 2000,
+        "typicalOutput": 3000,
+        "compactionOutput": 3600,
+        "breakEvenCalls": null,
+        "netSavingsUsd": null,
+        "compactionOverheadUsd": null,
+        "avoidableCostUsd": null,
+        "projectedBaselineCostUsd": null,
+        "projectedCompactedCostBeforeOverheadUsd": null,
+        "grossSavingsUsd": null,
+        "model": "unknown",
+        "regionalProcessing": false,
+        "assumptions": {
+          "warmPrefixReuse": true,
+          "pricingAvailable": false,
+          "assumedTier": true,
+          "contextLimitKnown": false,
+          "growth": {
+            "effective": 2000,
+            "sampleCount": 0,
+            "minimumApplied": false,
+            "fallback": true
+          },
+          "output": {
+            "observed": 10,
+            "effective": 3000,
+            "sampleCount": 1,
+            "minimumApplied": false,
+            "fallback": true,
+            "activeModelOnly": false
+          }
+        },
+        "limitation": "Verified model/tier or replacement cache-write pricing unavailable"
       },
       "contextHealth": 0,
       "fiveHour": {

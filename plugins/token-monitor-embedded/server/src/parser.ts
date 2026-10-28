@@ -1,6 +1,6 @@
 import {ActivityCollector} from './activity.js';
 import {createHash} from 'node:crypto';
-import {AttributionEstimator,BoundedSet,ThreadUsage,apiBreakEven,bounded,cacheTemperature,cleanTitle,compactionValue,date,emptyAttribution,health,integer,nonnegative,price,type Attribution,type RecordValue,type Sample} from './metrics.js';
+import {AttributionEstimator,BoundedSet,ThreadUsage,estimateCompactionValue,rollingContextGrowth,rollingTypicalOutput,bounded,cacheTemperature,cleanTitle,date,emptyAttribution,health,integer,nonnegative,price,type Attribution,type RecordValue,type Sample} from './metrics.js';
 const object=(x:any):x is RecordValue=>x!=null&&typeof x==='object'&&!Array.isArray(x);
 function canonical(x:any):string {if(Array.isArray(x))return '['+x.map(canonical).join(',')+']';if(object(x))return '{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+canonical(x[k])).join(',')+'}';return JSON.stringify(x);}
 const fingerprint=(value:any)=>createHash('sha256').update(canonical(value)).digest('hex');
@@ -9,6 +9,7 @@ export class TelemetryParser {
   samples:Sample[]=[]; contextLimit?:number; fiveHour?:{used:number;reset?:string}; weekly?:{used:number;reset?:string};
   model?:string; effort?:string; title?:string; lastCallModel?:string; lastCallEffort?:string; lastEvent?:string; callCount=0;
   private activity=new ActivityCollector();
+  private contextSegment=0; private forecastSamples:(Sample & {segment:number})[]=[];
   private reportedOutput?:number; private reportedReasoning?:number; private summedOutput=0; private summedReasoning=0; private outputComplete=true;private reasoningComplete=true;
   readonly attribution=new AttributionEstimator(); contextAttribution=emptyAttribution(); private pendingAttribution?:Attribution;
   readonly usage=new ThreadUsage(); private serviceTier?:string;private regionalProcessing?:boolean;
@@ -18,13 +19,13 @@ export class TelemetryParser {
     let r:RecordValue;try{r=typeof line==='string'||Buffer.isBuffer(line)?JSON.parse(line.toString()):line;}catch{return;}
     if(!object(r)||!object(r.payload))return;const p=r.payload,type=r.type,time=date(r.timestamp);
     this.activity.consume(type,p);
-    if(type==='compacted'&&time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp)){this.awaitingPostCompactionCall=true;this.compactedContext=undefined;this.pendingAttribution=undefined;this.contextAttribution=emptyAttribution();}
+    if(type==='compacted'&&time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp)){this.contextSegment++;this.forecastSamples=[];this.awaitingPostCompactionCall=true;this.compactedContext=undefined;this.pendingAttribution=undefined;this.contextAttribution=emptyAttribution();}
     const response=['reasoning','function_call','custom_tool_call'].includes(p.type)||(p.type==='message'&&p.role==='assistant');
     if(type==='response_item'&&!this.pendingAttribution&&response)this.pendingAttribution=this.attribution.snapshot();
     this.attribution.consume(type,p);if(time)this.lastEvent=time;
     if(type==='compacted'&&time&&this.compactions.at(-1)?.timestamp!==time){this.compactions.push({timestamp:time,callPosition:this.callCount-.5});if(this.compactions.length>120)this.compactions.shift();}
     if(type==='turn_context'){
-      const next=typeof p.model==='string'?p.model:this.model;if(next!==this.model){this.serviceTier=undefined;this.regionalProcessing=undefined;}
+      const next=typeof p.model==='string'?p.model:this.model;if(next!==this.model){this.contextSegment++;this.serviceTier=undefined;this.regionalProcessing=undefined;}
       this.model=next;this.serviceTier=typeof p.service_tier==='string'?p.service_tier:undefined;this.regionalProcessing=typeof p.regional_processing==='boolean'?p.regional_processing:undefined;
       this.effort=typeof p.effort==='string'?p.effort:typeof p.reasoning_effort==='string'?p.reasoning_effort:this.effort;
     }
@@ -58,16 +59,23 @@ export class TelemetryParser {
     if(!reportedThisRecord&&this.reportedOutput!=null){this.reportedOutput=nonnegative(u.output_tokens)&&Number.isSafeInteger(this.reportedOutput+output)?this.reportedOutput+output:undefined;this.reportedReasoning=this.reportedReasoning!=null&&s.reasoningRecorded&&Number.isSafeInteger(this.reportedReasoning+reasoning)?this.reportedReasoning+reasoning:undefined;}
     if(s.outputRecorded&&Number.isSafeInteger(this.summedOutput+output))this.summedOutput+=output;else this.outputComplete=false;
     if(s.reasoningRecorded&&Number.isSafeInteger(this.summedReasoning+reasoning))this.summedReasoning+=reasoning;else this.reasoningComplete=false;
+    this.forecastSamples.push({...s,segment:this.contextSegment});if(this.forecastSamples.length>120)this.forecastSamples.shift();
     this.samples.push(s);if(this.samples.length>120)this.samples.shift();
   }
   snapshot(task:{id:string;title:string;workspace?:string},session:RecordValue={},metadata:RecordValue={},available=true,now=Date.now()) {
     const last=this.samples.at(-1),input=this.awaitingPostCompactionCall?this.compactedContext:last?.input,cached=this.awaitingPostCompactionCall?undefined:last?.cached,fresh=cached!=null&&input!=null?input-cached:undefined;
     const contextPercent=input!=null&&this.contextLimit?input/this.contextLimit*100:undefined,started=date(session.updated_at),completed=this.compactions.at(-1)?.timestamp;
     const isCompacting=session.hook_event_name==='PreCompact'&&!!started&&!(completed&&completed>=started)&&!(last&&last.timestamp>started);
+    const growth=rollingContextGrowth(this.forecastSamples),output=rollingTypicalOutput(this.samples,this.lastCallModel);
+    const compactionValue=estimateCompactionValue({currentInput:isCompacting||this.awaitingPostCompactionCall?undefined:input,model:this.lastCallModel,
+      serviceTier:last?.serviceTier,regionalProcessing:last?.regionalProcessing,growthPerCall:growth.effective,typicalOutput:output.effective,contextLimit:this.contextLimit});
+    compactionValue.observedGrowthPerCall=growth.observed;
+    compactionValue.assumptions.growth=growth;compactionValue.assumptions.output=output;
+    if(isCompacting||this.awaitingPostCompactionCall)compactionValue.limitation='Waiting for a reliable post-compaction call';
     return {version:1,task,status:!available?'Transcript unavailable · showing last recorded call':isCompacting?'Compacting…':session.ended===true?'Session ended · last recorded call':'Monitoring selected task',available,
       model:this.lastCallModel??session.model??metadata.model,effort:this.lastCallEffort??metadata.effort,input,cached,fresh,contextLimit:this.contextLimit,contextPercent,callCount:this.callCount,samples:this.samples,
       compactions:this.compactions.filter(c=>c.callPosition>=this.callCount-this.samples.length),isCompacting,awaitingPostCompactionCall:this.awaitingPostCompactionCall,fiveHour:this.fiveHour,weekly:this.weekly,
-      attribution:this.contextAttribution,usage:this.usage,apiCompactionBreakEven:apiBreakEven(input,this.lastCallModel,last?.serviceTier),outputTotals:this.outputTotals,lastEvent:this.lastEvent,lastCall:last?.timestamp,
-      cacheTemperature:cacheTemperature(last?.timestamp,now),contextHealth:health(contextPercent,[40,50,65,75]),freshHealth:fresh!=null&&fresh>=2000&&input&&fresh<=input?health(fresh/input*100,[10,25,37.5,50]):0,compactionValue:compactionValue(input)};
+      attribution:this.contextAttribution,usage:this.usage,outputTotals:this.outputTotals,lastEvent:this.lastEvent,lastCall:last?.timestamp,
+      cacheTemperature:cacheTemperature(last?.timestamp,now),contextHealth:health(contextPercent,[40,50,65,75]),freshHealth:fresh!=null&&fresh>=2000&&input&&fresh<=input?health(fresh/input*100,[10,25,37.5,50]):0,compactionValue};
   }
 }

@@ -116,5 +116,5 @@ test('compaction forecast shows observed estimates, finite-horizon break-even an
 
  test('account allowances disclose live/fallback age and expired resets without inventing remaining usage',()=>{
  const html=render({panelId:'p',status:'Monitoring',fiveHour:{used:25,source:'live',observedAt:'2026-10-28T12:00:00Z',stale:true},weekly:{used:40,source:'catalogue',observedAt:'2026-10-28T11:00:00Z',awaitingRefresh:true}});
- assert.match(html,/Live account · stale/);assert.match(html,/Local fallback/);assert.match(html,/may be incomplete/);assert.match(html,/Observed/);assert.match(html,/75%/);assert.match(html,/Awaiting refresh/);assert.doesNotMatch(html,/60% remaining|last observed in selected thread/);
+ assert.doesNotMatch(html,/allowance-source|Live account|Local fallback|Waiting for allowance/);assert.match(html,/Live Codex account/);assert.match(html,/Stale/);assert.match(html,/may be incomplete/);assert.match(html,/Observed/);assert.match(html,/75%/);assert.match(html,/Awaiting refresh/);assert.doesNotMatch(html,/60% remaining|last observed in selected thread/);
  });

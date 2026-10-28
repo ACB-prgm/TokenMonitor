@@ -22,9 +22,9 @@ The newest valid event timestamp wins separately for each window. Catalogue orde
 
 ## Display and freshness
 
-Each window retains its existing `used` and optional `reset` fields and adds `source` (`live` or `catalogue`), `observedAt`, `stale`, and `awaitingRefresh`. The UI shows the source under the allowance; its help text includes the observation time and fallback limitations.
+Each window retains its existing `used` and optional `reset` fields and adds `source` (`live` or `catalogue`), `observedAt`, `stale`, and `awaitingRefresh`. Allowance hover help includes the source, observation time, stale status, and fallback limitations; these do not occupy a separate row.
 
-A live reading no more than 60 seconds old takes precedence. Otherwise, the newest timestamped live or local observation wins. Retained older live data is marked stale; local telemetry is labeled **Local fallback**. Missing windows remain unknown. Remaining percentage is clamped only for display; stored usage values are not rounded or capped.
+A live reading no more than 60 seconds old takes precedence. Otherwise, the newest timestamped live or local observation wins. Hover help marks retained older live data stale and identifies local telemetry as catalogue fallback. Missing windows remain unknown. Remaining percentage is clamped only for display; stored usage values are not rounded or capped.
 
 When the reported reset time passes without a newer observation, the UI shows **Awaiting refresh**. It does not assume that the account is back to 100% or estimate consumption from thread cost.
 

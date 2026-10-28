@@ -25,7 +25,7 @@ export class TelemetryParser {
     this.attribution.consume(type,p);if(time)this.lastEvent=time;
     if(type==='compacted'&&time&&this.compactions.at(-1)?.timestamp!==time){this.compactions.push({timestamp:time,callPosition:this.callCount-.5});if(this.compactions.length>120)this.compactions.shift();}
     if(type==='turn_context'){
-      const next=typeof p.model==='string'?p.model:this.model;if(next!==this.model){this.contextSegment++;this.serviceTier=undefined;this.regionalProcessing=undefined;}
+      const next=typeof p.model==='string'?p.model:this.model;if(next!==this.model){this.contextSegment++;this.contextLimit=undefined;this.serviceTier=undefined;this.regionalProcessing=undefined;}
       this.model=next;this.serviceTier=typeof p.service_tier==='string'?p.service_tier:undefined;this.regionalProcessing=typeof p.regional_processing==='boolean'?p.regional_processing:undefined;
       this.effort=typeof p.effort==='string'?p.effort:typeof p.reasoning_effort==='string'?p.reasoning_effort:this.effort;
     }
@@ -42,9 +42,10 @@ export class TelemetryParser {
     let reportedThisRecord=false;
     if(cumulative&&nonnegative(cumulative.output_tokens)){reportedThisRecord=true;this.reportedOutput=cumulative.output_tokens;this.reportedReasoning=nonnegative(cumulative.reasoning_output_tokens)&&cumulative.reasoning_output_tokens<=cumulative.output_tokens?cumulative.reasoning_output_tokens:undefined;}
     if(!u&&cumulative){if(integer(cumulative.input_tokens))this.usage.cumulativeMismatch=cumulative.input_tokens!==this.usage.input;if(integer(cumulative.output_tokens)&&cumulative.output_tokens!==this.usage.output)this.usage.cumulativeMismatch=true;}
-    if(!u||!integer(u.input_tokens)||!time)return;const input=u.input_tokens;
+    if(!u)return;
+    if(!integer(u.input_tokens)||!time){this.contextSegment++;return;}const input=u.input_tokens;
     if(this.awaitingPostCompactionCall&&input===0&&(u.cached_input_tokens??0)===0&&(u.output_tokens??0)===0&&integer(u.total_tokens)&&u.total_tokens>0&&this.compactions.at(-1)&&time>=this.compactions.at(-1)!.timestamp){this.compactedContext=u.total_tokens;this.contextAttribution=this.attribution.snapshot(u.total_tokens);return;}
-    if(input<=0)return;const cached=integer(u.cached_input_tokens)?u.cached_input_tokens:0;if(cached<0||cached>input)return;
+    if(input<=0){this.contextSegment++;return;}const cached=integer(u.cached_input_tokens)?u.cached_input_tokens:0;if(cached<0||cached>input){this.contextSegment++;return;}
     const output=integer(u.output_tokens)?u.output_tokens:0,reasoning=integer(u.reasoning_output_tokens)?u.reasoning_output_tokens:0;
     const s:Sample={timestamp:time,input,cached,cacheWrite:integer(u.cache_write_input_tokens)?u.cache_write_input_tokens:0,output,reasoning,total:integer(u.total_tokens)?u.total_tokens:undefined,ordinal:integer(r.ordinal)?r.ordinal:undefined,
       outputRecorded:nonnegative(u.output_tokens),reasoningRecorded:nonnegative(u.reasoning_output_tokens)&&u.reasoning_output_tokens<=output,
@@ -52,6 +53,7 @@ export class TelemetryParser {
       cachedRecorded:u.cached_input_tokens!=null,cacheWriteRecorded:nonnegative(u.cache_write_input_tokens)&&u.cache_write_input_tokens<=input-cached};
     s.price=price(s);
     if(!this.seenIdentities.add(fingerprint([r.timestamp,s.input,s.cached,s.output,s.total??-1])))return;
+    if(this.lastCallModel&&s.model!==this.lastCallModel&&!(integer(info.model_context_window)&&info.model_context_window>0))this.contextLimit=undefined;
     const activity=this.activity.take();if(activity)s.activity=activity;
     this.awaitingPostCompactionCall=false;this.compactedContext=undefined;this.contextAttribution=bounded(this.pendingAttribution??this.attribution.snapshot(),input);this.pendingAttribution=undefined;
     this.usage.add(s);if(cumulative){if(integer(cumulative.input_tokens))this.usage.cumulativeMismatch=cumulative.input_tokens!==this.usage.input;if(integer(cumulative.output_tokens)&&cumulative.output_tokens!==this.usage.output)this.usage.cumulativeMismatch=true;}

@@ -134,7 +134,7 @@ export function rollingTypicalOutput(samples:readonly ForecastObservation[],mode
 export type CompactionForecastInput = {currentInput?:number;model?:string;serviceTier?:string;regionalProcessing?:boolean;growthPerCall:number;typicalOutput:number;contextLimit?:number};
 export type CompactionForecast = {
   status:'available'|'unavailable'|'limited';score:number|null;category:string;currentInput?:number;estimatedInput:number;
-  horizonCalls:number;completedCalls:number;growthPerCall:number;observedGrowthPerCall?:number;typicalOutput:number;
+  horizonCalls:number;completedCalls:number;growthPerCall?:number;observedGrowthPerCall?:number;typicalOutput?:number;
   compactionOutput:number;breakEvenCalls:number|null;netSavingsUsd:number|null;compactionOverheadUsd:number|null;avoidableCostUsd:number|null;
   projectedBaselineCostUsd:number|null;projectedCompactedCostBeforeOverheadUsd:number|null;grossSavingsUsd:number|null;
   model?:string;serviceTier?:string;regionalProcessing:boolean;limitation?:string;
@@ -145,8 +145,8 @@ export function compactionCategory(score:number) {
 }
 export function estimateCompactionValue(input:CompactionForecastInput):CompactionForecast {
   const {currentInput,model,serviceTier,regionalProcessing=false,growthPerCall,typicalOutput,contextLimit}=input;
-  const result:CompactionForecast={status:'unavailable',score:null,category:'Unavailable',currentInput,estimatedInput:D.POST_COMPACTION_TOKENS,
-    horizonCalls:D.FORECAST_CALLS,completedCalls:0,growthPerCall,typicalOutput,compactionOutput:D.COMPACTION_OUTPUT_TOKENS,
+  const result:CompactionForecast={status:'unavailable',score:null,category:'Unavailable',currentInput:finiteNonnegative(currentInput)?currentInput:undefined,estimatedInput:D.POST_COMPACTION_TOKENS,
+    horizonCalls:D.FORECAST_CALLS,completedCalls:0,growthPerCall:finiteNonnegative(growthPerCall)?growthPerCall:undefined,typicalOutput:finiteNonnegative(typicalOutput)?typicalOutput:undefined,compactionOutput:D.COMPACTION_OUTPUT_TOKENS,
     breakEvenCalls:null,netSavingsUsd:null,compactionOverheadUsd:null,avoidableCostUsd:null,
     projectedBaselineCostUsd:null,projectedCompactedCostBeforeOverheadUsd:null,grossSavingsUsd:null,model,serviceTier,regionalProcessing,
     assumptions:{warmPrefixReuse:true,pricingAvailable:false,assumedTier:serviceTier==null||serviceTier==='auto',contextLimitKnown:contextLimit!=null}};

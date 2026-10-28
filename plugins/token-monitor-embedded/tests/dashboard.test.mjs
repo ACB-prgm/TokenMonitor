@@ -29,7 +29,7 @@ test('missing pricing and cache data stay visibly unavailable',()=>{
  assert.match(html,/partial/);assert.match(html,/Unknown model/);assert.match(html,/Breakdown unavailable/);assert.match(html,/missing calls cannot be priced/);assert.doesNotMatch(html,/>\$0.00<\/strong>/);
 });
 
-const latestFixture={panelId:'p',status:'Monitoring',input:40000,awaitingPostCompactionCall:true,callCount:1,cacheTemperature:'WARM',compactionValue:{category:'MEDIUM',level:1,currentInput:40000,estimatedInput:40000,breakEvenCalls:6},apiCompactionBreakEven:10,samples:[{timestamp:'2026-10-19T12:00:00Z',model:'gpt-6.1-sol',input:100000,cached:90000,cacheWrite:0,output:1200,reasoning:800}]};
+const latestFixture={panelId:'p',status:'Monitoring',input:40000,awaitingPostCompactionCall:true,callCount:1,cacheTemperature:'WARM',compactionValue:{status:'available',score:34,category:'Moderate',currentInput:100000,estimatedInput:40000,breakEvenCalls:6,horizonCalls:20,growthPerCall:2000,typicalOutput:3000,compactionOutput:3600,compactionOverheadUsd:.136,netSavingsUsd:.1,model:'gpt-6.1-sol',assumptions:{pricingAvailable:true,growth:{fallback:true,sampleCount:1},output:{fallback:true,sampleCount:1}}},samples:[{timestamp:'2026-10-19T12:00:00Z',model:'gpt-6.1-sol',input:100000,cached:90000,cacheWrite:0,output:1200,reasoning:800}]};
 test('single latest-call bar sits between thread usage and the graph and expands call and compaction details together',()=>{
  const html=render(latestFixture);
  const bar=html.match(/<details class="latest-call"[^>]*>[\s\S]*?<\/details>/)?.[0];
@@ -40,8 +40,8 @@ test('single latest-call bar sits between thread usage and the graph and expands
  assert.ok(html.indexOf('class="latest-call"')<html.indexOf('Exact call values'));
  const summary=bar.match(/<summary[\s\S]*?<\/summary>/)[0];
  assert.match(summary,/<b>100.0k<\/b> \(90%\)/);assert.match(summary,/<b>1.2k<\/b>/);
- assert.match(summary,/Cache warmth: WARM/);assert.match(summary,/MEDIUM/);
- assert.match(bar,/Thinking/);assert.match(bar,/gpt-6.1-sol/);assert.match(bar,/Context heuristic break-even 6 calls/);assert.match(bar,/~10 calls/);
+ assert.match(summary,/Cache warmth: WARM/);assert.match(summary,/34\/100/);
+ assert.match(bar,/Thinking/);assert.match(bar,/gpt-6.1-sol/);assert.match(bar,/Break-even<\/dt><dd>6 calls/);assert.match(bar,/Moderate/);assert.match(bar,/Default \(insufficient data\)/);assert.doesNotMatch(bar,/heuristic|Model-priced API break-even/);
  assert.equal((html.match(/Compaction Value ·/g)??[]).length,1);
  assert.match(render(latestFixture,true),/<details class="latest-call" open/);
 });
@@ -103,4 +103,13 @@ test('automatic update checkbox starts checked and respects an explicit opt-out'
  assert.match(checkbox(undefined),/checked=""/);
  assert.match(checkbox({automatic:true,status:'unknown'}),/checked=""/);
  assert.doesNotMatch(checkbox({automatic:false,status:'unknown'}),/checked=""/);
+});
+
+test('compaction forecast shows observed estimates, finite-horizon break-even and limitations',()=>{
+ const v=latestFixture.compactionValue;
+ const observed=render({...latestFixture,compactionValue:{...v,breakEvenCalls:null,assumptions:{...v.assumptions,growth:{observed:1000,effective:2000,sampleCount:20,minimumApplied:true,fallback:false}}}});
+ assert.match(observed,/&gt;20 calls/);assert.match(observed,/Observed · 20 samples · minimum applied/);
+ const limited=render({...latestFixture,compactionValue:{...v,status:'limited',score:null,category:'Forecast limited',completedCalls:4,limitation:'Un-compacted path exceeds reported context window'}});
+ assert.match(limited,/4\/20 calls possible/);assert.match(limited,/Break-even<\/dt><dd>Unavailable/);assert.doesNotMatch(limited,/34\/100/);
+ const unknown=render({panelId:'p',status:'Waiting'});assert.match(unknown,/Compaction Value ·/);assert.match(unknown,/Unavailable/);assert.doesNotMatch(unknown,/NaN|undefined/);
 });

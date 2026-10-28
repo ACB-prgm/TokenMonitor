@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import {installedVersion} from '../../shared/version.js';
 import {displayName,isDev} from '../../shared/identity.js';
 import {UpdateMenu,type UpdateAction} from './updates.js';
+import type {CompactionForecast,RollingEstimate} from '../../server/src/metrics.js';
 import type {CallActivity} from '../../server/src/activity.js';
 import type {UpdateStatus} from '../../server/src/updates.js';
 import {categories, composition, number, exact, percent, money, threadAllowanceEstimate, type Price, type Usage} from './analytics.js';
@@ -15,14 +16,14 @@ export type Monitor = { panelId: string; revision?: string; unchanged?: boolean;
   samples?: Sample[]; compactions?: {timestamp: string; callPosition: number}[]; isCompacting?: boolean;
   awaitingPostCompactionCall?: boolean; lastCall?: string; lastEvent?: string; cacheTemperature?: string;
   fiveHour?: {used: number; reset?: string}; weekly?: {used: number; reset?: string};
-  compactionValue?: {category: string; level: number; currentInput: number; estimatedInput: number; breakEvenCalls?: number};
+  compactionValue?: CompactionForecast;
   attribution?: {contributors: {name: string; calls: number; tokens: number}[]; skillCount: number; callCount: number; afterCompaction: boolean};
-  usage?: Usage; apiCompactionBreakEven?: number; outputTotals?: {total?: number; reasoning?: number; source: string}; tasks?: Task[]; completedAt?: string };
+  usage?: Usage; outputTotals?: {total?: number; reasoning?: number; source: string}; tasks?: Task[]; completedAt?: string };
 const time = (date?: string) => date ? new Date(date).toLocaleString() : '—';
 const quota = (a?: {used: number}) => a ? percent(Math.min(100,Math.max(0,100-a.used))) : '—';
 const attributionHelp = 'Estimate from recorded tool arguments and result text, about 4 characters per token, bounded by latest input. Covers retained history, not the entire session. Wrapped calls count once. Images, hidden tool schemas and skill catalogs are excluded. Compaction summaries cannot be attributed.';
 const cacheHelp = 'Predicted cache availability before the next call: warm under 30 minutes; uncertain through 120 minutes; presumed cold afterward. Actual cache reuse may differ.';
-const compactionHelp = 'Cost-only estimate of when compacting becomes cheaper. Includes estimated compaction output; the current-context read common to both choices cancels. Cache temperature does not change this estimate. Assumes 10% cached-read cost, 30% retained context (minimum 40,000), and 3,600 compaction output tokens. Compacting may discard useful detail.';
+const compactionHelp = 'Compaction Value estimates the percentage of avoidable context-processing cost saved over the next 20 calls, including compaction overhead and long-context pricing.';
 function health(level = 0) {
   const stops = ['var(--ink)','var(--health-amber)','var(--health-orange)','var(--health-red)'];
   const x = Math.min(3,Math.max(0,level)), i = Math.min(2,Math.floor(x));
@@ -81,11 +82,35 @@ function LatestCall({s, expanded}: {s: Monitor; expanded: boolean}) {
       <span className="bar-divider" aria-hidden="true">|</span>
       <span title={cacheHelp} aria-label={`Cache warmth: ${s.cacheTemperature??'Unavailable'}`} style={{color:warmthColor}}><i className="warmth-dot" aria-hidden="true"/>{s.cacheTemperature??'—'}</span>
       <span className="bar-divider" aria-hidden="true">|</span>
-      <span title={compactionHelp} aria-label={`Compaction value: ${value?.category??'Unavailable'}`}><span className="wide-label">Compaction</span><span className="narrow-label">CV</span> <b style={{color:health(value?.level)}}>{value?.category??'—'}</b></span>
+      <span title={compactionHelp} aria-label={`Compaction value: ${value?.category??'Unavailable'}`}><span>CV</span> <b style={{color:health(value?.score==null?0:value.score/100*3)}}>{value?.score==null?'—':`${value.score}/100`}</b></span>
     </span></summary><div className="latest-body"><h2>Latest call · {money(last?.price?.total)}</h2>{!last&&<p>Waiting for the first recorded call.</p>}<dl className="metrics"><Metric label={`Cached (${percent(cachedPercent)})`} value={cached}/><Metric label={`Fresh (${percent(freshPercent)})`} value={fresh}/><Metric label="Input" value={last?.input}/><Metric label="Output (incl. thinking)" value={last?.outputRecorded===false?undefined:last?.output}/><Metric label="Thinking" value={last?.reasoningRecorded===false?undefined:last?.reasoning}/><Metric label="Cache write" value={last?.cacheWriteRecorded===false?undefined:last?.cacheWrite}/></dl><p title={cacheHelp}>Cache <b style={{color:warmthColor}}>{s.cacheTemperature??'—'}</b>. {cacheHelp}</p><p>{last?.model??'Model unknown'} · {last?.serviceTier??'Standard assumed'} · {time(last?.timestamp)}</p>{last?.price?.rates&&<p>USD / 1M: input {money(last.price.rates.input)}, read {money(last.price.rates.cached)}, write {money(last.price.rates.write)}, output {money(last.price.rates.output)}.</p>}
     {last?.price?.issue&&<p className="warning">{last.price.issue}</p>}
-    <div className="latest-compaction"><h2 title={compactionHelp}>Compaction Value · <b style={{color:health(value?.level)}}>{value?.category??'—'}</b></h2><p>{compactionHelp}</p><p>Est. {number(value?.currentInput)} → {number(value?.estimatedInput)} tokens · Context heuristic break-even {value?.breakEvenCalls??'—'} calls.</p><p title="Same 30% retention, 40k minimum and 3,600 output assumptions, evaluated with verified API rates at each context size.">Model-priced API break-even: {s.apiCompactionBreakEven==null?'Unavailable / no break-even':`~${s.apiCompactionBreakEven} calls`}. Cost efficiency alone does not measure lost context.</p></div>
+    <CompactionDetails value={value}/>
     </div></details>;
+}
+function estimateSource(estimate?:RollingEstimate) {
+  if(!estimate)return 'Assumptions unavailable';
+  return `${estimate.fallback?'Default (insufficient data)':'Observed'} · ${estimate.sampleCount} samples${estimate.minimumApplied?' · minimum applied':''}${estimate.observed==null?'':` · observed ${exact(estimate.observed)}`}`;
+}
+function CompactionDetails({value:v}:{value?:CompactionForecast}) {
+  const available=v?.status==='available';
+  return <div className="latest-compaction"><h2 title={compactionHelp}>Compaction Value · <b style={{color:health(v?.score==null?0:v.score/100*3)}}>{v?.score==null?'—':`${v.score}/100`}</b>{v&&` · ${v.category}`}</h2>
+    <p>{compactionHelp}</p>
+    {v?.limitation&&<p className="warning">{v.limitation}{v.status==='limited'?` (${v.completedCalls}/${v.horizonCalls} calls possible).`:''}</p>}
+    <dl className="details-grid">
+      <dt>Context estimate</dt><dd>{number(v?.currentInput)} → {number(v?.estimatedInput)} tokens</dd>
+      <dt>Growth / call</dt><dd>{number(v?.growthPerCall)} tokens · {estimateSource(v?.assumptions.growth)}</dd>
+      <dt>Output / call (incl. thinking)</dt><dd>{number(v?.typicalOutput)} tokens · {estimateSource(v?.assumptions.output)}{v?.assumptions.output&&(v.assumptions.output.activeModelOnly?' · active model':' · thread samples')}</dd>
+      <dt>Forecast horizon</dt><dd>{v?.horizonCalls??20} normal calls</dd>
+      <dt>Break-even</dt><dd>{available?(v.breakEvenCalls==null?`>${v.horizonCalls} calls`:`${v.breakEvenCalls} calls`):'Unavailable'}</dd>
+      <dt>Compaction overhead</dt><dd>{money(v?.compactionOverheadUsd??undefined)} · {number(v?.compactionOutput)} output tokens + replacement cache write</dd>
+      <dt>Net estimated savings</dt><dd>{money(v?.netSavingsUsd??undefined)}</dd>
+      <dt>Avoidable cost baseline</dt><dd>{money(v?.avoidableCostUsd??undefined)}</dd>
+      <dt>Active model</dt><dd>{v?.model??'Unknown'} · {v?.serviceTier??'Standard assumed'}{v?.regionalProcessing?' · regional processing':''}</dd>
+      <dt>Assumptions</dt><dd>40K retained context · warm-prefix reuse · {v?.assumptions.pricingAvailable?'verified API rates':'pricing unavailable'}{v?.assumptions.assumedTier?' · Standard tier assumed':''}{v&&!v.assumptions.contextLimitKnown?' · context limit unknown':''}</dd>
+    </dl>
+    <p>API-equivalent estimates, not subscription charges. Cache temperature is separate; future cache misses may change savings. Financial value does not guarantee context preservation.</p>
+  </div>;
 }
 function History({s}: {s: Monitor}) {
   const [mode,setMode] = useState<'Cost'|'Tokens'|'Context'>('Cost');

@@ -92,3 +92,12 @@ test('parser resets growth after compaction and model changes, suppresses stale 
  assert.equal(snapshot(p).compactionValue.growthPerCall,3000);
  p.consume({type:'turn_context',payload:{model:'gpt-6-sol'}});p.consume(call(10,55000));assert.equal(snapshot(p).compactionValue.assumptions.growth.sampleCount,0);
 });
+
+test('invalid call telemetry cannot bridge growth; model changes cannot retain stale capacity',()=>{
+ const p=new TelemetryParser();p.consume({type:'turn_context',payload:{model:base.model}});
+ const first=call(0,100000);first.payload.info.model_context_window=180000;p.consume(first);
+ p.consume(call(1,110000));p.consume(call(2,-100));p.consume(call(3,130000));
+ assert.equal(snapshot(p).compactionValue.assumptions.growth.sampleCount,0);
+ p.consume({type:'turn_context',payload:{model:'gpt-6-sol'}});p.consume(call(4,140000));
+ assert.equal(snapshot(p).contextLimit,undefined);assert.equal(snapshot(p).compactionValue.assumptions.contextLimitKnown,false);
+});

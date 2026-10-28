@@ -1,4 +1,5 @@
-import React, {useState} from 'react';
+import React, {useEffect,useState} from 'react';
+import {InspectionController,type Inspection} from './inspection.js';
 import {installedVersion} from '../../shared/version.js';
 import {displayName,isDev} from '../../shared/identity.js';
 import {UpdateMenu,type UpdateAction} from './updates.js';
@@ -114,17 +115,20 @@ function CompactionDetails({value:v}:{value?:CompactionForecast}) {
 }
 function History({s}: {s: Monitor}) {
   const [mode,setMode] = useState<'Cost'|'Tokens'|'Context'>('Cost');
-  const [hovered,setHovered] = useState<string|null>(null);
-  const [focused,setFocused] = useState<string|null>(null);
-  const [pinned,setPinned] = useState<string|null>(null);
+  const [preview,setPreview]=useState<Inspection>({hovered:null,focused:null,pinned:null,closing:false});
+  const [inspection]=useState(()=>new InspectionController(setPreview,()=>globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false));
+  useEffect(()=>()=>inspection.dispose(),[inspection]);
+  const {hovered,focused,pinned}=preview;
   const samples=s.samples??[], compactions=s.compactions??[];
   const start=(s.callCount??samples.length)-samples.length;
   const callKey=(c:Sample,i:number)=>`${start+i}:${c.timestamp}`;
   const activeKey=hovered??focused??pinned;
   const inspect=samples.findIndex((c,i)=>callKey(c,i)===activeKey);
   const selected=inspect>=0?samples[inspect]:undefined;
-  const clearInspection=()=>{setPinned(null);setHovered(null);setFocused(null);};
-  const toggleInspection=(key:string)=>{if(pinned===key)clearInspection();else setPinned(key);};
+  const retainedKeys=samples.map(callKey).join('|');
+  useEffect(()=>inspection.retain(new Set(retainedKeys.split('|'))),[inspection,retainedKeys]);
+  const clearInspection=()=>inspection.clear();
+  const toggleInspection=(key:string)=>inspection.pin(key);
   const end=Math.max(start+1,(s.callCount??samples.length)-1,...compactions.map(c=>c.callPosition));
   const values=samples.map(c=>mode==='Cost'?c.price?.categories:sampleTokens(c));
   const max=Math.max(.000001,...samples.map((c,i)=>mode==='Context'?c.input:values[i]?.reduce((a,b)=>a+b,0)??0));
@@ -132,15 +136,15 @@ function History({s}: {s: Monitor}) {
   const describe=(c:Sample,i:number)=>`Call ${start+i+1}${c.ordinal!=null?` · ordinal ${c.ordinal}`:''} · ${c.model??'Unknown model'} · ${time(c.timestamp)}\nInput ${exact(c.input)} · Cached ${exact(c.cachedRecorded===false?undefined:c.cached)} · Cache write ${exact(c.cacheWriteRecorded===false?undefined:c.cacheWrite)}\nOutput ${exact(c.outputRecorded===false?undefined:c.output)} · Thinking ${exact(c.reasoningRecorded===false?undefined:c.reasoning)}\nAPI equivalent ${c.price?.total==null?'—':`$${c.price.total.toFixed(6)}`}${c.price?.rates?` · USD/1M input ${c.price.rates.input}, read ${c.price.rates.cached}, write ${c.price.rates.write??'—'}, output ${c.price.rates.output}`:''} · ${c.serviceTier??'Standard assumed'}${c.price?.issue?` · ${c.price.issue}`:''}${compactions.some(m=>Math.abs(m.callPosition-(start+i))<=.5)?' · Near compaction boundary':''}`;
   return <section className="history" aria-label="Recent call history"><div className="section-title"><h2>Recent calls</h2><div className="segmented" role="group" aria-label="History view">{(['Cost','Tokens','Context'] as const).map(m=><button key={m} title={`${m} per recorded call`} aria-pressed={mode===m} onClick={()=>setMode(m)}>{m}</button>)}</div></div>
     {!samples.length?<p className="muted">Waiting for the first recorded call.</p>:<>
-      <svg viewBox="0 0 580 155" role="group" aria-label={`${mode} for latest ${samples.length} calls; dotted lines mark compaction.`}>
+      <svg onMouseEnter={()=>inspection.enter()} onMouseLeave={()=>inspection.leave()} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))inspection.blur();}} viewBox="0 0 580 155" role="group" aria-label={`${mode} for latest ${samples.length} calls; dotted lines mark compaction.`}>
         <text x="0" y="24">{mode==='Cost'?money(max):number(max)}</text><text x="22" y="133">0</text><line x1="45" x2="565" y1="130" y2="130" className="axis"/>
         {compactions.map(c=><g key={c.timestamp}><title>Context compacted · {time(c.timestamp)}</title><line x1={x(c.callPosition)} x2={x(c.callPosition)} y1="12" y2="130" className="compaction-line"/></g>)}
         {mode==='Context' && (['input','fresh'] as const).map(series=><polyline key={series} className={`series ${series}`} points={samples.map((c,i)=>`${x(start+i)},${y(series==='input'?c.input:c.input-c.cached)}`).join(' ')}/>)}
-        {samples.map((c,i)=>{let below=0; const parts=values[i];const key=callKey(c,i);return <g key={key} className="history-call" tabIndex={0} role="button" aria-label={describe(c,i)} aria-pressed={pinned===key} onMouseEnter={()=>setHovered(key)} onMouseLeave={()=>setHovered(null)} onFocus={()=>setFocused(key)} onBlur={()=>setFocused(null)} onClick={()=>toggleInspection(key)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleInspection(key);}else if(e.key==='Escape'){clearInspection();}}}>
+        {samples.map((c,i)=>{let below=0; const parts=values[i];const key=callKey(c,i);return <g key={key} className="history-call" tabIndex={0} role="button" aria-label={describe(c,i)} aria-pressed={pinned===key} onMouseEnter={()=>inspection.enter(key)} onFocus={()=>inspection.focus(key)} onClick={()=>toggleInspection(key)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleInspection(key);}else if(e.key==='Escape'){clearInspection();}}}>
           {activeKey===key&&<rect className="call-highlight" x={x(start+i)-Math.min(8,230/samples.length)-2} width={Math.min(16,460/samples.length)+4} y="12" height="118" rx="3"/>}{mode==='Context'?<circle cx={x(start+i)} cy={y(c.input)} r="3" className="point"/>:parts?parts.map((n,j)=>{const bottom=below;below+=n;return n>0?<rect key={j} x={x(start+i)-Math.min(8,230/samples.length)} width={Math.min(16,460/samples.length)} y={y(below)} height={n/max*110} fill={categories[j].color}/>:null;}):<text x={x(start+i)} y="127" textAnchor="middle">×</text>}<rect x={x(start+i)-Math.min(8,230/samples.length)} width={Math.min(16,460/samples.length)} y="12" height="118" fill="transparent"/></g>;})}
         <text x="45" y="150">Call {start+1}</text><text x="565" y="150" textAnchor="end">{s.callCount}</text>
       </svg>
-      {selected && <div className="chart-inspect" role="status" aria-label={`Call ${start+inspect+1} details`}>
+      {selected && <div className={`inspect-shell${preview.closing?' closing':''}`} onMouseEnter={()=>inspection.enter()} onMouseLeave={()=>inspection.leave()} onFocus={()=>inspection.focus(activeKey??undefined)} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))inspection.blur();}} onKeyDown={e=>{if(e.key==='Escape')clearInspection();}}><div className="inspect-inner"><div className="chart-inspect" role="status" aria-label={`Call ${start+inspect+1} details`}>
         <div className="inspect-header"><div><strong>Call {start+inspect+1}</strong>{selected.ordinal!=null&&<span className="inspect-ordinal">Ordinal {selected.ordinal}</span>}<span className="inspect-state">{activeKey===pinned?'Pinned':'Preview'}</span></div>{pinned&&<button className="inspect-clear" onClick={clearInspection}>Clear selection</button>}</div>
         <div className="inspect-meta"><span>{selected.model??'Unknown model'} · {selected.serviceTier??'Standard assumed'}</span><time dateTime={selected.timestamp}>{time(selected.timestamp)}</time></div>
         <dl className="inspect-values">{[
@@ -156,7 +160,7 @@ function History({s}: {s: Monitor}) {
           {!!selected.activity?.files.length&&<div className="activity-files"><h4>File targets</h4>{selected.activity.files.map(file=><code key={file}>{file}</code>)}<p className="inspect-rates">From edit requests; successful changes are not verified here.</p></div>}
           {!selected.activity&&<p className="inspect-rates">No visible response or tool activity recorded for this call.</p>}
         </div>
-      </div>}
+      </div></div></div>}
       <p className="hint">{mode==='Context'?'Blue: input · Orange: fresh. ':''}Dotted: compaction. {mode==='Cost'?'×: unpriced call. ':''}Hover or focus for details. Click or press Enter to pin; repeat to clear.</p>
     </>}
     {!!samples.length && <details><summary title="Inspect retained call records">Exact call values ({samples.length})</summary><div className="table-scroll"><table><thead><tr><th>Call / model</th><th>Input</th><th>Read</th><th>Write</th><th>Output</th><th>Thinking</th><th>USD</th></tr></thead><tbody>{samples.map((c,i)=><tr key={i} title={describe(c,i)}><th>{start+i+1}<small>{c.model??'—'}</small></th><td>{exact(c.input)}</td><td>{exact(c.cachedRecorded===false?undefined:c.cached)}</td><td>{exact(c.cacheWriteRecorded===false?undefined:c.cacheWrite)}</td><td>{exact(c.outputRecorded===false?undefined:c.output)}</td><td>{exact(c.reasoningRecorded===false?undefined:c.reasoning)}</td><td>{money(c.price?.total)}</td></tr>)}</tbody></table></div></details>}

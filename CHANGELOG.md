@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Replace compaction heuristics and the secondary break-even with a single numeric, model-priced 20-call forecast and consistent payoff calculation.
+- Measure bounded per-thread rolling context growth and median billed output; disclose defaults, minima and active-model selection.
+- Account for per-call long-context rates, one replacement-context cache write and compaction output; keep cache temperature separate.
+- Show forecast economics and capacity limitations in compact/expanded layouts, with deterministic pricing and telemetry regression coverage.
+
 ## 1.7.0
 
 - Replace ZIP and SHA download buttons with **Update and install** for existing local release marketplace installations.

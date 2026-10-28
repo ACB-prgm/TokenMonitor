@@ -8,6 +8,7 @@ Portable, local Codex token telemetry in an embedded panel. A React interface an
 
 - Recorded input, cache reads and writes, output and reasoning totals.
 - Context capacity, recent calls, cache temperature, and compaction state.
+- Numeric Compaction Value (0–100), forecasting API-equivalent savings over 20 calls from active-model pricing and observed thread growth/output.
 - Account allowances and clearly labeled thread allowance estimates.
 - Tool and skill attribution estimates, and API-equivalent costs with explicit coverage limitations.
 - Separate live-panel and inline-summary views, with independent task selection.
@@ -53,3 +54,7 @@ See [Contributing](CONTRIBUTING.md) for tests and the staged release process. Th
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE). Noncommercial use only under the license terms. Bundled dependencies retain their own licenses and notices.
+
+## Compaction Value
+
+CV estimates net savings as a percentage of avoidable context-processing costs over 20 normal calls, including compaction overhead and per-call long-context pricing. It assumes 40K retained context and warm-prefix reuse. The panel shows observed growth/output or disclosed defaults, a consistent break-even, and context-capacity limitations. Cache temperature remains separate. These are API-equivalent estimates, not subscription charges; financial value does not guarantee context preservation. See [calculation and assumptions](docs/COMPACTION-VALUE.md).

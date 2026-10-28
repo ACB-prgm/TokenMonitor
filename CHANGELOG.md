@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 1.8.0
+
+- Remove the extra allowance source/status row; retain source and freshness information in hover help.
 - Smooth recent-call previews with immediate switching, delayed animated dismissal, keyboard/pinning support and reduced-motion handling.
 - Refresh account allowances from the signed-in Codex account, with bounded cross-chat catalogue fallback and per-window source/freshness indicators.
 

@@ -1,6 +1,6 @@
 {
   "name": "token-monitor-embedded",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Portable local Codex telemetry in an embedded panel, powered by a bundled Node runtime.",
   "mcpServers": "./.mcp.json",
   "hooks": "./hooks/hooks.json",

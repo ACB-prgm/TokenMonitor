@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {runInNewContext} from 'node:vm';
-const bundle=await build({entryPoints:[new URL('../ui/src/inspection.ts',import.meta.url).pathname],bundle:true,format:'esm',platform:'node',write:false});
+import {fileURLToPath} from 'node:url';
+const entry=fileURLToPath(new URL('../ui/src/inspection.ts',import.meta.url));
+const bundle=await build({entryPoints:[entry],bundle:true,format:'esm',platform:'node',write:false});
 const {InspectionController}=await import('data:text/javascript;base64,'+Buffer.from(bundle.outputFiles[0].text).toString('base64'));
 function setup(reduced=false){
  let now=0,id=0;const timers=new Map(),states=[];
@@ -28,6 +30,6 @@ test('reduced motion preserves hide delay but omits exit phase',()=>{
 });
 
 test('default timers call browser globals with their native receiver',async()=>{
- const browser=await build({entryPoints:[new URL('../ui/src/inspection.ts',import.meta.url).pathname],bundle:true,format:'iife',globalName:'Preview',write:false});
+ const browser=await build({entryPoints:[entry],bundle:true,format:'iife',globalName:'Preview',write:false});
  runInNewContext(`let scheduled=0;function setTimeout(fn,ms){if(this!==globalThis)throw new Error('Illegal invocation');scheduled++;return 1;}function clearTimeout(id){if(this!==globalThis)throw new Error('Illegal invocation');}${browser.outputFiles[0].text};const c=new Preview.InspectionController(()=>{});c.enter('a');c.leave();c.enter('b');c.leave();c.dispose();if(scheduled!==2)throw new Error('Timers not scheduled');`);
 });

@@ -17,9 +17,9 @@ Costs are estimates using the bundled rate table, not invoices. Subscription all
 
 ## Platforms and installation
 
-Packages target macOS Apple silicon (`macos-arm64`), macOS Intel (`macos-x64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop behavior is pending user verification for 1.4.0.
+Packages target macOS Apple silicon (`macos-arm64`), macOS Intel (`macos-x64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop rendering and trusted lifecycle delivery require separate verification.
 
-Version 1.8.0 adds a model-priced compaction forecast, smoother call previews, and live account allowances with catalogue fallback. **Update and install** remains available in the version menu. Platform validation results distinguish native launcher tests from desktop hook and rendering checks.
+Version 1.8.1 fixes task-switch and call-preview state, preserves unknown cache readings, hardens telemetry parsing and update cleanup, and refreshes vulnerable dependencies. The model-priced compaction forecast and live account allowances from 1.8.0 remain available. **Update and install** is in the version menu. See the [release notes](docs/RELEASE-1.8.1.md) and [validation scope](docs/VALIDATION-1.8.1.md).
 
 Download a complete `token-monitor-VERSION-TARGET.zip` and its `.sha256` companion from [Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Verify the checksum before extraction, then run the included macOS `install.sh` or Windows `install.ps1`. Restart Codex and review hook trust. The installer requires the existing Codex CLI, but uses the bundled Node runtime.
 

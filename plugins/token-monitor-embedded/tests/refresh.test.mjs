@@ -58,6 +58,18 @@ test('polls retain unchanged views and queue selections made in flight',async()=
  assert.strictEqual(p.render().s,selected);
 });
 
+test('a new panel discards queued selections and stale responses from the previous panel',async()=>{
+ const p=panel(),old={panelId:'old',revision:'r1',selectedId:'a',status:'Monitoring'};
+ p.deliver(old);p.render().onAction('select','b');
+ const current={panelId:'new',revision:'r2',selectedId:'c',status:'Monitoring'};
+ p.deliver(current);assert.equal(p.calls.length,2);
+ p.calls[0].resolve({_meta:{monitor:{...old,revision:'stale'}}});await new Promise(resolve=>setImmediate(resolve));
+ assert.strictEqual(p.render().s,current);
+ await p.settle({panelId:'new',revision:'r2',unchanged:true});
+ assert.equal(p.calls.length,2,'the previous panel selection must not change the new panel');
+ assert.strictEqual(p.render().s,current);
+});
+
  test('opening check is deferred, once per panel, and does not block telemetry or task changes',async()=>{
   const p=panel(),state={panelId:'p',revision:'r1',selectedId:'a',status:'Monitoring'};
   p.deliver(state);assert.equal(p.calls.length,1);assert.equal(p.opening.length,1);

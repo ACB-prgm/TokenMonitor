@@ -12,9 +12,9 @@ try {
     chunks.push(chunk);
   }
   if (size <= 1024 * 1024) {
-    const input = Buffer.concat(chunks);
-    await new TelemetryStore().record(JSON.parse(input.toString('utf8')));
-    const additionalContext = await requestStartup(JSON.parse(input.toString('utf8')));
+    const input = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    await new TelemetryStore().record(input);
+    const additionalContext = await requestStartup(input);
     if (additionalContext) process.stdout.write(JSON.stringify({ hookSpecificOutput: {
       hookEventName: 'UserPromptSubmit', additionalContext,
     } }) + '\n');

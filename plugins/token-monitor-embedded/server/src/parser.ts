@@ -3,8 +3,26 @@ import {ActivityCollector} from './activity.js';
 import {createHash} from 'node:crypto';
 import {AttributionEstimator,BoundedSet,ThreadUsage,estimateCompactionValue,rollingContextGrowth,rollingTypicalOutput,bounded,cacheTemperature,cleanTitle,date,emptyAttribution,health,integer,nonnegative,price,type Attribution,type RecordValue,type Sample} from './metrics.js';
 const object=(x:any):x is RecordValue=>x!=null&&typeof x==='object'&&!Array.isArray(x);
-function canonical(x:any):string {if(Array.isArray(x))return '['+x.map(canonical).join(',')+']';if(object(x))return '{'+Object.keys(x).sort().map(k=>JSON.stringify(k)+':'+canonical(x[k])).join(',')+'}';return JSON.stringify(x);}
-const fingerprint=(value:any)=>createHash('sha256').update(canonical(value)).digest('hex');
+// Walk iteratively so valid deeply nested JSON cannot exhaust the call stack.
+// Hash bounded batches rather than one allocation or crypto call per JSON token.
+function fingerprint(value:any) {
+  const hash=createHash('sha256');let buffer='';
+  const write=(text:string)=>{buffer+=text;if(buffer.length>=65536){hash.update(buffer);buffer='';}};
+  const pending:({value:any}|{text:string})[]=[{value}];
+  while(pending.length){
+    const part=pending.pop()!;
+    if('text' in part){write(part.text);continue;}
+    const x=part.value;
+    if(Array.isArray(x)){
+      write('[');pending.push({text:']'});
+      for(let i=x.length-1;i>=0;i--){pending.push({value:x[i]});if(i)pending.push({text:','});}
+    }else if(object(x)){
+      write('{');pending.push({text:'}'});const keys=Object.keys(x).sort();
+      for(let i=keys.length-1;i>=0;i--)pending.push({value:x[keys[i]]},{text:(i?',':'')+JSON.stringify(keys[i])+':'});
+    }else write(JSON.stringify(x)??'undefined');
+  }
+  return hash.update(buffer).digest('hex');
+}
 export class TelemetryParser {
   awaitingPostCompactionCall=false; compactedContext?:number; compactions:{timestamp:string;callPosition:number}[]=[];
   samples:Sample[]=[]; contextLimit?:number; fiveHour?:{used:number;reset?:string}; weekly?:{used:number;reset?:string};
@@ -53,7 +71,7 @@ export class TelemetryParser {
     const s:Sample={timestamp:time,input,cached,cacheWrite:integer(u.cache_write_input_tokens)?u.cache_write_input_tokens:0,output,reasoning,total:integer(u.total_tokens)?u.total_tokens:undefined,ordinal:integer(r.ordinal)?r.ordinal:undefined,
       outputRecorded:nonnegative(u.output_tokens),reasoningRecorded:nonnegative(u.reasoning_output_tokens)&&u.reasoning_output_tokens<=output,
       model:typeof info.model==='string'?info.model:this.model,serviceTier:typeof p.service_tier==='string'?p.service_tier:typeof info.service_tier==='string'?info.service_tier:this.serviceTier,regionalProcessing:this.regionalProcessing,
-      cachedRecorded:u.cached_input_tokens!=null,cacheWriteRecorded:nonnegative(u.cache_write_input_tokens)&&u.cache_write_input_tokens<=input-cached};
+      cachedRecorded:nonnegative(u.cached_input_tokens),cacheWriteRecorded:nonnegative(u.cache_write_input_tokens)&&u.cache_write_input_tokens<=input-cached};
     s.price=price(s);
     if(!this.seenIdentities.add(fingerprint([r.timestamp,s.input,s.cached,s.output,s.total??-1])))return;
     if(this.lastCallModel&&s.model!==this.lastCallModel&&!(integer(info.model_context_window)&&info.model_context_window>0))this.contextLimit=undefined;
@@ -68,7 +86,7 @@ export class TelemetryParser {
     this.samples.push(s);if(this.samples.length>120)this.samples.shift();
   }
   snapshot(task:{id:string;title:string;workspace?:string},session:RecordValue={},metadata:RecordValue={},available=true,now=Date.now()) {
-    const last=this.samples.at(-1),input=this.awaitingPostCompactionCall?this.compactedContext:last?.input,cached=this.awaitingPostCompactionCall?undefined:last?.cached,fresh=cached!=null&&input!=null?input-cached:undefined;
+    const last=this.samples.at(-1),input=this.awaitingPostCompactionCall?this.compactedContext:last?.input,cached=this.awaitingPostCompactionCall||!last?.cachedRecorded?undefined:last.cached,fresh=cached!=null&&input!=null?input-cached:undefined;
     const contextPercent=input!=null&&this.contextLimit?input/this.contextLimit*100:undefined,started=date(session.updated_at),completed=this.compactions.at(-1)?.timestamp;
     const isCompacting=session.hook_event_name==='PreCompact'&&!!started&&!(completed&&completed>=started)&&!(last&&last.timestamp>started);
     const growth=rollingContextGrowth(this.forecastSamples),output=rollingTypicalOutput(this.samples,this.lastCallModel);

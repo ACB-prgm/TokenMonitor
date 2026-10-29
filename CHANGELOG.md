@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 1.8.1
+
+- Retry transient Windows updater status-file locks without losing explicit failure reporting.
+
+- Clear stale task snapshots before switching chats and discard queued selections when a panel is replaced.
+- Preserve unknown cache readings in latest-call metrics and history; tolerate deeply nested telemetry and malformed workspace metadata.
+- Keep keyboard call previews aligned with focus and stop queued allowance refreshes after shutdown.
+- Release unread HTTP error responses during update checks and downloads; update vulnerable validation and transport dependencies.
+- Bound title truncation work, avoid duplicate startup-hook JSON parsing, and restore the browser preview with current forecast fixtures.
+
 ## 1.8.0
 
 - Remove the extra allowance source/status row; retain source and freshness information in hover help.

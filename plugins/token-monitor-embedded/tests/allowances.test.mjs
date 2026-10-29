@@ -134,3 +134,10 @@ test('synchronous spawn failure returns to retryable state',async t=>{
  t.mock.timers.enable({apis:['setTimeout','Date'],now});let attempts=0;const s=new AccountLimits(temp,{resolve:()=>'/missing/codex',spawn:()=>{attempts++;throw new Error('ENOENT');}});
  try{s.touch();await flush();assert.equal(attempts,1);t.mock.timers.tick(30000);await flush();assert.equal(attempts,2);}finally{s.close();}
 });
+
+test('close cancels a refresh queued before the subprocess starts',async()=>{
+ let attempts=0;
+ const service=new AccountLimits(temp,{resolve:()=>'/fake/codex',spawn:()=>{attempts++;throw new Error('Unexpected spawn');}});
+ service.touch();service.close();await flush();
+ assert.equal(attempts,0);
+});

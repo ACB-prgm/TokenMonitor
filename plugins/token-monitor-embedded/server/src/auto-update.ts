@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {randomUUID,createHash} from 'node:crypto';
 import {spawn,execFileSync} from 'node:child_process';
 import {unzipSync} from 'fflate';
+import {setTimeout as delay} from 'node:timers/promises';
 import {atomicJSON,stateRoot,withStateLock} from './platform.js';
 import {codexCommand} from './install-platform.js';
 import {installRelease,verifyPackage} from './install.js';
@@ -17,12 +18,18 @@ const digest=(bytes:Uint8Array)=>createHash('sha256').update(bytes).digest('hex'
 const jobFile=(root:string)=>path.join(root,'job.json');
 const lockFile=(root:string)=>path.join(root,'update.lock');
 async function job(root:string):Promise<Job|undefined>{try{const value=JSON.parse(await readFile(jobFile(root),'utf8'));return typeof value.id==='string'&&Number.isInteger(value.pid)&&parseVersion(value.version)&&['downloading','verifying','extracting','installing','installed','failed'].includes(value.phase)?value:undefined;}catch{return undefined;}}
+// Windows can briefly deny replacement while another process inspects the file.
+// Yield between bounded retries; never remove the previous complete record.
+export async function writeJob(root:string,value:unknown,platform:string=process.platform) {
+ for(let attempt=0;;attempt++)try{atomicJSON(jobFile(root),value);return;}
+ catch(error){if(platform!=='win32'||attempt>=5||!['EPERM','EACCES','EBUSY'].includes((error as NodeJS.ErrnoException).code??''))throw error;await delay(20*(attempt+1));}
+}
 const alive=(pid:number)=>{if(!Number.isInteger(pid)||pid<=0)return false;try{process.kill(pid,0);return true;}catch(e){return (e as NodeJS.ErrnoException).code!=='ESRCH';}};
 
 /** Runs in a separate bundled Node process so updates cannot block telemetry. */
 export async function installUpdate(value:Job,options:{root:string;releasesRoot?:string;dataRoot?:string;fetch?:typeof fetch;run?:(args:string[])=>string;target?:Target;onPhase?:(phase:Installation['phase'])=>void}) {
  const {root}=options,fetcher=options.fetch??fetch;
- const phase=(next:Installation['phase'])=>{value.phase=next;atomicJSON(jobFile(root),value);options.onPhase?.(next);};
+ const phase=async(next:Installation['phase'])=>{value.phase=next;await writeJob(root,value);options.onPhase?.(next);};
  const target=options.target??detectedTarget();
  if(value.target!==target)throw Error('The selected package does not match this computer. Choose Automatic and retry.');
  const version=parseVersion(value.version);if(!version||version.pre.length)throw Error('Invalid update version.');
@@ -43,7 +50,7 @@ export async function installUpdate(value:Job,options:{root:string;releasesRoot?
     const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password||u.port||!['github.com','release-assets.githubusercontent.com','objects.githubusercontent.com'].includes(u.hostname))throw Error('Untrusted download destination.');
     const response=await fetcher(url,{signal:controller.signal,redirect:'manual'});
     if([301,302,303,307,308].includes(response.status)){const location=response.headers.get('location');await response.body?.cancel();if(!location)throw Error('Invalid download redirect.');url=new URL(location,url).href;continue;}
-    if(!response.ok||!response.body)throw Error('Unable to download the update. Retry shortly.');
+    if(!response.ok||!response.body){await response.body?.cancel();throw Error('Unable to download the update. Retry shortly.');}
     const reader=response.body.getReader(),chunks:Uint8Array[]=[];let size=0;
     try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>limit)throw Error('Update download exceeds the size limit.');chunks.push(value);}}catch(error){await reader.cancel();throw error;}
     return Buffer.concat(chunks);
@@ -51,16 +58,16 @@ export async function installUpdate(value:Job,options:{root:string;releasesRoot?
    throw Error('Too many download redirects.');
   }finally{clearTimeout(timer);}
  }
- phase('downloading');
+ await phase('downloading');
  const checksum=(await download(value.checksumURL,4096)).toString('utf8').trim();
  const match=/^([a-fA-F0-9]{64})[ \t]+\*?([^\r\n]+)$/.exec(checksum);
  if(!match||match[2]!==name)throw Error('Invalid update checksum file.');
  const archive=await download(value.downloadURL,128*1024*1024);
- phase('verifying');if(digest(archive)!==match[1].toLowerCase())throw Error('Update checksum mismatch. Nothing was installed.');
+ await phase('verifying');if(digest(archive)!==match[1].toLowerCase())throw Error('Update checksum mismatch. Nothing was installed.');
  const releases=options.releasesRoot??path.join(stateRoot(),'releases');await mkdir(releases,{recursive:true,mode:0o700});
  const staging=await mkdtemp(path.join(releases,value.version+'-'));let installing=false;
  try{
-  phase('extracting');let total=0,count=0;const seen=new Set<string>();
+  await phase('extracting');let total=0,count=0;const seen=new Set<string>();
   const files=unzipSync(archive,{filter:entry=>{
    const name=entry.name,parts=name.replace(/\/$/,'').split('/');
    if(++count>512||!name.startsWith('TokenMonitor/')||parts.some(p=>!p||p==='.'||p==='..'||!/^[A-Za-z0-9_.-]+$/.test(p)||/[. ]$/.test(p)||/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(p)))throw Error('Unsafe update archive path.');
@@ -71,16 +78,17 @@ export async function installUpdate(value:Job,options:{root:string;releasesRoot?
   for(const [relative,bytes]of Object.entries(files)){const file=path.join(staging,relative);if(relative.endsWith('/')){await mkdir(file,{recursive:true,mode:0o700});continue;}await mkdir(path.dirname(file),{recursive:true,mode:0o700});await writeFile(file,bytes,{flag:'wx',mode:0o600});}
   const plugin=path.join(staging,'TokenMonitor/plugins/token-monitor-embedded');
   const release=await verifyPackage(plugin,target);if(release.version!==value.version)throw Error('Downloaded package version does not match the selected update.');
-  phase('installing');installing=true;
+  await phase('installing');installing=true;
   await installRelease(plugin,{target,run,dataRoot:options.dataRoot});
-  phase('installed');
+  await phase('installed');
  }finally{if(!installing)await rm(staging,{recursive:true,force:true});}
 }
 
 export class AutoUpdater {
+ private failure?:Job;
  constructor(readonly root=path.join(stateRoot(),'updates','installer'),readonly worker=fileURLToPath(new URL('./auto-update.mjs',import.meta.url))){}
  async status():Promise<Installation|undefined>{
-  const value=await job(this.root);if(!value)return;
+  const stored=await job(this.root),value=this.failure?.id===stored?.id?this.failure:stored;if(!value)return;
   if(installationBusy(value)&&!alive(value.pid)){value.phase='failed';value.error='The update was interrupted. Retry to continue.';}
   return {phase:value.phase,version:value.version,error:value.error};
  }
@@ -96,8 +104,10 @@ export class AutoUpdater {
    writeFileSync(lockFile(this.root),String(process.pid),{flag:'wx',mode:0o600});atomicJSON(jobFile(this.root),value);
    try{
    const child=spawn(process.execPath,[this.worker,'--update',this.root,value.id],{stdio:'ignore',windowsHide:true});
-   child.once('error',()=>{value.phase='failed';value.error='Unable to start the installer.';atomicJSON(jobFile(this.root),value);void rm(lockFile(this.root),{force:true});});
-   child.once('exit',async()=>{const current=await job(this.root);if(current?.id===value.id&&installationBusy(current)){current.phase='failed';current.error='The installer stopped unexpectedly. Retry the update.';atomicJSON(jobFile(this.root),current);await rm(lockFile(this.root),{force:true});}});
+   const failed=async(current:Job,message:string)=>{current.phase='failed';current.error=message;try{await writeJob(this.root,current);}finally{await rm(lockFile(this.root),{force:true});this.failure=current;}};
+   const report=()=>process.stderr.write('TokenMonitor: unable to persist installer failure; panel retains failure status.\n');
+   child.once('error',()=>{void failed(value,'Unable to start the installer.').catch(report);});
+   child.once('exit',()=>{void(async()=>{const current=await job(this.root);if(current?.id===value.id&&installationBusy(current))await failed(current,'The installer stopped unexpectedly. Retry the update.');})().catch(report);});
    child.unref();
    }catch(error){rmSync(lockFile(this.root),{force:true});throw error;}
    return true;
@@ -109,8 +119,8 @@ export class AutoUpdater {
 if(process.argv[2]==='--update'&&process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  const root=process.argv[3],value=await job(root);
  if(!value||value.id!==process.argv[4])throw Error('Update job changed.');
- value.pid=process.pid;atomicJSON(jobFile(root),value);await writeFile(lockFile(root),String(process.pid));
+ value.pid=process.pid;await writeJob(root,value);await writeFile(lockFile(root),String(process.pid));
  try{await installUpdate(value,{root});}
- catch(error){value.phase='failed';value.error=error instanceof Error?error.message:'Unable to install update.';atomicJSON(jobFile(root),value);}
+ catch(error){value.phase='failed';value.error=error instanceof Error?error.message:'Unable to install update.';await writeJob(root,value);}
  finally{await rm(lockFile(root),{force:true});}
 }

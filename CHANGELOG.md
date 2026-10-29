@@ -4,6 +4,8 @@
 
 ## 1.8.1
 
+- Retry transient Windows updater status-file locks without losing explicit failure reporting.
+
 - Clear stale task snapshots before switching chats and discard queued selections when a panel is replaced.
 - Preserve unknown cache readings in latest-call metrics and history; tolerate deeply nested telemetry and malformed workspace metadata.
 - Keep keyboard call previews aligned with focus and stop queued allowance refreshes after shutdown.

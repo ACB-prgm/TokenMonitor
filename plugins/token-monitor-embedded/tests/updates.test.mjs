@@ -98,3 +98,8 @@ test('a fresh installation enables automatic checks and performs its opening che
  await f.u.check(true);const status=await f.u.settled();
  assert.equal(f.requests.length,1);assert.equal(status.automatic,true);assert.equal(status.status,'available');
 });
+for(const status of [403,500])test(`HTTP ${status} cancels an unread response body`,async t=>{
+ const f=await fixture(t);let cancelled=false;
+ f.fetch(async()=>new Response(new ReadableStream({cancel(){cancelled=true;}}),{status}));
+ await f.u.check();assert.equal((await f.u.settled()).status,'unknown');assert.equal(cancelled,true);
+});

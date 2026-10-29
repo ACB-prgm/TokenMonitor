@@ -43,7 +43,7 @@ export async function installUpdate(value:Job,options:{root:string;releasesRoot?
     const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password||u.port||!['github.com','release-assets.githubusercontent.com','objects.githubusercontent.com'].includes(u.hostname))throw Error('Untrusted download destination.');
     const response=await fetcher(url,{signal:controller.signal,redirect:'manual'});
     if([301,302,303,307,308].includes(response.status)){const location=response.headers.get('location');await response.body?.cancel();if(!location)throw Error('Invalid download redirect.');url=new URL(location,url).href;continue;}
-    if(!response.ok||!response.body)throw Error('Unable to download the update. Retry shortly.');
+    if(!response.ok||!response.body){await response.body?.cancel();throw Error('Unable to download the update. Retry shortly.');}
     const reader=response.body.getReader(),chunks:Uint8Array[]=[];let size=0;
     try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>limit)throw Error('Update download exceeds the size limit.');chunks.push(value);}}catch(error){await reader.cancel();throw error;}
     return Buffer.concat(chunks);

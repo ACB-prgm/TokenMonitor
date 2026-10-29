@@ -77,3 +77,8 @@ test('background process failure is reported and concurrent panel starts are exc
 test('interrupted background work is visible and cannot be mistaken for an installed update',async t=>{
  const f=await fixture(t);await writeFile(path.join(f.root,'job.json'),JSON.stringify({...f.value,pid:2147483647}));assert.match((await new AutoUpdater(f.root).status()).error,/interrupted/);
 });
+test('failed downloads cancel unread response bodies before returning',async t=>{
+ const f=await fixture(t);let cancelled=false;
+ await assert.rejects(installUpdate(f.value,{...f.options,fetch:async()=>new Response(new ReadableStream({cancel(){cancelled=true;}}),{status:500})}),/Unable to download/);
+ assert.equal(cancelled,true);assert.deepEqual(f.calls.map(a=>a[0]),['list']);assert.equal(f.active(),'/previous/release');
+});

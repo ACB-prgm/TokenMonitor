@@ -111,7 +111,7 @@ export class Updates {
    if(response.status===304&&cache)await atomic(this.file('cache'),{...cache,checkedAt:this.now()});
    else{
     if(!response.ok){this.rateLimited=response.status===403||response.status===429;const after=response.headers.get('retry-after'),seconds=after===null?NaN:Number(after),reset=Number(response.headers.get('x-ratelimit-reset'))*1000;
-     this.retryAt=Math.min(this.now()+86400000,Math.max(this.now()+60000,Number.isFinite(seconds)?this.now()+seconds*1000:Date.parse(after??'')||0,reset||0));throw Error('GitHub unavailable');}
+     this.retryAt=Math.min(this.now()+86400000,Math.max(this.now()+60000,Number.isFinite(seconds)?this.now()+seconds*1000:Date.parse(after??'')||0,reset||0));await response.body?.cancel();throw Error('GitHub unavailable');}
     const reader=response.body?.getReader();if(!reader)throw Error('Empty response');const chunks:Uint8Array[]=[];let size=0;
     while(true){const {done,value}=await reader.read();if(done)break;size+=value.length;if(size>1024*1024){await reader.cancel();throw Error('Response too large');}chunks.push(value);}
     const release=parseRelease(JSON.parse(Buffer.concat(chunks).toString('utf8')));

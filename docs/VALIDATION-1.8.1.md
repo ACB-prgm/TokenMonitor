@@ -9,6 +9,12 @@ The completed audit was validated at commit `af664aaa059bcaf9f3bcd3995047f9f39e6
 - `npm audit` reported zero vulnerabilities after targeted dependency updates.
 - Packages for all four supported targets were built and inspected. The native macOS ARM64 package passed runtime/MCP checks, installation/update/rollback, user-state retention, and hook discovery in disposable Codex profiles. Foreign-architecture inspection does not establish native execution on those platforms.
 
-Version 1.8.1 metadata, package, local installation, and protected-branch/native release CI checks are pending at release preparation. Record those results here after they complete; earlier 1.8.0-labelled package checks do not verify the new release artifacts.
+Version 1.8.1 was then validated at release-preparation commit `4a429ca`:
+
+- Build, typecheck, all 160 plugin tests, two DEV workflow tests, release metadata checks, and diff checks passed after the version change.
+- The clean macOS ARM64 package passed offline runtime startup, checksum repair, MCP metrics, hooks, and shutdown.
+- Two disposable-profile installation tests passed clean installation, update, rollback, user-state retention, and Git marketplace refresh. A separate hook-discovery test found all six hooks without granting trust.
+
+The [protected-branch CI](https://github.com/ACB-prgm/TokenMonitor/actions/workflows/ci.yml) and [annotated-tag release workflow](https://github.com/ACB-prgm/TokenMonitor/actions/workflows/release.yml) validate the promoted source on native macOS ARM64/Intel and Windows ARM64/x64 runners. Publication requires both workflows to succeed and all eight ZIPs and matching checksum files to identify the same tagged source commit. Consult the `v1.8.1` release workflow for the final artifact evidence.
 
 Trusted desktop rendering and lifecycle delivery were not verified by this audit. Installation does not grant hook trust. Windows desktop behavior requires separate verification. No telemetry schema, plugin identity, or license change is part of this patch.

@@ -43,7 +43,7 @@ export class TelemetryStore {
     if(!validID(id))return;const hook=this.hook(id);if(hook)return hook.session;
     const row=this.metadata(id)[0];if(row)return {session_id:row.id,transcript_path:row.rollout_path,cwd:row.cwd??undefined,title:cleanTitle(row.title)};
   }
-  private task(session:Session,title?:string) {return {id:session.session_id,title:cleanTitle(title??session.title)??`${session.cwd?path.basename(session.cwd):'Task'} · ${session.session_id.slice(-8)}`,workspace:session.cwd?path.basename(session.cwd):undefined};}
+  private task(session:Session,title?:string) {const workspace=typeof session.cwd==='string'&&session.cwd?path.basename(session.cwd):undefined;return {id:session.session_id,title:cleanTitle(title??session.title)??`${workspace??'Task'} · ${session.session_id.slice(-8)}`,workspace};}
   tasks(){const sessions:Session[]=this.metadata().map(row=>({session_id:row.id,transcript_path:row.rollout_path,cwd:row.cwd??undefined,title:row.title}));const latest=this.hook()?.session;if(latest&&!sessions.some(s=>s.session_id===latest.session_id))sessions.unshift(latest);return sessions.map(s=>this.task(s));}
   taskMetadata(id:string){const s=this.resolve(id);return s?this.task(s,s.title??this.metadata(id)[0]?.title):undefined;}
   async record(payload:unknown):Promise<boolean> {

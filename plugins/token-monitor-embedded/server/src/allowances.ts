@@ -147,6 +147,8 @@ export class AccountLimits {
     if(this.closed||this.now()-this.touched>=60000){this.disconnect();return;}
     this.running=Promise.resolve().then(async()=>{
       try{
+        // Closing can happen before this queued refresh starts.
+        if(this.closed||this.now()-this.touched>=60000)return;
         if(!this.child){this.connect();await this.rpc('initialize',{clientInfo:{name:'token_monitor_allowances',version:'1.0.0'},capabilities:{experimentalApi:false}});this.send('initialized');this.initialized=true;}
         const response=await this.rpc('account/rateLimits/read');
         if(this.closed)return;

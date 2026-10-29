@@ -89,3 +89,24 @@ test('concurrent task switches cannot label a stale snapshot as the newly select
  const last=await panels.state(id);assert.equal(last.task.id,last.selectedId);assert.equal(last.input,200);
 });
 
+for(const manual of [false,true])test(`${manual?'manual':'hook'} task switch failure never reuses another task's snapshot or revision`,async()=>{
+ let selected='a',broken=false;
+ const requests=[];
+ const backend={request:async(method,input)=>{
+  if(method==='catalog')return {hostMatched:false,tasks:[{id:'a',title:'A'},{id:'b',title:'B'}],latestHook:{id:selected,sequence:selected}};
+  requests.push({...input});
+  if(broken)throw new Error('offline');
+  return {revision:input.taskId,state:{task:{id:input.taskId},input:input.taskId==='a'?100:200}};
+ }};
+ const panels=new Panels(backend),id=panels.create();
+ assert.equal((await panels.state(id)).task.id,'a');
+ selected='b';broken=true;
+ if(manual)await assert.rejects(panels.state(id,{action:'select',taskId:'b'}),/offline/);
+ const offline=await panels.state(id);
+ assert.equal(offline.selectedId,'b');assert.equal(offline.disconnected,true);
+ assert.equal(offline.task,undefined);assert.equal(offline.input,undefined);
+ assert.equal(requests.at(-1).revision,undefined);
+ broken=false;const recovered=await panels.state(id,{revision:offline.revision});
+ assert.equal(recovered.selectedId,'b');assert.equal(recovered.task.id,'b');assert.equal(recovered.input,200);
+});
+

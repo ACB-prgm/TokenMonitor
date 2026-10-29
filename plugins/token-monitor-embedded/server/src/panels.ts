@@ -44,6 +44,7 @@ export class Panels {
       const catalog = await this.tasks(id, hostId);
       const hookChanged = !!catalog.latestHook && panel.hook !== catalog.latestHook.sequence;
       const bindingChanged = panel.hostMatched !== !!catalog.hostMatched;
+      const previousSelection = panel.selected;
       panel.hostMatched = !!catalog.hostMatched;
       if (input.action === 'select') {
         if (!catalog.tasks.some((task: any) => task.id === input.taskId) && input.taskId !== panel.selected && !(catalog.hostMatched && input.taskId === panel.hostId)) throw new Error('Task is not available locally');
@@ -58,6 +59,11 @@ export class Panels {
       // Consume hook changes during manual selection so only a new relevant
       // event resumes automatic following.
       panel.hook = catalog.latestHook?.sequence;
+      // A failed switch must never expose the previous task's metrics under
+      // the newly selected task, or reuse its collector revision.
+      if (panel.selected !== previousSelection) {
+        panel.snapshot = undefined; panel.revision = undefined;
+      }
       let data: any = { unavailable: true };
       if (panel.selected) data = await this.collector.request('state', { taskId: panel.selected, revision: panel.revision });
       if (data.state) { panel.snapshot = data.state; panel.revision = data.revision; }
@@ -74,7 +80,7 @@ export class Panels {
       panel.disconnected = true;
       return { ...panel.snapshot, version: 1, panelId: id, selectedId: panel.selected,
         selectionSource: panel.source, followingMode: panel.hostMatched ? 'host-chat' : 'latest-hook', disconnected: true,
-        status: 'Collector disconnected · showing last snapshot · retrying', revision: `disconnected:${panel.revision ?? ''}` };
+        status: panel.snapshot ? 'Collector disconnected · showing last snapshot · retrying' : 'Collector disconnected · retrying', revision: `disconnected:${panel.revision ?? ''}` };
     }
   }
 }

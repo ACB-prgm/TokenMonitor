@@ -95,6 +95,7 @@ function Panel() {
     app.ontoolresult=result=>{
       const value=(result._meta as any)?.monitor as Monitor | undefined;
       if(value?.panelId) {
+        if(value.panelId!==current.current.panelId)pendingSelection.current=undefined;
         serial.current++; fetching.current=false; apply(value);
         if(!summary) {
           void refresh();

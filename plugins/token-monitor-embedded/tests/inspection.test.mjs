@@ -29,6 +29,14 @@ test('reduced motion preserves hide delay but omits exit phase',()=>{
  const {c,tick}=setup(true);c.enter('a');c.leave();tick(199);assert.equal(c.active,'a');tick(1);assert.equal(c.active,null);assert.equal(c.state.closing,false);
 });
 
+test('keyboard focus replaces stale hover and blur publishes the cleared preview',()=>{
+ const {c,states,tick}=setup();
+ c.enter('a');c.leave();c.focus('b');tick(500);
+ assert.equal(c.active,'b');assert.equal(states.at(-1).hovered,null);assert.equal(states.at(-1).focused,'b');
+ c.blur();assert.equal(c.active,null);assert.equal(states.at(-1).focused,null);
+ c.pin('a');c.focus('b');c.blur();assert.equal(c.active,'a');assert.equal(states.at(-1).focused,null);
+});
+
 test('default timers call browser globals with their native receiver',async()=>{
  const browser=await build({entryPoints:[entry],bundle:true,format:'iife',globalName:'Preview',write:false});
  runInNewContext(`let scheduled=0;function setTimeout(fn,ms){if(this!==globalThis)throw new Error('Illegal invocation');scheduled++;return 1;}function clearTimeout(id){if(this!==globalThis)throw new Error('Illegal invocation');}${browser.outputFiles[0].text};const c=new Preview.InspectionController(()=>{});c.enter('a');c.leave();c.enter('b');c.leave();c.dispose();if(scheduled!==2)throw new Error('Timers not scheduled');`);

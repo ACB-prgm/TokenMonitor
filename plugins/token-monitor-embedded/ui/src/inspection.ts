@@ -13,8 +13,8 @@ export class InspectionController {
   private emit(){if(!this.disposed)this.changed({...this.state});}
   enter(key?:string){this.stop();this.inside=true;this.state.closing=false;if(key)this.state.hovered=key;this.emit();}
   leave(){this.inside=false;this.dismiss();}
-  focus(key?:string){this.stop();this.state.closing=false;if(key)this.state.focused=key;this.emit();}
-  blur(){this.state.focused=null;this.dismiss();}
+  focus(key?:string){this.stop();this.state.closing=false;if(key){this.state.focused=key;if(this.state.hovered!==key)this.state.hovered=null;}this.emit();}
+  blur(){this.state.focused=null;this.emit();this.dismiss();}
   pin(key:string){if(this.state.pinned===key)this.clear();else{this.stop();this.state.pinned=key;this.state.closing=false;this.emit();}}
   private dismiss(){
     this.stop();if(this.inside||this.state.focused||!this.state.hovered)return;

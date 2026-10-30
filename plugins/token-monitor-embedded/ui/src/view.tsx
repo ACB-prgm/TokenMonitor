@@ -3,7 +3,7 @@ import {InspectionController,type Inspection} from './inspection.js';
 import {installedVersion} from '../../shared/version.js';
 import {displayName,isDev} from '../../shared/identity.js';
 import {UpdateMenu,type UpdateAction} from './updates.js';
-import type {CompactionForecast,RollingEstimate} from '../../server/src/metrics.js';
+import type {CompactionForecast,RollingEstimate,GrowthEstimate} from '../../server/src/metrics.js';
 import type {CallActivity} from '../../server/src/activity.js';
 import type {Allowance} from '../../server/src/allowances.js';
 import type {UpdateStatus} from '../../server/src/updates.js';
@@ -94,6 +94,13 @@ function estimateSource(estimate?:RollingEstimate) {
   if(!estimate)return 'Assumptions unavailable';
   return `${estimate.fallback?'Default (insufficient data)':'Observed'} · ${estimate.sampleCount} samples${estimate.minimumApplied?' · minimum applied':''}${estimate.observed==null?'':` · observed ${exact(estimate.observed)}`}`;
 }
+function growthSource(estimate?:GrowthEstimate) {
+  if(!estimate)return 'Assumptions unavailable';
+  const progress=`${estimate.sampleCount}/20 thread intervals`;
+  if(estimate.source==='thread')return `Thread average · ${estimate.sampleCount} intervals`;
+  if(estimate.source==='user')return `Your same-model average · ${estimate.userSampleCount} intervals · ${progress}`;
+  return `Default (insufficient history) · ${progress}`;
+}
 function CompactionDetails({value:v}:{value?:CompactionForecast}) {
   const available=v?.status==='available';
   return <div className="latest-compaction"><h2 title={compactionHelp}>Compaction Value · <b style={{color:health(v?.score==null?0:v.score/100*3)}}>{v?.score==null?'—':`${v.score}/100`}</b>{v&&` · ${v.category}`}</h2>
@@ -101,7 +108,7 @@ function CompactionDetails({value:v}:{value?:CompactionForecast}) {
     {v?.limitation&&<p className="warning">{v.limitation}{v.status==='limited'?` (${v.completedCalls}/${v.horizonCalls} calls possible).`:''}</p>}
     <dl className="details-grid">
       <dt>Context estimate</dt><dd>{number(v?.currentInput)} → {number(v?.estimatedInput)} tokens</dd>
-      <dt>Growth / call</dt><dd>{number(v?.growthPerCall)} tokens · {estimateSource(v?.assumptions.growth)}</dd>
+      <dt>Growth / call</dt><dd>{number(v?.growthPerCall)} tokens · {growthSource(v?.assumptions.growth)}</dd>
       <dt>Output / call (incl. thinking)</dt><dd>{number(v?.typicalOutput)} tokens · {estimateSource(v?.assumptions.output)}{v?.assumptions.output&&(v.assumptions.output.activeModelOnly?' · active model':' · thread samples')}</dd>
       <dt>Forecast horizon</dt><dd>{v?.horizonCalls??20} normal calls</dd>
       <dt>Break-even</dt><dd>{available?(v.breakEvenCalls==null?`>${v.horizonCalls} calls`:`${v.breakEvenCalls} calls`):'Unavailable'}</dd>

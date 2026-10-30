@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Forecast context growth from recent same-model personal history until the current segment has 20 intervals, then use its latest-20 mean. Remove the observed-growth floor, retain the 2K fallback, and disclose the estimate source and counts.
+
 ## 1.8.1
 
 - Retry transient Windows updater status-file locks without losing explicit failure reporting.

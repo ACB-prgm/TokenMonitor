@@ -7,20 +7,22 @@ import {acceptedTranscript,atomicJSON,codexHome,stateRoot,validID,withStateLock}
 import {cleanTitle,type RecordValue} from './metrics.js';
 import {TelemetryParser} from './parser.js';
 import {JSONLTail} from './tail.js';
+import {PersonalGrowthHistory} from './growth-history.js';
 type Session={session_id:string;transcript_path:string;title?:string;cwd?:string;model?:string;turn_id?:string;hook_event_name?:string;ended?:boolean;updated_at?:string};
 type Hook={sequence:string;session:Session};
 type Entry={parser:TelemetryParser;tail:JSONLTail;path:string;session:Session;touched:number};
 const events=new Set(['SessionStart','UserPromptSubmit','Stop','SessionEnd','PreCompact','PostCompact']);
 export class TelemetryStore {
   private entries=new Map<string,Entry>();
-  constructor(readonly home=codexHome()){}
+  private growthHistory:PersonalGrowthHistory;
+  constructor(readonly home=codexHome()){this.growthHistory=new PersonalGrowthHistory(home);}
   private hookFile(id?:string){return id?path.join(stateRoot(this.home),'tasks',id+'.json'):path.join(stateRoot(this.home),'latest-hook.json');}
   hook(id?:string):Hook|undefined {if(id!=null&&!validID(id))return;try{
     const file=this.hookFile(id),s=lstatSync(file);if(!s.isFile()||s.size>=65536)return;
     const record=JSON.parse(readFileSync(file,'utf8'));
     if(typeof record.sequence==='string'&&record.sequence.length<=100&&record.session&&(!id||record.session.session_id===id)&&acceptedTranscript(record.session.transcript_path,record.session.session_id,this.home))return record;
   }catch{} }
-  metadata(id?:string):RecordValue[] {
+  metadata(id?:string,includeArchived=false):RecordValue[] {
     if(id!=null&&!validID(id))return [];
     let files:string[];try{files=readdirSync(this.home).filter(f=>/^state_\d+\.sqlite$/.test(f)).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true}));}catch{return [];}
     for(const file of files){let db:DatabaseSync|undefined;try{
@@ -29,7 +31,7 @@ export class TelemetryStore {
       if(!['id','title','rollout_path'].every(c=>columns.has(c)))continue;
       const title=columns.has('name')?"COALESCE(NULLIF(name, ''), title)":'title';
       const optional=(name:string)=>columns.has(name)?name:'NULL';
-      const where=id?'WHERE id = ?':columns.has('archived')?'WHERE archived = 0':'';
+      const where=id?'WHERE id = ?':!includeArchived&&columns.has('archived')?'WHERE archived = 0':'';
       const order=columns.has('updated_at')?'updated_at DESC, id':'id';
       const statement=db.prepare(`SELECT id, ${title} AS title, rollout_path, ${optional('cwd')} AS cwd, ${optional('model')} AS model, ${optional('reasoning_effort')} AS effort FROM threads ${where} ORDER BY ${order}`);
       const result:RecordValue[]=[];
@@ -68,13 +70,14 @@ export class TelemetryStore {
     if(session)entry.session=session;entry.touched=now;let available=!!session;
     try{if(session)entry.tail.read(source,()=>entry!.parser=new TelemetryParser(),line=>entry!.parser.consume(line));}catch{available=false;}
     const metadata=this.metadata(id)[0]??{},s=entry.session,p=entry.parser;
-    return p.snapshot(this.task(s,cleanTitle(s.title)??cleanTitle(metadata.title)??p.title),s,metadata,available,now);
+    const personal=this.growthHistory.read(()=>[{id,file:source},...this.metadata(undefined,true).filter(row=>row.id!==id).map(row=>({id:row.id,file:row.rollout_path}))],p.lastCallModel,p.growthIntervals,now);
+    return p.snapshot(this.task(s,cleanTitle(s.title)??cleanTitle(metadata.title)??p.title),s,metadata,available,now,personal);
   }
   allowanceFiles(id:string){
     const sessions=[this.resolve(id),this.hook()?.session,...this.metadata().map(row=>({session_id:row.id,transcript_path:row.rollout_path}))];
     return sessions.flatMap(s=>s&&acceptedTranscript(s.transcript_path,s.session_id,this.home)?[s.transcript_path]:[]);
   }
-  close(){this.entries.clear();}
+  close(){this.entries.clear();this.growthHistory.close();}
 }
 // In-process replacement for the former subprocess bridge. The request shape
 // stays stable so panel selection and revision handling do not change.

@@ -23,7 +23,7 @@ await writeFile(path.join(outputRoot, `ui/dist/${view}.html`), `<!doctype html>
 <title>${devVersion?'Token Monitor DEV':'TokenMonitor Embedded'}</title><style>${await readFile(path.join(root, 'ui/src/style.css'), 'utf8')}</style></head>
 <body><div id="root"></div><script>${script}</script></body></html>`);
 }
-for (const entry of ['index', 'startup-hook', 'hook', 'panels', 'collector', 'allowances', 'parser', 'metrics', 'platform', 'tail', 'updates', 'install', 'install-platform', 'auto-update']) await build({
+for (const entry of ['index', 'startup-hook', 'hook', 'panels', 'collector', 'allowances', 'growth-history', 'parser', 'metrics', 'platform', 'tail', 'updates', 'install', 'install-platform', 'auto-update']) await build({
   entryPoints: [path.join(root, `server/src/${entry}.ts`)], bundle: true,
   platform: 'node', format: 'esm', target: 'node24', define,
   outfile: path.join(outputRoot, `server/dist/${entry}.mjs`),

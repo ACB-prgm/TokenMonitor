@@ -95,7 +95,7 @@ export class TelemetryParser {
     const last=this.samples.at(-1),input=this.awaitingPostCompactionCall?this.compactedContext:last?.input,cached=this.awaitingPostCompactionCall||!last?.cachedRecorded?undefined:last.cached,fresh=cached!=null&&input!=null?input-cached:undefined;
     const contextPercent=input!=null&&this.contextLimit?input/this.contextLimit*100:undefined,started=date(session.updated_at),completed=this.compactions.at(-1)?.timestamp;
     const isCompacting=session.hook_event_name==='PreCompact'&&!!started&&!(completed&&completed>=started)&&!(last&&last.timestamp>started);
-    const growth=rollingContextGrowth(this.forecastSamples,personalGrowth),output=rollingTypicalOutput(this.samples,this.lastCallModel);
+    const growth=rollingContextGrowth(this.forecastSamples.filter(s=>s.segment===this.contextSegment),personalGrowth),output=rollingTypicalOutput(this.samples,this.lastCallModel);
     const compactionValue=estimateCompactionValue({currentInput:isCompacting||this.awaitingPostCompactionCall?undefined:input,model:this.lastCallModel,
       serviceTier:last?.serviceTier,regionalProcessing:last?.regionalProcessing,growthPerCall:growth.effective,typicalOutput:output.effective,contextLimit:this.contextLimit});
     compactionValue.observedGrowthPerCall=growth.observed;

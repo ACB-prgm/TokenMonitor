@@ -107,8 +107,13 @@ test('automatic update checkbox starts checked and respects an explicit opt-out'
 
 test('compaction forecast shows observed estimates, finite-horizon break-even and limitations',()=>{
  const v=latestFixture.compactionValue;
- const observed=render({...latestFixture,compactionValue:{...v,breakEvenCalls:null,assumptions:{...v.assumptions,growth:{observed:1000,effective:2000,sampleCount:20,minimumApplied:true,fallback:false}}}});
- assert.match(observed,/&gt;20 calls/);assert.match(observed,/Observed · 20 samples · minimum applied/);
+ const observed=render({...latestFixture,compactionValue:{...v,breakEvenCalls:null,assumptions:{...v.assumptions,growth:{observed:1000,effective:1000,sampleCount:20,minimumApplied:false,fallback:false,source:'thread'}}}});
+ assert.match(observed,/&gt;20 calls/);assert.match(observed,/Thread average · 20 intervals/);
+ const personal=render({...latestFixture,compactionValue:{...v,assumptions:{...v.assumptions,growth:{observed:1000,effective:1750,sampleCount:4,minimumApplied:false,fallback:false,source:'user',userSampleCount:300}}}});
+ assert.match(personal,/Your same-model average · 300 intervals · 4\/20 thread intervals/);
+ const fallback=render({...latestFixture,compactionValue:{...v,assumptions:{...v.assumptions,growth:{effective:2000,sampleCount:0,minimumApplied:false,fallback:true,source:'default'}}}});
+ assert.match(fallback,/Default \(insufficient history\) · 0\/20 thread intervals/);
+
  const limited=render({...latestFixture,compactionValue:{...v,status:'limited',score:null,category:'Forecast limited',completedCalls:4,limitation:'Un-compacted path exceeds reported context window'}});
  assert.match(limited,/4\/20 calls possible/);assert.match(limited,/Break-even<\/dt><dd>Unavailable/);assert.doesNotMatch(limited,/34\/100/);
  const unknown=render({panelId:'p',status:'Waiting'});assert.match(unknown,/Compaction Value ·/);assert.match(unknown,/Unavailable/);assert.doesNotMatch(unknown,/NaN|undefined/);

@@ -5,7 +5,7 @@ import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 const root=fileURLToPath(new URL('..',import.meta.url));
-const result=await build({stdin:{resolveDir:root,contents:`import React from 'react'; import {renderToStaticMarkup} from 'react-dom/server'; import {MonitorView} from './ui/src/view'; export {percent,money,migrateLayout,composition,threadAllowanceEstimate} from './ui/src/analytics'; export const render=(s,expanded=false,interactive=false,updates)=>renderToStaticMarkup(React.createElement(MonitorView,{s,expanded,scale:1,onAction:interactive?()=>{}:undefined,updates,onUpdate:interactive?()=>{}:undefined}));`},bundle:true,platform:'node',format:'cjs',write:false});
+const result=await build({stdin:{resolveDir:root,contents:`import React from 'react'; import {renderToStaticMarkup} from 'react-dom/server'; import {MonitorView} from './ui/src/view'; export {percent,money,migrateLayout,composition,threadAllowanceEstimate} from './ui/src/analytics'; export const render=(s,expanded=false,interactive=false,updates)=>renderToStaticMarkup(React.createElement(MonitorView,{s,expanded,scale:1,onAction:interactive?()=>{}:undefined,updates,onUpdate:interactive?()=>{}:undefined}));`},bundle:true,loader:{'.png':'dataurl'},platform:'node',format:'cjs',write:false});
 const mod={exports:{}};new Function('require','module','exports',result.outputFiles[0].text)(createRequire(path.join(root,'package.json')),mod,mod.exports);
 const {percent,money,migrateLayout,composition,threadAllowanceEstimate,render}=mod.exports;
 test('small nonzero and near-full percentages never round to false zero or 100',()=>{

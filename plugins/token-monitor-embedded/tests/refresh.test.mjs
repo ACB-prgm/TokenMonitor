@@ -5,7 +5,7 @@ import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 
 const root=new URL('../',import.meta.url);
-const bundle=await build({entryPoints:[fileURLToPath(new URL('ui/src/main.tsx',root))],bundle:true,platform:'node',format:'cjs',write:false,external:['react','react-dom/client','@modelcontextprotocol/ext-apps']});
+const bundle=await build({entryPoints:[fileURLToPath(new URL('ui/src/main.tsx',root))],bundle:true,loader:{'.png':'dataurl'},platform:'node',format:'cjs',write:false,external:['react','react-dom/client','@modelcontextprotocol/ext-apps']});
 
 // Run the real panel controller with deterministic hooks and a deferred bridge.
 function panel(summary=false) {

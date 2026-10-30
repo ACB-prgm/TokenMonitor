@@ -13,14 +13,14 @@ await mkdir(path.join(outputRoot, 'server/dist'), { recursive: true });
 await mkdir(path.join(outputRoot, 'ui/dist'), { recursive: true });
 const ui = await build({
   entryPoints: [path.join(root, 'ui/src/main.tsx')], bundle: true,
-  platform: 'browser', format: 'iife', target: 'es2022', write: false,
+  loader: {'.png':'dataurl'}, platform: 'browser', format: 'iife', target: 'es2022', write: false,
   define: { ...define, 'process.env.NODE_ENV': '"production"' }, minify: true,
 });
 const script = ui.outputFiles[0].text.replaceAll('</script', '<\\/script');
 for (const view of ['panel', 'summary']) {
 await writeFile(path.join(outputRoot, `ui/dist/${view}.html`), `<!doctype html>
 <html lang="en" data-monitor-view="${view}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${devVersion?'Token Monitor DEV':'TokenMonitor Embedded'}</title><style>${await readFile(path.join(root, 'ui/src/style.css'), 'utf8')}</style></head>
+<title>${devVersion?'Token Monitor DEV':'Token Monitor'}</title><style>${await readFile(path.join(root, 'ui/src/style.css'), 'utf8')}</style></head>
 <body><div id="root"></div><script>${script}</script></body></html>`);
 }
 for (const entry of ['index', 'startup-hook', 'hook', 'panels', 'collector', 'allowances', 'growth-history', 'parser', 'metrics', 'platform', 'tail', 'updates', 'install', 'install-platform', 'auto-update']) await build({

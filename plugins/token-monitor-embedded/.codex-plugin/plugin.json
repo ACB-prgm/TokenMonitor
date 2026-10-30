@@ -6,8 +6,8 @@
   "hooks": "./hooks/hooks.json",
   "requires_local_executor": true,
   "interface": {
-    "displayName": "TokenMonitor Embedded",
-    "shortDescription": "Embedded Codex token monitor",
+    "displayName": "Token Monitor",
+    "shortDescription": "Local Codex token monitor",
     "longDescription": "Local token usage, per-call API-equivalent cost, thread input/output and reasoning totals, cache status, allowances, compaction, history, and tool attribution. Bundled Node runtime for macOS and Windows. Opens once per local chat; refreshes directly without model turns.",
     "developerName": "ACB-prgm",
     "category": "Productivity",

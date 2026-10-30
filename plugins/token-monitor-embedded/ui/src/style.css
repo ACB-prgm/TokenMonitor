@@ -55,3 +55,5 @@ progress::-webkit-progress-bar{background:var(--line)}progress::-webkit-progress
 .inspect-shell.closing{grid-template-rows:0fr;opacity:0}
 .inspect-inner{min-height:0;overflow:hidden}
 @media(prefers-reduced-motion:reduce){.inspect-shell{transition:none}}
+
+.brand-logo{width:2em;height:2em;object-fit:contain;flex-shrink:0}

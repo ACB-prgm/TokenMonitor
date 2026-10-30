@@ -41,7 +41,7 @@ test('panel and inline summary are callable by the model; refresh tools remain a
     assert.equal(tools[0]._meta['openai/ui'].preferredModelDisplayMode, 'fullscreen');
     const resource = await client.readResource({ uri: tools[0]._meta.ui.resourceUri });
     assert.equal(resource.contents[0].mimeType, 'text/html;profile=mcp-app');
-    assert.match(resource.contents[0].text, /TokenMonitor Embedded/);
+    assert.match(resource.contents[0].text, /Token Monitor/);
     assert.deepEqual(resource.contents[0]._meta.ui.csp, { connectDomains: [], resourceDomains: [] });
     assert.deepEqual(resource.contents[0]._meta['openai/ui'], {
       availableDisplayModes: ['inline', 'fullscreen'], preferredDisplayMode: 'fullscreen',

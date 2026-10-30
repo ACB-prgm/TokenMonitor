@@ -5,7 +5,7 @@ import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 
 const root=new URL('../',import.meta.url),nativeRequire=createRequire(new URL('package.json',root));
-const bundle=await build({entryPoints:[fileURLToPath(new URL('ui/src/view.tsx',root))],bundle:true,platform:'node',format:'cjs',write:false,external:['react']});
+const bundle=await build({entryPoints:[fileURLToPath(new URL('ui/src/view.tsx',root))],bundle:true,loader:{'.png':'dataurl'},platform:'node',format:'cjs',write:false,external:['react']});
 const react={...nativeRequire('react'),useState(initial){return [initial==='Cost'?'Context':typeof initial==='function'?initial():initial,()=>{}];},useEffect(){}};
 const mod={exports:{}};
 new Function('require','module','exports',bundle.outputFiles[0].text)(name=>name==='react'?react:nativeRequire(name),mod,mod.exports);

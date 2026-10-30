@@ -168,7 +168,8 @@ function History({s}: {s: Monitor}) {
         {compactions.some(m=>Math.abs(m.callPosition-(start+inspect))<=.5)&&<p className="inspect-rates">Near compaction boundary</p>}
         <div className="inspect-activity" aria-label="Call activity"><h3>Activity</h3>
           {selected.activity?.response&&<p className="activity-response">{selected.activity.response}</p>}
-          {!!selected.activity?.tools.length&&<div className="activity-tools">{selected.activity.tools.map((tool,i)=><p key={i}><strong>{tool.name}</strong>{tool.detail&&<span>{tool.detail}</span>}</p>)}</div>}
+          {!!selected.activity?.skills?.length&&<div className="activity-skills"><h4>Skills loaded</h4>{selected.activity.skills.map(skill=><p key={skill}>{skill}</p>)}<p className="inspect-rates">Detected from skill instruction reads for this call.</p></div>}
+          {!!selected.activity?.tools.length&&<div className="activity-tools"><h4>Tool calls</h4>{selected.activity.tools.map((tool,i)=><p key={i}><strong>{tool.name}</strong>{tool.detail&&<span>{tool.detail}</span>}</p>)}</div>}
           {!!selected.activity?.files.length&&<div className="activity-files"><h4>File targets</h4>{selected.activity.files.map(file=><code key={file}>{file}</code>)}<p className="inspect-rates">From edit requests; successful changes are not verified here.</p></div>}
           {!selected.activity&&<p className="inspect-rates">No visible response or tool activity recorded for this call.</p>}
         </div>

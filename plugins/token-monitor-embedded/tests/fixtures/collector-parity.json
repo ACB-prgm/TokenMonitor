@@ -6858,7 +6858,7 @@
             "assumedTier": true,
             "cacheSavings": 0,
             "categories": [
-              0.00004,
+              4e-05,
               0,
               0,
               0.0004,
@@ -6893,7 +6893,7 @@
         "configurationEffectiveDate": "2026-10-19",
         "cost": 0.0010400000000000001,
         "costCategories": [
-          0.00004,
+          4e-05,
           0,
           0,
           0.0004,
@@ -7082,7 +7082,10 @@
                 "name": "exec_command"
               }
             ],
-            "files": []
+            "files": [],
+            "skills": [
+              "pdf"
+            ]
           }
         }
       ],

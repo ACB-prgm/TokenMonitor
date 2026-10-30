@@ -8,6 +8,7 @@ import {cleanTitle,type RecordValue} from './metrics.js';
 import {TelemetryParser} from './parser.js';
 import {ThreadDiscovery} from './discovery.js';
 import {JSONLTail} from './tail.js';
+import {EfficiencyStore} from './efficiency.js';
 import {PersonalGrowthHistory} from './growth-history.js';
 type Session={session_id:string;transcript_path:string;title?:string;cwd?:string;model?:string;turn_id?:string;hook_event_name?:string;ended?:boolean;updated_at?:string};
 type Hook={sequence:string;session:Session};
@@ -16,10 +17,11 @@ const events=new Set(['SessionStart','UserPromptSubmit','Stop','SessionEnd','Pre
 export class TelemetryStore {
   private entries=new Map<string,Entry>();
   private growthHistory:PersonalGrowthHistory;
+  readonly efficiency:EfficiencyStore;
   readonly discovery:ThreadDiscovery;
   indexStatus="unavailable";
   private indexed=new Map<string,RecordValue>();
-  constructor(readonly home=codexHome()){this.growthHistory=new PersonalGrowthHistory(home);this.discovery=new ThreadDiscovery(home);}
+  constructor(readonly home=codexHome()){this.efficiency=new EfficiencyStore(home);this.growthHistory=new PersonalGrowthHistory(home);this.discovery=new ThreadDiscovery(home);}
   private hookFile(id?:string){return id?path.join(stateRoot(this.home),'tasks',id+'.json'):path.join(stateRoot(this.home),'latest-hook.json');}
   hook(id?:string):Hook|undefined {if(id!=null&&!validID(id))return;try{
     const file=this.hookFile(id),s=lstatSync(file);if(!s.isFile()||s.size>=65536)return;
@@ -67,6 +69,7 @@ export class TelemetryStore {
     for(const row of rows)items.set(row.id,{...this.task({session_id:row.id,transcript_path:row.rollout_path,cwd:row.cwd,title:row.title}),archived:!!row.archived,updated:Number(row.updated_at??0)*1000});
     if(hook){const e=items.get(hook.session.session_id);items.set(hook.session.session_id,{...this.task(hook.session,e?.title),archived:e?.archived??false,updated:Date.parse(hook.session.updated_at??'')||e?.updated||0});}
     for(const [id,row]of this.indexed){const e=items.get(id);if(e){e.archived=!!row.archived;e.title=cleanTitle(row.title)??e.title;}}
+    void this.efficiency.scan(this.home,[...items.keys()].flatMap(id=>{const session=this.resolve(id);return session?[{id,file:session.transcript_path,end:session.ended?session.updated_at:undefined}]:[]}),this.discovery.status.state==='complete').catch(()=>{});
     const query=(options.query??'').trim().toLowerCase();
     const matches=[...items.values()].filter(t=>(options.includeArchived||!t.archived)&&(!query||[t.title,t.workspace,t.id].some(v=>v?.toLowerCase().includes(query)))).sort((a,b)=>b.updated-a.updated||a.id.localeCompare(b.id));
     const tasks=matches.slice(0,100);
@@ -103,7 +106,7 @@ export class TelemetryStore {
     const sessions=[this.resolve(id),this.hook()?.session,...this.metadata().map(row=>({session_id:row.id,transcript_path:row.rollout_path}))];
     return sessions.flatMap(s=>s&&acceptedTranscript(s.transcript_path,s.session_id,this.home)?[s.transcript_path]:[]);
   }
-  close(){this.entries.clear();this.discovery.close();this.growthHistory.close();}
+  close(){this.efficiency.close();this.entries.clear();this.discovery.close();this.growthHistory.close();}
 }
 // In-process replacement for the former subprocess bridge. The request shape
 // stays stable so panel selection and revision handling do not change.
@@ -115,7 +118,7 @@ export class Collector {
     if(typeof params.taskId!=='string'||!validID(params.taskId))return {unavailable:true};
     this.account.touch();
     const local=this.catalogue.read(()=>this.store.allowanceFiles(params.taskId as string));
-    const state=this.store.snapshot(params.taskId);if(!state)return {unavailable:true};
+    const state={...this.store.snapshot(params.taskId),efficiency:this.store.efficiency.snapshot(params.taskId)};
     const allowances=chooseAllowances(this.account.snapshot(),local);
     state.fiveHour=allowances.fiveHour;state.weekly=allowances.weekly;
     const revision=createHash('sha256').update(JSON.stringify(state)).digest('hex');return params.revision===revision?{revision,unchanged:true}:{revision,state};

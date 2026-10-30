@@ -23,7 +23,9 @@ function fingerprint(value:any) {
   }
   return hash.update(buffer).digest('hex');
 }
+export type NumericEvent = {kind:"call";sample:Sample;contextLimit?:number}|{kind:"compaction";timestamp:string}|{kind:"activity";timestamp:string};
 export class TelemetryParser {
+  constructor(private numericEvent?:(event:NumericEvent)=>void){}
   awaitingPostCompactionCall=false; compactedContext?:number; compactions:{timestamp:string;callPosition:number}[]=[];
   samples:Sample[]=[]; contextLimit?:number; fiveHour?:{used:number;reset?:string}; weekly?:{used:number;reset?:string};
   model?:string; effort?:string; title?:string; lastCallModel?:string; lastCallEffort?:string; lastEvent?:string; callCount=0;
@@ -38,8 +40,9 @@ export class TelemetryParser {
   consume(line:string|Buffer|RecordValue) {
     let r:RecordValue;try{r=typeof line==='string'||Buffer.isBuffer(line)?JSON.parse(line.toString()):line;}catch{return;}
     if(!object(r)||!object(r.payload))return;const p=r.payload,type=r.type,time=date(r.timestamp);
+    if(time)this.numericEvent?.({kind:"activity",timestamp:time});
     this.activity.consume(type,p);
-    if(type==='compacted'&&time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp)){this.contextSegment++;this.forecastSamples=[];this.awaitingPostCompactionCall=true;this.compactedContext=undefined;this.pendingAttribution=undefined;this.contextAttribution=emptyAttribution();}
+    if(type==='compacted'&&time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp)){this.numericEvent?.({kind:"compaction",timestamp:time});this.contextSegment++;this.forecastSamples=[];this.awaitingPostCompactionCall=true;this.compactedContext=undefined;this.pendingAttribution=undefined;this.contextAttribution=emptyAttribution();}
     const response=['reasoning','function_call','custom_tool_call'].includes(p.type)||(p.type==='message'&&p.role==='assistant');
     if(type==='response_item'&&!this.pendingAttribution&&response)this.pendingAttribution=this.attribution.snapshot();
     this.attribution.consume(type,p);if(time)this.lastEvent=time;
@@ -78,6 +81,7 @@ export class TelemetryParser {
     if(this.lastCallModel&&s.model!==this.lastCallModel&&!(integer(info.model_context_window)&&info.model_context_window>0))this.contextLimit=undefined;
     const activity=this.activity.take();if(activity)s.activity=activity;
     this.awaitingPostCompactionCall=false;this.compactedContext=undefined;this.contextAttribution=bounded(this.pendingAttribution??this.attribution.snapshot(),input);this.pendingAttribution=undefined;
+    this.numericEvent?.({kind:"call",sample:{...s,activity:undefined},contextLimit:this.contextLimit});
     this.usage.add(s);if(cumulative){if(integer(cumulative.input_tokens))this.usage.cumulativeMismatch=cumulative.input_tokens!==this.usage.input;if(integer(cumulative.output_tokens)&&cumulative.output_tokens!==this.usage.output)this.usage.cumulativeMismatch=true;}
     this.lastCallModel=s.model;this.lastCallEffort=this.effort;this.callCount++;
     if(!reportedThisRecord&&this.reportedOutput!=null){this.reportedOutput=nonnegative(u.output_tokens)&&Number.isSafeInteger(this.reportedOutput+output)?this.reportedOutput+output:undefined;this.reportedReasoning=this.reportedReasoning!=null&&s.reasoningRecorded&&Number.isSafeInteger(this.reportedReasoning+reasoning)?this.reportedReasoning+reasoning:undefined;}

@@ -75,3 +75,26 @@ test('DEV installation and refresh only address the DEV marketplace and plugin',
     assert.equal(calls.length,1);
   } finally {await rm(temp,{recursive:true,force:true});}
 });
+
+test('fresh DEV MCP discovers historical JSONL without database or hooks',async()=>{
+ const temp=await mkdtemp(path.join(tmpdir(),'tokenmonitor-dev-cold-'));let client;
+ try{
+  const built=await buildDev({marketplaceRoot:path.join(temp,'marketplace')}),home=path.join(temp,'codex');
+  const directory=path.join(home,'sessions','2026','01','01');await mkdir(directory,{recursive:true});
+  const {writeFile}=await import('node:fs/promises');
+  await writeFile(path.join(directory,'rollout-2026-01-01T00-00-00-historical.jsonl'),[
+   {type:'session_meta',payload:{id:'historical',source:'cli'}},
+   {type:'event_msg',timestamp:'2026-01-01T00:00:00Z',payload:{type:'token_count',info:{last_token_usage:{input_tokens:4321,output_tokens:10}}}}
+  ].map(JSON.stringify).join('\n')+'\n');
+  client=new Client({name:'cold-test',version:'1'});
+  await client.connect(new StdioClientTransport({command:process.execPath,args:[path.join(built.pluginRoot,'server/dist/index.mjs')],cwd:built.pluginRoot,env:{...process.env,CODEX_HOME:home,CODEX_CLI_PATH:path.join(temp,'absent')},stderr:'pipe'}));
+  let state=(await client.callTool({name:'open_monitor',arguments:{}}))._meta.monitor;
+  for(let i=0;i<100&&!state.tasks.some(t=>t.id==='historical');i++){
+   await new Promise(r=>setTimeout(r,10));state=(await client.callTool({name:'get_monitor_state',arguments:{panelId:state.panelId}}))._meta.monitor;
+  }
+  assert.ok(state.tasks.some(t=>t.id==='historical'));assert.equal(state.selectedId,undefined);
+  const selected=(await client.callTool({name:'get_monitor_state',arguments:{panelId:state.panelId,action:'select',taskId:'historical'}}))._meta.monitor;
+  assert.equal(selected.input,4321);assert.doesNotMatch(JSON.stringify(state),/transcript_path|\.jsonl/);
+  await assert.rejects(readFile(path.join(home,'token-monitor-dev','latest-hook.json')));
+ }finally{await client?.close();await rm(temp,{recursive:true,force:true});}
+});

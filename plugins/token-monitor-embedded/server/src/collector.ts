@@ -71,7 +71,7 @@ export class TelemetryStore {
     const matches=[...items.values()].filter(t=>(options.includeArchived||!t.archived)&&(!query||[t.title,t.workspace,t.id].some(v=>v?.toLowerCase().includes(query)))).sort((a,b)=>b.updated-a.updated||a.id.localeCompare(b.id));
     const tasks=matches.slice(0,100);
     for(const id of [options.selectedId,options.hostId]){const e=id?items.get(id):undefined;if(e&&!tasks.some(t=>t.id===id))tasks.push(e);}
-    return {tasks:tasks.map(({updated,...task})=>task),matchCount:matches.length,shownCount:Math.min(matches.length,100),discovery:{...this.discovery.status,index:this.indexStatus,readable:items.size},hostMatched:!!options.hostId&&!!this.resolve(options.hostId),...(hook?{latestHook:{id:hook.session.session_id,sequence:hook.sequence,event:hook.session.hook_event_name??''}}:{})};
+    return {tasks:tasks.map(({updated,...task})=>task),matchCount:matches.length,shownCount:Math.min(matches.length,100),discovery:{...this.discovery.status,targeting:this.discovery.targeting,index:this.indexStatus,readable:items.size},hostMatched:!!options.hostId&&!!this.resolve(options.hostId),...(hook?{latestHook:{id:hook.session.session_id,sequence:hook.sequence,event:hook.session.hook_event_name??''}}:{})};
   }
   taskMetadata(id:string){const s=this.resolve(id);return s?this.task(s,s.title??this.metadata(id)[0]?.title):undefined;}
   async record(payload:unknown):Promise<boolean> {

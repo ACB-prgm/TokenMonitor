@@ -36,3 +36,28 @@ test('corrupt cache and database do not prevent discovery; removed files are hid
  const root=await home();const file=await transcript(root,'old');await mkdir(path.join(root,'token-monitor-embedded'));await writeFile(path.join(root,'token-monitor-embedded','discovery.json'),'broken');await writeFile(path.join(root,'state_5.sqlite'),'broken');const store=new TelemetryStore(root);
  try{assert.equal((await complete(store)).tasks.length,1);await rm(file);assert.equal((await store.catalogue()).tasks.length,0);}finally{store.close();}
 });
+
+test('concurrent discovery caches merge and closing interrupts scans safely',async()=>{
+ const root=await home();const a=new TelemetryStore(root),b=new TelemetryStore(root);await Promise.all([complete(a),complete(b)]);
+ const first=await transcript(root,'one'),second=await transcript(root,'two');
+ await Promise.all([a.discovery.target('one',first),b.discovery.target('two',second)]);
+ // A lock contender may retain its entry in memory; the next update retries persistence.
+ await b.discovery.target('three',await transcript(root,'three'));
+ a.close();b.close();
+ const cache=JSON.parse(await readFile(path.join(root,'token-monitor-embedded','discovery.json'),'utf8'));
+ assert.ok(cache.entries.some(e=>e.id==='one'));assert.ok(cache.entries.some(e=>e.id==='two'));
+ const c=new TelemetryStore(root);await c.catalogue({rescan:true});c.close();await new Promise(r=>setTimeout(r,20));
+});
+
+test('healthy but incomplete SQLite is supplemented and missing indexed logs are counted',async()=>{
+ const {DatabaseSync}=await import('node:sqlite');const root=await home();const indexed=await transcript(root,'indexed');await transcript(root,'orphan');
+ const db=new DatabaseSync(path.join(root,'state_5.sqlite'));db.exec('CREATE TABLE threads(id TEXT,title TEXT,rollout_path TEXT,archived INTEGER,updated_at INTEGER)');
+ db.prepare('INSERT INTO threads VALUES(?,?,?,?,?)').run('indexed','Named thread',indexed,1,1);
+ db.prepare('INSERT INTO threads VALUES(?,?,?,?,?)').run('absent','Unavailable thread',path.join(root,'sessions','absent.jsonl'),0,2);db.close();
+ const store=new TelemetryStore(root);try{const list=await complete(store);assert.equal(list.discovery.index,'available');assert.equal(list.discovery.missing,1);assert.deepEqual(list.tasks.map(t=>t.id),['orphan']);const archive=await store.catalogue({includeArchived:true,query:'Named thread'});assert.equal(archive.tasks[0].id,'indexed');assert.equal(archive.tasks[0].archived,true);}finally{store.close();}
+});
+
+test('session title index names orphaned threads without inventing transcript entries',async()=>{
+ const root=await home();await transcript(root,'old');await writeFile(path.join(root,'session_index.jsonl'),[{id:'old',thread_name:'Restored work'},{id:'absent',thread_name:'No local file'}].map(JSON.stringify).join('\n'));
+ const store=new TelemetryStore(root);try{const list=await complete(store);assert.equal(list.tasks.length,1);assert.equal(list.tasks[0].title,'Restored work');}finally{store.close();}
+});

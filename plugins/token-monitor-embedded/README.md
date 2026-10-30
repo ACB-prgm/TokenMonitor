@@ -35,3 +35,18 @@ The fixed 20-call horizon provides a consistent comparison; the fixed 40K retain
 Account allowances use the installed, signed-in Codex CLI through a shared stdio app-server connection. Live account reads refresh every 30 seconds while monitoring, with five-second deadlines and bounded retries. The connection closes after 60 seconds without state requests. This may make account network requests, but creates no model turns or logins. If unavailable, the newest timestamped quota events across the local catalogue supply each window independently. Catalogue scans are limited to the last 1 MiB of changed, validated transcripts and may be incomplete. Sources and observation times are disclosed; expired resets show “Awaiting refresh.” Chat selection still controls thread-specific metrics.
 
 Recent-call previews switch immediately and stay mounted between columns. Leaving starts a 200 ms hide delay followed by a 140 ms fade/collapse; re-entry cancels dismissal. Focus, pinning, Clear selection, Escape and reduced-motion preferences are supported.
+
+## Finding existing threads
+
+On first use, Token Monitor supplements Codex's SQLite thread index with a
+background discovery of local session JSONL headers. Historical usage is loaded
+when a thread is selected. Search covers the full discovered catalogue; the
+picker displays 100 recent matches. **Include archived** reveals archived local
+threads. Threads without readable local transcripts are omitted; availability
+counts and discovery status appear in Help & diagnostics.
+
+Discovery metadata is cached in the plugin's private state directory. Later
+launches reuse it. Hooks and unknown current chats use targeted lookup only;
+there are no periodic scans or filesystem watchers. Choose **Rescan threads**
+to find restored logs or refresh the full catalogue. Discovery never changes
+Codex transcripts or databases and does not recover logs missing from this device.

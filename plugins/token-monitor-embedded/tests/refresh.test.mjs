@@ -97,3 +97,14 @@ test('install action pins the requested version, reports progress through unchan
  p.poll();await p.settle({...state,unchanged:true},{installation:{phase:'installed',version:'1.7.0'}});assert.equal(p.render().updates.installation.phase,'installed');
  p.render().onUpdate({action:'install',version:'1.7.0'});p.calls.at(-1).resolve({isError:true,_meta:{error:'Choose the package for this computer.'}});await new Promise(r=>setImmediate(r));assert.match(p.render().updateError,/package for this computer/);
 });
+
+test('filters and explicit rescans survive an in-flight request',async()=>{
+ const p=panel();const state={panelId:'p',revision:'r1',status:'Monitoring'};p.deliver(state);
+ p.render().onFilter('older',true);p.render().onAction('rescan');
+ await p.settle({...state,unchanged:true});
+ assert.equal(p.calls[1].request.arguments.action,'rescan');
+ assert.equal(p.calls[1].request.arguments.query,'older');
+ assert.equal(p.calls[1].request.arguments.includeArchived,true);
+ await p.settle({...state,revision:'r2'});
+ assert.equal(p.calls[2].request.arguments.query,'older');
+});

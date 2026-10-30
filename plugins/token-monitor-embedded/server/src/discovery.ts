@@ -1,12 +1,14 @@
 import path from 'node:path';
 import {readFileSync,lstatSync} from 'node:fs';
-import {opendir,open,readFile,lstat,realpath} from 'node:fs/promises';
+import {opendir,open,lstat,realpath} from 'node:fs/promises';
 import {cleanTitle} from './metrics.js';
-import {acceptedTranscript,atomicJSON,stateRoot,validID,contained,withStateLock} from './platform.js';
+import {acceptedTranscript,atomicJSON,stateRoot,validID,contained,withStateLock,privateDirectory} from './platform.js';
 export type Discovered={id:string;file:string;cwd?:string;title?:string;archived:boolean;updated:number;signature:string};
 export class ThreadDiscovery {
   entries=new Map<string,Discovered>();
   status:{state:string;lastCompleted?:string;missing:number;unreadable:number;malformed:number;excluded:number}={state:'idle',missing:0,unreadable:0,malformed:0,excluded:0};
+  private incomplete=false;
+  get targeting(){return this.targeted.size>0;}
   private ready?:Promise<void>;private running?:Promise<void>;private closed=false;private complete=false;
   private targeted=new Map<string,Promise<void>>();private failed=new Map<string,number>();
   constructor(private home:string){}
@@ -25,10 +27,10 @@ export class ThreadDiscovery {
   }catch{}}
   private async *files(directory:string,depth=0):AsyncGenerator<{file:string;archived:boolean}>{
     if(this.closed)return;
-    let dir;try{if(!(await lstat(directory)).isDirectory()||!contained(await realpath(this.home),await realpath(directory)))return;dir=await opendir(directory);}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')this.status.unreadable++;return;}
+    let dir;try{if(!(await lstat(directory)).isDirectory()||!contained(await realpath(this.home),await realpath(directory))){this.status.excluded++;this.incomplete=true;return;}dir=await opendir(directory);}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')this.status.unreadable++;return;}
     try{for await(const entry of dir){if(this.closed)return;const file=path.join(directory,entry.name);
       if(entry.isSymbolicLink()){this.status.excluded++;continue;}
-      if(entry.isDirectory()){if(depth<8)yield* this.files(file,depth+1);else this.status.excluded++;}
+      if(entry.isDirectory()){if(depth<8)yield* this.files(file,depth+1);else {this.status.excluded++;this.incomplete=true;}}
       else if(entry.isFile()&&entry.name.endsWith('.jsonl'))yield {file,archived:directory.startsWith(path.join(this.home,'archived_sessions'))};
     }}finally{await dir.close().catch(()=>{});}
   }
@@ -42,11 +44,11 @@ export class ThreadDiscovery {
   }
   private add(e:Discovered){const old=this.entries.get(e.id);if(!old||!acceptedTranscript(old.file,old.id,this.home)||(!e.archived&&old.archived)||e.archived===old.archived&&(e.updated>old.updated||e.updated===old.updated&&e.file<old.file))this.entries.set(e.id,e);}
   private async scan(){
-    this.status.malformed=this.status.unreadable=this.status.excluded=0;
+    this.status.malformed=this.status.unreadable=this.status.excluded=0;this.incomplete=false;
     try{let count=0;for(const root of ['sessions','archived_sessions'])for await(const candidate of this.files(path.join(this.home,root))){const e=await this.inspect(candidate.file,candidate.archived);if(e)this.add(e);if(++count%32===0){await this.save();await new Promise<void>(resolve=>setImmediate(resolve));}}
       if(this.closed)return;
       try{const handle=await open(path.join(this.home,'session_index.jsonl'),'r');try{if((await handle.stat()).size<=8*1024*1024){for(const line of (await handle.readFile('utf8')).split('\n')){try{const r=JSON.parse(line),e=this.entries.get(r.id);if(e)e.title=cleanTitle(r.thread_name);}catch{}}}}finally{await handle.close();}}catch{}
-      this.complete=true;this.status.lastCompleted=new Date().toISOString();this.status.state=this.status.unreadable||this.status.malformed||this.status.excluded?'partial':'complete';await this.save();
+      this.complete=true;this.status.lastCompleted=new Date().toISOString();this.status.state=this.status.unreadable||this.status.malformed||this.incomplete?'partial':'complete';await this.save();
     }catch{this.status.state='partial';}
   }
   async target(id:string,file?:string){
@@ -61,7 +63,7 @@ export class ThreadDiscovery {
   }
   private async save(){
     if(this.closed)return;
-    try{await withStateLock(path.join(stateRoot(this.home),'discovery-lock'),()=>{
+    try{privateDirectory(stateRoot(this.home));await withStateLock(path.join(stateRoot(this.home),'discovery-lock'),()=>{
       let prior:any;try{if(!lstatSync(this.file).isFile()||lstatSync(this.file).size>32*1024*1024)throw Error('cache');const file=JSON.parse(readFileSync(this.file,'utf8'));if(file.version===1&&file.home===this.home)prior=file;}catch{}
       const merged=new Map<string,Discovered>();
       for(const e of prior?.entries??[])if(validID(e.id)&&acceptedTranscript(e.file,e.id,this.home))merged.set(e.id,e);

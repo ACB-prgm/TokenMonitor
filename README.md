@@ -55,6 +55,10 @@ See [Contributing](CONTRIBUTING.md) for tests and the staged release process. Th
 
 [PolyForm Noncommercial 1.0.0](LICENSE). Noncommercial use only under the license terms. Bundled dependencies retain their own licenses and notices.
 
+## Historical efficiency
+
+An expandable KPI banner compares selected-thread lifetime cost/call, context/call and modeled compaction payback with all local chats. It imports readable historical telemetry, uses an earliest-observed baseline and offers period, weekly and model breakdowns. See [calculations, local storage and limitations](docs/HISTORICAL-EFFICIENCY.md).
+
 ## Compaction Value
 
 CV estimates net savings as a percentage of avoidable context-processing costs over 20 normal calls, including compaction overhead and per-call long-context pricing. It assumes 40K retained context and warm-prefix reuse. The panel shows observed growth/output or disclosed defaults, a consistent break-even, and context-capacity limitations. Cache temperature remains separate. These are API-equivalent estimates, not subscription charges; financial value does not guarantee context preservation. See [calculation and assumptions](docs/COMPACTION-VALUE.md).

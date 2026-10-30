@@ -123,3 +123,12 @@ test('compaction forecast shows observed estimates, finite-horizon break-even an
  const html=render({panelId:'p',status:'Monitoring',fiveHour:{used:25,source:'live',observedAt:'2026-10-28T12:00:00Z',stale:true},weekly:{used:40,source:'catalogue',observedAt:'2026-10-28T11:00:00Z',awaitingRefresh:true}});
  assert.doesNotMatch(html,/allowance-source|Live account|Local fallback|Waiting for allowance/);assert.match(html,/Live Codex account/);assert.match(html,/Stale/);assert.match(html,/may be incomplete/);assert.match(html,/Observed/);assert.match(html,/75%/);assert.match(html,/Awaiting refresh/);assert.doesNotMatch(html,/60% remaining|last observed in selected thread/);
  });
+
+test('historical KPI banner follows Latest call, stays collapsed and explains both scopes',()=>{
+ const summary={calls:10,priced:8,inputPriced:9,cost:.8,inputCost:.45,overhead:.08,costPerCall:.11,contextPerCall:.05,paybackRate:null,netSavings:0,evaluable:0,profitable:0,pending:1,excluded:0,inactivity:0};
+ const data={activation:'2026-10-30T00:00:00Z',baseline:summary,baselineCalls:10,baselineProvisional:true,thread:summary,rolling:summary,threadRolling:summary,threadWeeks:[],threadModels:[],baselineModels:[],paybacks:[],periods:{7:{summary,models:[],weeks:[]}},progress:{processed:1,total:1,running:false,failed:0},pricingBasis:'fixture'};
+ const html=render({...latestFixture,efficiency:data});
+ assert.ok(html.indexOf('class="latest-call"')<html.indexOf('class="efficiency"'));
+ assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="history"'));
+ assert.match(html,/Thread \$0.11/);assert.match(html,/All chats \$0.11/);assert.match(html,/Compaction payback/);assert.match(html,/N\/A/);assert.match(html,/provisional/);assert.match(html,/not a pre-TokenMonitor claim/);assert.match(html,/seven days without activity/);assert.doesNotMatch(html,/<details class="efficiency" open/);
+});

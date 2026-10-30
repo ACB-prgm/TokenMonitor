@@ -23,7 +23,7 @@ function fingerprint(value:any) {
   }
   return hash.update(buffer).digest('hex');
 }
-export type NumericEvent = {kind:"call";sample:Sample;contextLimit?:number}|{kind:"compaction";timestamp:string}|{kind:"activity";timestamp:string};
+export type NumericEvent = {kind:"call";sample:Sample;contextLimit?:number}|{kind:"compaction";timestamp:string}|{kind:"activity";timestamp:string}|{kind:"retained";tokens:number};
 export class TelemetryParser {
   constructor(private numericEvent?:(event:NumericEvent)=>void){}
   awaitingPostCompactionCall=false; compactedContext?:number; compactions:{timestamp:string;callPosition:number}[]=[];
@@ -69,7 +69,7 @@ export class TelemetryParser {
     if(!u&&cumulative){if(integer(cumulative.input_tokens))this.usage.cumulativeMismatch=cumulative.input_tokens!==this.usage.input;if(integer(cumulative.output_tokens)&&cumulative.output_tokens!==this.usage.output)this.usage.cumulativeMismatch=true;}
     if(!u)return;
     if(!integer(u.input_tokens)||!time){this.contextSegment++;return;}const input=u.input_tokens;
-    if(this.awaitingPostCompactionCall&&input===0&&(u.cached_input_tokens??0)===0&&(u.output_tokens??0)===0&&integer(u.total_tokens)&&u.total_tokens>0&&this.compactions.at(-1)&&time>=this.compactions.at(-1)!.timestamp){this.compactedContext=u.total_tokens;this.contextAttribution=this.attribution.snapshot(u.total_tokens);return;}
+    if(this.awaitingPostCompactionCall&&input===0&&(u.cached_input_tokens??0)===0&&(u.output_tokens??0)===0&&integer(u.total_tokens)&&u.total_tokens>0&&this.compactions.at(-1)&&time>=this.compactions.at(-1)!.timestamp){this.numericEvent?.({kind:"retained",tokens:u.total_tokens});this.compactedContext=u.total_tokens;this.contextAttribution=this.attribution.snapshot(u.total_tokens);return;}
     if(input<=0){this.contextSegment++;return;}const cached=integer(u.cached_input_tokens)?u.cached_input_tokens:0;if(cached<0||cached>input){this.contextSegment++;return;}
     const output=integer(u.output_tokens)?u.output_tokens:0,reasoning=integer(u.reasoning_output_tokens)?u.reasoning_output_tokens:0;
     const s:Sample={timestamp:time,input,cached,cacheWrite:integer(u.cache_write_input_tokens)?u.cache_write_input_tokens:0,output,reasoning,total:integer(u.total_tokens)?u.total_tokens:undefined,ordinal:integer(r.ordinal)?r.ordinal:undefined,

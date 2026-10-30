@@ -9,6 +9,7 @@ const standard: Record<string, number[]> = {
   'gpt-5.5':[5,.5,NaN,30], 'gpt-5.4':[2.5,.25,NaN,15], 'gpt-5.4-mini':[.75,.075,NaN,4.5], 'gpt-5.4-nano':[.2,.02,NaN,1.25],
   'gpt-5.3-codex':[1.75,.175,NaN,14], 'gpt-5.2':[1.75,.175,NaN,14], 'gpt-5.1':[1.25,.125,NaN,10], 'gpt-5':[1.25,.125,NaN,10],
 };
+export const pricingTableSignature=JSON.stringify(standard);
 export const pricingMetadata = {source:'https://developers.openai.com/api/docs/pricing', verifiedAt:'2026-10-19', configurationEffectiveDate:'2026-10-19'};
 export const integer = (n: unknown): n is number => Number.isSafeInteger(n);
 export const nonnegative = (n: unknown): n is number => integer(n) && n >= 0;

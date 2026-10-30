@@ -57,3 +57,5 @@ progress::-webkit-progress-bar{background:var(--line)}progress::-webkit-progress
 @media(prefers-reduced-motion:reduce){.inspect-shell{transition:none}}
 
 .brand-logo{width:2em;height:2em;object-fit:contain;flex-shrink:0}
+
+.discovery-controls{display:flex;gap:.5em;flex-wrap:wrap;font-size:.75em;align-items:center}.discovery-controls>input{flex:1;min-width:8em;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:.4em}.discovery-controls label{white-space:nowrap}

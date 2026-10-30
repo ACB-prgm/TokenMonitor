@@ -37,7 +37,9 @@ test('real TypeScript metrics bind exactly to the host, stay UI-only, and return
   assert.equal(s.usage.unpricedCalls,1);assert.equal(s.usage.pricedCalls,0);assert.equal(s.usage.input,100000);assert.equal(s.usage.cumulativeMismatch,true);assert.equal(s.samples[0].price.total,undefined);assert.equal(s.compactionValue.status,'unavailable');assert.match(s.compactionValue.limitation,/pricing unavailable/);assert.equal('apiCompactionBreakEven' in s,false);
   assert.equal(s.outputTotals.total,1000000);assert.equal(s.outputTotals.reasoning,400000);assert.equal(s.callCount,1);assert.match(s.samples[0].timestamp,/Z$/);
   assert.doesNotMatch(JSON.stringify(s),/SECRET|transcriptPath|transcript_path|\.jsonl/);
-  assert.equal((await f.refresh(s.panelId,{revision:s.revision},'a')).unchanged,true);
+  let settled=await f.refresh(s.panelId,{},'a');
+  for(let i=0;i<30&&settled.discovery?.state==='scanning';i++){await new Promise(r=>setTimeout(r,10));settled=await f.refresh(s.panelId,{},'a');}
+  assert.equal((await f.refresh(s.panelId,{revision:settled.revision},'a')).unchanged,true);
   assert.equal((await f.call('get_monitor_state',{panelId:s.panelId,action:'select',taskId:'/etc/passwd'},'a')).isError,true);
   const unknown=await f.open('not-a-local-thread');assert.equal(unknown.followingMode,'latest-hook');assert.equal(unknown.selectedId,undefined);
   assert.equal((await f.call('list_tasks',{panelId:s.panelId},'a'))._meta.tasks.length,2);

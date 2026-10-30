@@ -73,7 +73,7 @@ server.registerTool('open_monitor', {
 server.registerTool('get_monitor_state', {
   title: 'Refresh monitor', description: 'Refresh local token metrics and account allowances without a model turn. Account limits may be fetched through the installed Codex CLI. Task IDs must be discovered locally.',
   inputSchema: { panelId: z.string().uuid(), taskId: z.string().min(1).max(200).optional(),
-    action: z.enum(['select']).optional(), revision: z.string().max(500).optional() },
+    action: z.enum(['select','rescan']).optional(),query:z.string().max(200).optional(),includeArchived:z.boolean().optional(), revision: z.string().max(500).optional() },
   annotations: {...annotations,openWorldHint:true}, _meta: { ui: { visibility: ['app'] } },
 }, async (args, extra) => {
   try { return { content: [], _meta: { monitor: await panels.state(args.panelId, args, hostID(extra)), updates: await updateState() } }; }
@@ -99,9 +99,9 @@ server.registerTool('manage_updates', {
 });
 server.registerTool('list_tasks', {
   title: 'List monitored tasks', description: 'List recent local tasks for the panel picker.',
-  inputSchema: { panelId: z.string().uuid() }, annotations, _meta: { ui: { visibility: ['app'] } },
+  inputSchema: { panelId: z.string().uuid(),query:z.string().max(200).optional(),includeArchived:z.boolean().optional() }, annotations, _meta: { ui: { visibility: ['app'] } },
 }, async (args, extra) => {
-  try { return { content: [], _meta: await panels.tasks(args.panelId, hostID(extra)) }; }
+  try { return { content: [], _meta: await panels.tasks(args.panelId, hostID(extra),args) }; }
   catch { return { isError: true, content: [], _meta: { error: 'Local tasks unavailable' } }; }
 });
 

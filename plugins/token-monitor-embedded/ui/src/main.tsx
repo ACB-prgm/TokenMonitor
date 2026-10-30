@@ -53,16 +53,18 @@ function Panel() {
       if(active.current&&request===updateSerial.current)setUpdateError(error instanceof Error?error.message:'Unable to check updates.');
     } finally {updating.current--;}
   }
-  async function refresh(action?: 'select', taskId?: string) {
+  const filters=useRef({query:'',includeArchived:false}),pendingRescan=useRef(false),pendingFilter=useRef(false);
+  async function refresh(action?: 'select'|'rescan', taskId?: string) {
     const now = Date.now();
     if (!active.current || !current.current.panelId || (!action && now < retry.current.at)) return;
     if (fetching.current) {
       if (action === 'select') pendingSelection.current = taskId;
+      if(action==='rescan')pendingRescan.current=true;
       return;
     }
     const request = ++serial.current, updateRequest=updateSerial.current; fetching.current = true;
     try {
-      const result = await app.callServerTool({name:'get_monitor_state',arguments:{panelId:current.current.panelId,revision:current.current.revision,action,taskId}});
+      const result = await app.callServerTool({name:'get_monitor_state',arguments:{panelId:current.current.panelId,revision:current.current.revision,action,taskId,...filters.current}});
       if (result.isError) throw new Error('Task unavailable. Refresh or choose another local task.');
       const next = (result._meta as any)?.monitor as Monitor | undefined;
       if (!next) throw new Error('The host did not return monitor data.');
@@ -81,6 +83,8 @@ function Panel() {
         const selected = pendingSelection.current;
         pendingSelection.current=undefined;
         if (selected) void refresh('select',selected);
+        else if(pendingRescan.current){pendingRescan.current=false;void refresh('rescan');}
+        else if(pendingFilter.current){pendingFilter.current=false;void refresh();}
       }
     }
   }
@@ -115,6 +119,7 @@ function Panel() {
   },[]);
   return <MonitorView s={state} expanded={layout.expanded} scale={layout.scale} error={error}
     updates={updates} onUpdate={summary?undefined:action=>void manageUpdate(action)} updateError={updateError}
+    onFilter={summary?undefined:(query,includeArchived)=>{filters.current={query,includeArchived};pendingFilter.current=fetching.current;retry.current.at=0;void refresh();}}
     onAction={summary ? undefined : (action,id)=>{retry.current.at=0;void refresh(action,id);}} onLayout={changeLayout}
     storage={legacy()?.setWidgetState ? 'host widget state' : 'frame session storage (host state API unavailable)'} />;
 }

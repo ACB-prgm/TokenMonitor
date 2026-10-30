@@ -2,7 +2,7 @@ import { randomUUID, createHash } from 'node:crypto';
 import { Collector } from './collector.js';
 
 type Panel = { hostId?: string; selected?: string; hook?: string; source: string;
-  revision?: string; snapshot?: any; touched: number; disconnected: boolean; hostMatched: boolean };
+  revision?: string; snapshot?: any; touched: number; disconnected: boolean; hostMatched: boolean; query?:string; includeArchived?:boolean };
 export class Panels {
   private panels = new Map<string, Panel>();
   private queues = new Map<string, Promise<any>>();
@@ -26,22 +26,24 @@ export class Panels {
     for (const [key, value] of this.panels) if (Date.now() - value.touched > 60 * 60 * 1000) this.panels.delete(key);
     return panel;
   }
-  async tasks(id: string, hostId?: string) {
+  async tasks(id: string, hostId?: string, filters:{query?:string;includeArchived?:boolean;rescan?:boolean}={}) {
     const panel = this.panel(id, hostId);
-    return this.collector.request('catalog', { hostId: panel.hostId });
+    return this.collector.request('catalog', { hostId: panel.hostId,selectedId:panel.selected,query:filters.query??panel.query,includeArchived:filters.includeArchived??panel.includeArchived,rescan:filters.rescan });
   }
-  async state(id: string, input: { taskId?: string; action?: 'select'; revision?: string } = {}, hostId?: string) {
+  async state(id: string, input: { taskId?: string; action?: 'select'|'rescan'; query?:string;includeArchived?:boolean;revision?: string } = {}, hostId?: string) {
     const previous = this.queues.get(id) ?? Promise.resolve();
     const request = previous.catch(() => {}).then(() => this.stateNow(id, input, hostId));
     this.queues.set(id, request);
     try { return await request; }
     finally { if (this.queues.get(id) === request) this.queues.delete(id); }
   }
-  private async stateNow(id: string, input: { taskId?: string; action?: 'select'; revision?: string }, hostId?: string) {
+  private async stateNow(id: string, input: { taskId?: string; action?: 'select'|'rescan'; query?:string;includeArchived?:boolean;revision?: string }, hostId?: string) {
     const panel = this.panel(id, hostId);
     const wasDisconnected = panel.disconnected;
     try {
-      const catalog = await this.tasks(id, hostId);
+      if(input.query!==undefined)panel.query=input.query;
+      if(input.includeArchived!==undefined)panel.includeArchived=input.includeArchived;
+      const catalog = await this.tasks(id, hostId,{rescan:input.action==='rescan'});
       const hookChanged = !!catalog.latestHook && panel.hook !== catalog.latestHook.sequence;
       const bindingChanged = panel.hostMatched !== !!catalog.hostMatched;
       const previousSelection = panel.selected;
@@ -50,7 +52,7 @@ export class Panels {
         if (!catalog.tasks.some((task: any) => task.id === input.taskId) && input.taskId !== panel.selected && !(catalog.hostMatched && input.taskId === panel.hostId)) throw new Error('Task is not available locally');
         panel.selected = input.taskId; panel.source = 'manual';
       } else {
-        if (catalog.hostMatched && (!panel.selected || bindingChanged || (hookChanged && catalog.latestHook.id === panel.hostId) || (panel.source !== 'manual' && panel.selected !== panel.hostId))) {
+        if (catalog.hostMatched && (!panel.selected || (bindingChanged&&panel.source!=='manual') || (hookChanged && catalog.latestHook.id === panel.hostId) || (panel.source !== 'manual' && panel.selected !== panel.hostId))) {
           panel.selected = panel.hostId; panel.source = 'host-chat';
         } else if (!catalog.hostMatched && hookChanged) {
           panel.selected = catalog.latestHook.id; panel.source = 'latest-hook';
@@ -73,7 +75,7 @@ export class Panels {
         selectionSource: panel.source, followingMode: panel.hostMatched ? 'host-chat' : 'latest-hook',
         disconnected: false,
         status: panel.snapshot?.status ?? (panel.selected ? 'Task unavailable · choose another task or refresh' : 'Waiting for a valid local task'),
-        tasks: catalog.tasks, revision: createHash('sha256').update(JSON.stringify([panel.revision, panel.selected, panel.source, panel.hostMatched, catalog.tasks])).digest('hex') };
+        tasks: catalog.tasks,matchCount:catalog.matchCount,shownCount:catalog.shownCount,discovery:catalog.discovery, revision: createHash('sha256').update(JSON.stringify([panel.revision, panel.selected, panel.source, panel.hostMatched, catalog.tasks,catalog.matchCount,catalog.discovery])).digest('hex') };
       return !wasDisconnected && input.revision === view.revision ? { panelId: id, unchanged: true, revision: view.revision } : view;
     } catch (error) {
       if (input.action === 'select') throw error;

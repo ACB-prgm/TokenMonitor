@@ -1,7 +1,7 @@
 import {normalizeAllowances} from './allowances.js';
 import {ActivityCollector} from './activity.js';
 import {createHash} from 'node:crypto';
-import {AttributionEstimator,BoundedSet,ThreadUsage,estimateCompactionValue,rollingContextGrowth,rollingTypicalOutput,bounded,cacheTemperature,cleanTitle,date,emptyAttribution,health,integer,nonnegative,price,type Attribution,type RecordValue,type Sample} from './metrics.js';
+import {AttributionEstimator,BoundedSet,ThreadUsage,COMPACTION_DEFAULTS,estimateCompactionValue,rollingContextGrowth,rollingTypicalOutput,bounded,cacheTemperature,cleanTitle,date,emptyAttribution,health,integer,nonnegative,price,type Attribution,type GrowthInterval,type PersonalGrowth,type RecordValue,type Sample} from './metrics.js';
 const object=(x:any):x is RecordValue=>x!=null&&typeof x==='object'&&!Array.isArray(x);
 // Walk iteratively so valid deeply nested JSON cannot exhaust the call stack.
 // Hash bounded batches rather than one allocation or crypto call per JSON token.
@@ -29,6 +29,7 @@ export class TelemetryParser {
   model?:string; effort?:string; title?:string; lastCallModel?:string; lastCallEffort?:string; lastEvent?:string; callCount=0;
   private activity=new ActivityCollector();
   private contextSegment=0; private forecastSamples:(Sample & {segment:number})[]=[];
+  readonly growthIntervals:GrowthInterval[]=[];
   private reportedOutput?:number; private reportedReasoning?:number; private summedOutput=0; private summedReasoning=0; private outputComplete=true;private reasoningComplete=true;
   readonly attribution=new AttributionEstimator(); contextAttribution=emptyAttribution(); private pendingAttribution?:Attribution;
   readonly usage=new ThreadUsage(); private serviceTier?:string;private regionalProcessing?:boolean;
@@ -82,14 +83,19 @@ export class TelemetryParser {
     if(!reportedThisRecord&&this.reportedOutput!=null){this.reportedOutput=nonnegative(u.output_tokens)&&Number.isSafeInteger(this.reportedOutput+output)?this.reportedOutput+output:undefined;this.reportedReasoning=this.reportedReasoning!=null&&s.reasoningRecorded&&Number.isSafeInteger(this.reportedReasoning+reasoning)?this.reportedReasoning+reasoning:undefined;}
     if(s.outputRecorded&&Number.isSafeInteger(this.summedOutput+output))this.summedOutput+=output;else this.outputComplete=false;
     if(s.reasoningRecorded&&Number.isSafeInteger(this.summedReasoning+reasoning))this.summedReasoning+=reasoning;else this.reasoningComplete=false;
+    const previous=this.forecastSamples.at(-1),delta=previous?s.input-previous.input:-1;
+    if(previous&&previous.segment===this.contextSegment&&previous.model===s.model&&s.timestamp>=previous.timestamp&&delta>=0){
+      this.growthIntervals.push({timestamp:s.timestamp,model:s.model,value:delta,identity:JSON.stringify([previous.timestamp,s.timestamp,previous.input,s.input,s.model])});
+      if(this.growthIntervals.length>COMPACTION_DEFAULTS.PERSONAL_GROWTH_WINDOW)this.growthIntervals.shift();
+    }
     this.forecastSamples.push({...s,segment:this.contextSegment});if(this.forecastSamples.length>120)this.forecastSamples.shift();
     this.samples.push(s);if(this.samples.length>120)this.samples.shift();
   }
-  snapshot(task:{id:string;title:string;workspace?:string},session:RecordValue={},metadata:RecordValue={},available=true,now=Date.now()) {
+  snapshot(task:{id:string;title:string;workspace?:string},session:RecordValue={},metadata:RecordValue={},available=true,now=Date.now(),personalGrowth?:PersonalGrowth) {
     const last=this.samples.at(-1),input=this.awaitingPostCompactionCall?this.compactedContext:last?.input,cached=this.awaitingPostCompactionCall||!last?.cachedRecorded?undefined:last.cached,fresh=cached!=null&&input!=null?input-cached:undefined;
     const contextPercent=input!=null&&this.contextLimit?input/this.contextLimit*100:undefined,started=date(session.updated_at),completed=this.compactions.at(-1)?.timestamp;
     const isCompacting=session.hook_event_name==='PreCompact'&&!!started&&!(completed&&completed>=started)&&!(last&&last.timestamp>started);
-    const growth=rollingContextGrowth(this.forecastSamples),output=rollingTypicalOutput(this.samples,this.lastCallModel);
+    const growth=rollingContextGrowth(this.forecastSamples,personalGrowth),output=rollingTypicalOutput(this.samples,this.lastCallModel);
     const compactionValue=estimateCompactionValue({currentInput:isCompacting||this.awaitingPostCompactionCall?undefined:input,model:this.lastCallModel,
       serviceTier:last?.serviceTier,regionalProcessing:last?.regionalProcessing,growthPerCall:growth.effective,typicalOutput:output.effective,contextLimit:this.contextLimit});
     compactionValue.observedGrowthPerCall=growth.observed;

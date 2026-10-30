@@ -87,7 +87,8 @@
             "effective": 2000,
             "sampleCount": 1,
             "minimumApplied": false,
-            "fallback": true
+            "fallback": true,
+            "source": "default"
           },
           "output": {
             "observed": 100,
@@ -325,7 +326,8 @@
             "effective": 2000,
             "sampleCount": 0,
             "minimumApplied": false,
-            "fallback": true
+            "fallback": true,
+            "source": "default"
           },
           "output": {
             "observed": 100,
@@ -2756,16 +2758,16 @@
         "estimatedInput": 40000,
         "horizonCalls": 20,
         "completedCalls": 20,
-        "growthPerCall": 2000,
+        "growthPerCall": 1.0000000000000002,
         "typicalOutput": 1000,
         "compactionOutput": 3600,
         "breakEvenCalls": null,
-        "netSavingsUsd": -0.1927454,
+        "netSavingsUsd": -0.19274540000000004,
         "compactionOverheadUsd": 0.136,
-        "avoidableCostUsd": 0.057254599999999996,
-        "projectedBaselineCostUsd": 0.258268,
-        "projectedCompactedCostBeforeOverheadUsd": 0.3150134,
-        "grossSavingsUsd": -0.0567454,
+        "avoidableCostUsd": 0.019273600000000002,
+        "projectedBaselineCostUsd": 0.22028699999999998,
+        "projectedCompactedCostBeforeOverheadUsd": 0.2770324,
+        "grossSavingsUsd": -0.05674540000000003,
         "model": "gpt-6.1-sol",
         "regionalProcessing": false,
         "assumptions": {
@@ -2775,10 +2777,11 @@
           "contextLimitKnown": true,
           "growth": {
             "observed": 1.0000000000000002,
-            "effective": 2000,
+            "effective": 1.0000000000000002,
             "sampleCount": 20,
-            "minimumApplied": true,
-            "fallback": false
+            "minimumApplied": false,
+            "fallback": false,
+            "source": "thread"
           },
           "output": {
             "observed": 100,
@@ -6812,7 +6815,8 @@
             "effective": 2000,
             "sampleCount": 0,
             "minimumApplied": false,
-            "fallback": true
+            "fallback": true,
+            "source": "default"
           },
           "output": {
             "observed": 100,
@@ -7011,7 +7015,8 @@
             "effective": 2000,
             "sampleCount": 0,
             "minimumApplied": false,
-            "fallback": true
+            "fallback": true,
+            "source": "default"
           },
           "output": {
             "observed": 100,
@@ -7205,7 +7210,8 @@
             "effective": 2000,
             "sampleCount": 0,
             "minimumApplied": false,
-            "fallback": true
+            "fallback": true,
+            "source": "default"
           },
           "output": {
             "observed": 10,

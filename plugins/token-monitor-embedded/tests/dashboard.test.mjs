@@ -130,7 +130,7 @@ test('historical KPI banner precedes Latest call, stays collapsed and explains b
  const html=render({...latestFixture,efficiency:data});
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="latest-call"'));
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="history"'));
- assert.match(html,/kpi-row-label">Thread/);assert.match(html,/kpi-row-label">All chats/);assert.match(html,/\$0.11/);assert.match(html,/Compaction payback/);assert.match(html,/N\/A/);assert.match(html,/provisional/);assert.match(html,/not a pre-TokenMonitor claim/);assert.match(html,/seven days without activity/);assert.doesNotMatch(html,/<details class="efficiency" open/);
+ assert.match(html,/kpi-row-label">Thread/);assert.match(html,/kpi-row-label">All chats/);assert.match(html,/\$0.11/);assert.match(html,/Compaction payback/);assert.match(html,/N\/A/);assert.match(html,/Provisional/);assert.match(html,/not a pre-TokenMonitor claim/);assert.match(html,/seven days without activity/);assert.doesNotMatch(html,/<details class="efficiency" open/);
 });
 
 test('collapsed KPI summary has shared labels, three headers and no definitions',()=>{
@@ -177,3 +177,14 @@ test('actionable insights precede thread usage while empty and healthy placehold
 test('thread allowance estimate leads account remaining in each group',()=>{
  const html=render({panelId:'p',status:'Monitoring',usage:allowanceFixture,fiveHour:{used:7},weekly:{used:20}});const group=html.match(/<div class="allowance-group"[\s\S]*?(?=<div class="allowance-group")/)[0];assert.ok(group.indexOf('Est. ≈12.9% used')<group.indexOf('93%'));assert.match(group,/class="thread-contribution"/);
 });
+
+ test('provisional KPIs use asterisks with a disclosure explanation and badges in both scopes',()=>{
+ const summary={calls:10,priced:10,inputPriced:10,cost:.274,inputCost:.218,overhead:0,costPerCall:.0274,contextPerCall:.0218,paybackRate:100,netSavings:.1,evaluable:2,profitable:2,pending:0,excluded:0,inactivity:0};
+ const c={current:.0274,reference:.02,delta:37,currentCalls:10,baselineCalls:100,coverage:1,provisional:true,reason:'Fewer than 20 current calls'};
+ const comparisons={cost:c,context:c,cache:c};
+ const data={activation:'2026-10-30',baseline:summary,baselineCalls:100,baselineProvisional:false,thread:summary,rolling:summary,threadRolling:summary,threadWeeks:[],threadModels:[],baselineModels:[],paybacks:[],comparisons:{thread:comparisons,periods:{7:comparisons}},periods:{7:{summary,models:[],weeks:[]}},progress:{processed:1,total:1,running:false,failed:0},pricingBasis:'fixture'};
+ const html=render({...latestFixture,efficiency:data});const collapsed=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
+ assert.equal((collapsed.match(/class="provisional-mark"/g)??[]).length,6);
+ assert.equal((collapsed.match(/class="kpi-badge tone-neutral"/g)??[]).length,4);
+ assert.doesNotMatch(collapsed.replace(/<span class="sr-only">[^<]*<\/span>/g,''),/>Provisional</);assert.match(html,/\* Provisional<\/strong> means/);assert.match(html,/20 current and 20 baseline/);assert.match(html,/five by default/);
+ });

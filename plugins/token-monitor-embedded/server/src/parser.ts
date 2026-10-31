@@ -50,7 +50,7 @@ export class TelemetryParser {
     if(type==='turn_context'){
       const next=typeof p.model==='string'?p.model:this.model;if(next!==this.model){this.contextSegment++;this.contextLimit=undefined;this.serviceTier=undefined;this.regionalProcessing=undefined;}
       this.model=next;this.serviceTier=typeof p.service_tier==='string'?p.service_tier:undefined;this.regionalProcessing=typeof p.regional_processing==='boolean'?p.regional_processing:undefined;
-      this.effort=typeof p.effort==='string'?p.effort:typeof p.reasoning_effort==='string'?p.reasoning_effort:this.effort;
+      this.effort=typeof p.effort==='string'?p.effort:typeof p.reasoning_effort==='string'?p.reasoning_effort:undefined;
     }
     if(type==='session_meta'&&typeof p.title==='string')this.title=p.title;
     if(type!=='event_msg')return;

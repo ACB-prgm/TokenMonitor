@@ -23,7 +23,7 @@ panel resource URLs, startup records, layout preferences, and fallback state
 directory are separate from the release. Both read the existing Codex transcripts
 and database without modifying them. DEV retains five metadata hooks but omits
 the first-prompt auto-open hook so installing both does not request two panels.
-DEV shows its build version in the header and does not run automatic release checks.
+DEV shows its build version in Settings → About and does not run automatic release checks.
 
 DEV uses the Node executable that runs the build; it does not bundle or download
 a runtime. Keep that Node installation available. `CODEX_CLI_PATH` can point to a

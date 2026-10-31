@@ -38,7 +38,7 @@ test('real TypeScript metrics bind exactly to the host, stay UI-only, and return
   assert.equal(s.outputTotals.total,1000000);assert.equal(s.outputTotals.reasoning,400000);assert.equal(s.callCount,1);assert.match(s.samples[0].timestamp,/Z$/);
   assert.doesNotMatch(JSON.stringify(s),/SECRET|transcriptPath|transcript_path|\.jsonl/);
   let settled=await f.refresh(s.panelId,{},'a');
-  for(let i=0;i<30&&settled.discovery?.state==='scanning';i++){await new Promise(r=>setTimeout(r,10));settled=await f.refresh(s.panelId,{},'a');}
+  for(let i=0;i<30&&(settled.discovery?.state==='scanning'||settled.efficiency?.progress.running);i++){await new Promise(r=>setTimeout(r,10));settled=await f.refresh(s.panelId,{},'a');}
   assert.equal((await f.refresh(s.panelId,{revision:settled.revision},'a')).unchanged,true);
   assert.equal((await f.call('get_monitor_state',{panelId:s.panelId,action:'select',taskId:'/etc/passwd'},'a')).isError,true);
   const unknown=await f.open('not-a-local-thread');assert.equal(unknown.followingMode,'latest-hook');assert.equal(unknown.selectedId,undefined);
@@ -112,3 +112,10 @@ for(const manual of [false,true])test(`${manual?'manual':'hook'} task switch fai
  assert.equal(recovered.selectedId,'b');assert.equal(recovered.task.id,'b');assert.equal(recovered.input,200);
 });
 
+
+test('search acknowledgements change revisions even when the matching catalogue is unchanged',async()=>{
+ const f=await fixture();try{
+  const initial=await f.open('a');const first=await f.refresh(initial.panelId,{query:'Task'},'a');assert.equal(first.catalogueQuery,'Task');
+  const next=await f.refresh(initial.panelId,{query:'Task ',revision:first.revision},'a');assert.equal(next.unchanged,undefined);assert.equal(next.catalogueQuery,'Task ');assert.notEqual(next.revision,first.revision);
+ }finally{await f.client.close();}
+});

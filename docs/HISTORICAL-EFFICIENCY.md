@@ -1,6 +1,8 @@
 # Historical efficiency
 
-An expandable KPI banner below Latest call compares the selected thread's lifetime usage with all readable local primary chats. All chats defaults to seven UTC calendar days, including today; 30 days and all history are available. Archived chats participate regardless of picker filters. Import runs in the background, and the banner reports progress and failed reads.
+An expandable KPI strip above Efficiency Insights and Latest Call compares the selected thread's lifetime usage with all readable local primary chats. All chats defaults to seven UTC calendar days, including today; 30 days and all history are available. Archived chats participate regardless of picker filters. Import runs in the background, and the banner reports progress and failed reads.
+
+The compact strip has shared Thread and All chats rows. Color and delta assessments use model/effort/tier/region/rate-matched baseline cohorts with explicit coverage and provisional states; see [Dashboard redesign](DASHBOARD-REDESIGN.md) for thresholds, settings, insights and validation.
 
 Cost per call divides priced normal-call cost plus separately estimated compaction charges by priced normal calls. Context cost per call independently prices fresh, cached and cache-write input, even when output is unavailable. Reasoning is already included in output and is never charged twice. Missing categories and unsupported rates are excluded, with qualifying counts and pricing coverage shown. Partial spending is a lower bound, not a complete bill.
 

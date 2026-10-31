@@ -75,7 +75,7 @@ export class Panels {
         selectionSource: panel.source, followingMode: panel.hostMatched ? 'host-chat' : 'latest-hook',
         disconnected: false,
         status: panel.snapshot?.status ?? (panel.selected ? 'Task unavailable · choose another task or refresh' : 'Waiting for a valid local task'),
-        tasks: catalog.tasks,matchCount:catalog.matchCount,shownCount:catalog.shownCount,discovery:catalog.discovery, revision: createHash('sha256').update(JSON.stringify([panel.revision, panel.selected, panel.source, panel.hostMatched, catalog.tasks,catalog.matchCount,catalog.discovery])).digest('hex') };
+        tasks: catalog.tasks,catalogueQuery:panel.query??'',matchCount:catalog.matchCount,shownCount:catalog.shownCount,discovery:catalog.discovery, revision: createHash('sha256').update(JSON.stringify([panel.revision, panel.selected, panel.source, panel.hostMatched, panel.query, catalog.tasks,catalog.matchCount,catalog.discovery])).digest('hex') };
       return !wasDisconnected && input.revision === view.revision ? { panelId: id, unchanged: true, revision: view.revision } : view;
     } catch (error) {
       if (input.action === 'select') throw error;

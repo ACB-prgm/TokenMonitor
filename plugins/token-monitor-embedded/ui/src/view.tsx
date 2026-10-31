@@ -28,7 +28,7 @@ export type Monitor = { panelId: string; revision?: string; unchanged?: boolean;
   fiveHour?: Allowance; weekly?: Allowance;
   compactionValue?: CompactionForecast;
   attribution?: {contributors: {name: string; calls: number; tokens: number}[]; skillCount: number; callCount: number; afterCompaction: boolean};
-  usage?: Usage; outputTotals?: {total?: number; reasoning?: number; source: string}; matchCount?:number;shownCount?:number;discovery?:{targeting?:boolean;state:string;index:string;lastCompleted?:string;readable:number;missing:number;unreadable:number;malformed:number;excluded:number};tasks?: Task[]; completedAt?: string };
+  usage?: Usage; outputTotals?: {total?: number; reasoning?: number; source: string}; catalogueQuery?:string;matchCount?:number;shownCount?:number;discovery?:{targeting?:boolean;state:string;index:string;lastCompleted?:string;readable:number;missing:number;unreadable:number;malformed:number;excluded:number};tasks?: Task[]; completedAt?: string };
 const time = (date?: string) => date ? new Date(date).toLocaleString() : '—';
 const quota = (a?: Allowance) => a?.awaitingRefresh ? 'Awaiting refresh' : a ? percent(Math.min(100,Math.max(0,100-a.used))) : '—';
 const attributionHelp = 'Estimate from recorded tool arguments and result text, about 4 characters per token, bounded by latest input. Covers retained history, not the entire session. Wrapped calls count once. Images, hidden tool schemas and skill catalogs are excluded. Compaction summaries cannot be attributed.';

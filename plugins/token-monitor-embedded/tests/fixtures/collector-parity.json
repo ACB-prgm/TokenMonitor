@@ -148,7 +148,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:01Z"
+          "timestamp": "2026-10-19T12:00:01Z",
+          "effort": "high"
         },
         {
           "cached": 260000,
@@ -180,7 +181,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:02Z"
+          "timestamp": "2026-10-19T12:00:02Z",
+          "effort": "high"
         }
       ],
       "status": "Monitoring selected task",
@@ -386,7 +388,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:01Z"
+          "timestamp": "2026-10-19T12:00:01Z",
+          "effort": "high"
         }
       ],
       "status": "Monitoring selected task",
@@ -2841,7 +2844,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:16Z"
+          "timestamp": "2026-10-19T12:00:16Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -2873,7 +2877,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:17Z"
+          "timestamp": "2026-10-19T12:00:17Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -2905,7 +2910,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:18Z"
+          "timestamp": "2026-10-19T12:00:18Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -2937,7 +2943,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:19Z"
+          "timestamp": "2026-10-19T12:00:19Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -2969,7 +2976,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:20Z"
+          "timestamp": "2026-10-19T12:00:20Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3001,7 +3009,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:21Z"
+          "timestamp": "2026-10-19T12:00:21Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3033,7 +3042,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:22Z"
+          "timestamp": "2026-10-19T12:00:22Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3065,7 +3075,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:23Z"
+          "timestamp": "2026-10-19T12:00:23Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3097,7 +3108,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:24Z"
+          "timestamp": "2026-10-19T12:00:24Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3129,7 +3141,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:25Z"
+          "timestamp": "2026-10-19T12:00:25Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3161,7 +3174,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:26Z"
+          "timestamp": "2026-10-19T12:00:26Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3193,7 +3207,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:27Z"
+          "timestamp": "2026-10-19T12:00:27Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3225,7 +3240,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:28Z"
+          "timestamp": "2026-10-19T12:00:28Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3257,7 +3273,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:29Z"
+          "timestamp": "2026-10-19T12:00:29Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3289,7 +3306,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:30Z"
+          "timestamp": "2026-10-19T12:00:30Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3321,7 +3339,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:31Z"
+          "timestamp": "2026-10-19T12:00:31Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3353,7 +3372,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:32Z"
+          "timestamp": "2026-10-19T12:00:32Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3385,7 +3405,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:33Z"
+          "timestamp": "2026-10-19T12:00:33Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3417,7 +3438,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:34Z"
+          "timestamp": "2026-10-19T12:00:34Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3449,7 +3471,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:35Z"
+          "timestamp": "2026-10-19T12:00:35Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3481,7 +3504,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:36Z"
+          "timestamp": "2026-10-19T12:00:36Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3513,7 +3537,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:37Z"
+          "timestamp": "2026-10-19T12:00:37Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3545,7 +3570,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:38Z"
+          "timestamp": "2026-10-19T12:00:38Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3577,7 +3603,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:39Z"
+          "timestamp": "2026-10-19T12:00:39Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3609,7 +3636,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:40Z"
+          "timestamp": "2026-10-19T12:00:40Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3641,7 +3669,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:41Z"
+          "timestamp": "2026-10-19T12:00:41Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3673,7 +3702,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:42Z"
+          "timestamp": "2026-10-19T12:00:42Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3705,7 +3735,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:43Z"
+          "timestamp": "2026-10-19T12:00:43Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3737,7 +3768,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:44Z"
+          "timestamp": "2026-10-19T12:00:44Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3769,7 +3801,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:45Z"
+          "timestamp": "2026-10-19T12:00:45Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3801,7 +3834,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:46Z"
+          "timestamp": "2026-10-19T12:00:46Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3833,7 +3867,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:47Z"
+          "timestamp": "2026-10-19T12:00:47Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3865,7 +3900,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:48Z"
+          "timestamp": "2026-10-19T12:00:48Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3897,7 +3933,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:49Z"
+          "timestamp": "2026-10-19T12:00:49Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3929,7 +3966,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:50Z"
+          "timestamp": "2026-10-19T12:00:50Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3961,7 +3999,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:51Z"
+          "timestamp": "2026-10-19T12:00:51Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -3993,7 +4032,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:52Z"
+          "timestamp": "2026-10-19T12:00:52Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4025,7 +4065,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:53Z"
+          "timestamp": "2026-10-19T12:00:53Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4057,7 +4098,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:54Z"
+          "timestamp": "2026-10-19T12:00:54Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4089,7 +4131,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:55Z"
+          "timestamp": "2026-10-19T12:00:55Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4121,7 +4164,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:56Z"
+          "timestamp": "2026-10-19T12:00:56Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4153,7 +4197,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:57Z"
+          "timestamp": "2026-10-19T12:00:57Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4185,7 +4230,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:58Z"
+          "timestamp": "2026-10-19T12:00:58Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4217,7 +4263,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:59Z"
+          "timestamp": "2026-10-19T12:00:59Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4249,7 +4296,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:00Z"
+          "timestamp": "2026-10-19T12:01:00Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4281,7 +4329,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:01Z"
+          "timestamp": "2026-10-19T12:01:01Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4313,7 +4362,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:02Z"
+          "timestamp": "2026-10-19T12:01:02Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4345,7 +4395,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:03Z"
+          "timestamp": "2026-10-19T12:01:03Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4377,7 +4428,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:04Z"
+          "timestamp": "2026-10-19T12:01:04Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4409,7 +4461,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:05Z"
+          "timestamp": "2026-10-19T12:01:05Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4441,7 +4494,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:06Z"
+          "timestamp": "2026-10-19T12:01:06Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4473,7 +4527,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:07Z"
+          "timestamp": "2026-10-19T12:01:07Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4505,7 +4560,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:08Z"
+          "timestamp": "2026-10-19T12:01:08Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4537,7 +4593,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:09Z"
+          "timestamp": "2026-10-19T12:01:09Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4569,7 +4626,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:10Z"
+          "timestamp": "2026-10-19T12:01:10Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4601,7 +4659,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:11Z"
+          "timestamp": "2026-10-19T12:01:11Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4633,7 +4692,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:12Z"
+          "timestamp": "2026-10-19T12:01:12Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4665,7 +4725,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:13Z"
+          "timestamp": "2026-10-19T12:01:13Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4697,7 +4758,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:14Z"
+          "timestamp": "2026-10-19T12:01:14Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4729,7 +4791,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:15Z"
+          "timestamp": "2026-10-19T12:01:15Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4761,7 +4824,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:16Z"
+          "timestamp": "2026-10-19T12:01:16Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4793,7 +4857,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:17Z"
+          "timestamp": "2026-10-19T12:01:17Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4825,7 +4890,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:18Z"
+          "timestamp": "2026-10-19T12:01:18Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4857,7 +4923,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:19Z"
+          "timestamp": "2026-10-19T12:01:19Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4889,7 +4956,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:20Z"
+          "timestamp": "2026-10-19T12:01:20Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4921,7 +4989,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:21Z"
+          "timestamp": "2026-10-19T12:01:21Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4953,7 +5022,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:22Z"
+          "timestamp": "2026-10-19T12:01:22Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -4985,7 +5055,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:23Z"
+          "timestamp": "2026-10-19T12:01:23Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5017,7 +5088,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:24Z"
+          "timestamp": "2026-10-19T12:01:24Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5049,7 +5121,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:25Z"
+          "timestamp": "2026-10-19T12:01:25Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5081,7 +5154,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:26Z"
+          "timestamp": "2026-10-19T12:01:26Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5113,7 +5187,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:27Z"
+          "timestamp": "2026-10-19T12:01:27Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5145,7 +5220,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:28Z"
+          "timestamp": "2026-10-19T12:01:28Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5177,7 +5253,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:29Z"
+          "timestamp": "2026-10-19T12:01:29Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5209,7 +5286,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:30Z"
+          "timestamp": "2026-10-19T12:01:30Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5241,7 +5319,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:31Z"
+          "timestamp": "2026-10-19T12:01:31Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5273,7 +5352,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:32Z"
+          "timestamp": "2026-10-19T12:01:32Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5305,7 +5385,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:33Z"
+          "timestamp": "2026-10-19T12:01:33Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5337,7 +5418,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:34Z"
+          "timestamp": "2026-10-19T12:01:34Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5369,7 +5451,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:35Z"
+          "timestamp": "2026-10-19T12:01:35Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5401,7 +5484,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:36Z"
+          "timestamp": "2026-10-19T12:01:36Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5433,7 +5517,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:37Z"
+          "timestamp": "2026-10-19T12:01:37Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5465,7 +5550,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:38Z"
+          "timestamp": "2026-10-19T12:01:38Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5497,7 +5583,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:39Z"
+          "timestamp": "2026-10-19T12:01:39Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5529,7 +5616,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:40Z"
+          "timestamp": "2026-10-19T12:01:40Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5561,7 +5649,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:41Z"
+          "timestamp": "2026-10-19T12:01:41Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5593,7 +5682,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:42Z"
+          "timestamp": "2026-10-19T12:01:42Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5625,7 +5715,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:43Z"
+          "timestamp": "2026-10-19T12:01:43Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5657,7 +5748,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:44Z"
+          "timestamp": "2026-10-19T12:01:44Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5689,7 +5781,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:45Z"
+          "timestamp": "2026-10-19T12:01:45Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5721,7 +5814,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:46Z"
+          "timestamp": "2026-10-19T12:01:46Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5753,7 +5847,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:47Z"
+          "timestamp": "2026-10-19T12:01:47Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5785,7 +5880,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:48Z"
+          "timestamp": "2026-10-19T12:01:48Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5817,7 +5913,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:49Z"
+          "timestamp": "2026-10-19T12:01:49Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5849,7 +5946,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:50Z"
+          "timestamp": "2026-10-19T12:01:50Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5881,7 +5979,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:51Z"
+          "timestamp": "2026-10-19T12:01:51Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5913,7 +6012,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:52Z"
+          "timestamp": "2026-10-19T12:01:52Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5945,7 +6045,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:53Z"
+          "timestamp": "2026-10-19T12:01:53Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -5977,7 +6078,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:54Z"
+          "timestamp": "2026-10-19T12:01:54Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6009,7 +6111,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:55Z"
+          "timestamp": "2026-10-19T12:01:55Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6041,7 +6144,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:56Z"
+          "timestamp": "2026-10-19T12:01:56Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6073,7 +6177,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:57Z"
+          "timestamp": "2026-10-19T12:01:57Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6105,7 +6210,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:58Z"
+          "timestamp": "2026-10-19T12:01:58Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6137,7 +6243,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:01:59Z"
+          "timestamp": "2026-10-19T12:01:59Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6169,7 +6276,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:00Z"
+          "timestamp": "2026-10-19T12:02:00Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6201,7 +6309,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:01Z"
+          "timestamp": "2026-10-19T12:02:01Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6233,7 +6342,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:02Z"
+          "timestamp": "2026-10-19T12:02:02Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6265,7 +6375,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:03Z"
+          "timestamp": "2026-10-19T12:02:03Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6297,7 +6408,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:04Z"
+          "timestamp": "2026-10-19T12:02:04Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6329,7 +6441,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:05Z"
+          "timestamp": "2026-10-19T12:02:05Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6361,7 +6474,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:06Z"
+          "timestamp": "2026-10-19T12:02:06Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6393,7 +6507,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:07Z"
+          "timestamp": "2026-10-19T12:02:07Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6425,7 +6540,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:08Z"
+          "timestamp": "2026-10-19T12:02:08Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6457,7 +6573,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:09Z"
+          "timestamp": "2026-10-19T12:02:09Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6489,7 +6606,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:10Z"
+          "timestamp": "2026-10-19T12:02:10Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6521,7 +6639,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:11Z"
+          "timestamp": "2026-10-19T12:02:11Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6553,7 +6672,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:12Z"
+          "timestamp": "2026-10-19T12:02:12Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6585,7 +6705,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:13Z"
+          "timestamp": "2026-10-19T12:02:13Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6617,7 +6738,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:14Z"
+          "timestamp": "2026-10-19T12:02:14Z",
+          "effort": "high"
         },
         {
           "cached": 8000,
@@ -6649,7 +6771,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:02:15Z"
+          "timestamp": "2026-10-19T12:02:15Z",
+          "effort": "high"
         }
       ],
       "status": "Monitoring selected task",
@@ -6875,7 +6998,8 @@
           },
           "reasoning": 40,
           "reasoningRecorded": true,
-          "timestamp": "2026-10-19T12:00:01Z"
+          "timestamp": "2026-10-19T12:00:01Z",
+          "effort": "high"
         }
       ],
       "status": "Monitoring selected task",
@@ -7086,7 +7210,8 @@
             "skills": [
               "pdf"
             ]
-          }
+          },
+          "effort": "high"
         }
       ],
       "status": "Monitoring selected task",

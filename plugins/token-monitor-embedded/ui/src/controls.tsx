@@ -11,7 +11,8 @@ export function ThreadPicker({s,onSelect,onFilter}:{s:Monitor;onSelect?:(id:stri
  const trigger=useRef<HTMLButtonElement>(null),input=useRef<HTMLInputElement>(null),filter=useRef(onFilter);filter.current=onFilter;
  const id=useId();
  const tasks=[...(s.tasks??[])];if(s.task&&!tasks.some(t=>t.id===s.task!.id))tasks.unshift(s.task);
- const results=tasks.filter(t=>!query||`${t.title} ${t.id}`.toLowerCase().includes(query.toLowerCase()));
+ const results=tasks.filter(t=>!query||`${t.title} ${t.id} ${t.workspace??''}`.toLowerCase().includes(query.toLowerCase()));
+ const searching=s.catalogueQuery!==undefined&&s.catalogueQuery!==query;
  const index=Math.min(active,Math.max(0,results.length-1));
  useEffect(()=>{const timer=setTimeout(()=>filter.current?.(query,false),200);return()=>clearTimeout(timer);},[query]);
  useEffect(()=>{if(open)input.current?.focus();},[open]);
@@ -26,9 +27,9 @@ export function ThreadPicker({s,onSelect,onFilter}:{s:Monitor;onSelect?:(id:stri
  }}>
   <button ref={trigger} className="thread-trigger" disabled={!onSelect} aria-label={`Select monitored thread: ${s.task?.title??'Waiting for local threads'}`} aria-haspopup="listbox" aria-expanded={open} aria-controls={open?`${id}-list`:undefined} onClick={()=>open?close():setOpen(true)}><span>{s.task?.archived?'Archived · ':''}{s.task?.title??'Choose a thread'}</span><span aria-hidden="true">⌄</span></button>
   {open&&<div className="thread-popover"><input ref={input} role="combobox" aria-label="Search threads by name or ID" aria-autocomplete="list" aria-expanded="true" aria-controls={`${id}-list`} aria-activedescendant={results.length?`${id}-${index}`:undefined} placeholder="Search threads…" maxLength={200} value={query} onChange={e=>{setQuery(e.target.value);setActive(0);}}/>
-   <div className="picker-status" role="status">{s.discovery?.state==='scanning'?'Discovering threads…':`${s.matchCount??results.length} matching threads`}{s.shownCount!=null&&s.matchCount!=null&&s.shownCount<s.matchCount?` · showing ${s.shownCount}`:''}</div>
+   <div className="picker-status" role="status">{s.discovery?.state==='scanning'?'Discovering threads…':searching?'Searching threads…':`${s.matchCount??results.length} matching threads`}{s.shownCount!=null&&s.matchCount!=null&&s.shownCount<s.matchCount?` · showing ${s.shownCount}`:''}</div>
    <div id={`${id}-list`} role="listbox" aria-label="Local threads">{results.map((t,i)=><button key={t.id} id={`${id}-${i}`} role="option" aria-selected={t.id===s.selectedId} className={i===index?'active':''} tabIndex={-1} onMouseDown={e=>e.preventDefault()} onMouseEnter={()=>setActive(i)} onClick={()=>select(i)}><span>{t.archived?'Archived · ':''}{t.title}</span><small>{t.id}</small></button>)}</div>
-   {!results.length&&<p className="picker-status">No matching local threads.</p>}
+   {!results.length&&!searching&&<p className="picker-status">No matching local threads.</p>}
   </div>}
  </div>;
 }

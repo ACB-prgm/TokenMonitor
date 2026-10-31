@@ -132,3 +132,14 @@ test('historical KPI banner precedes Latest call, stays collapsed and explains b
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="history"'));
  assert.match(html,/kpi-row-label">Thread/);assert.match(html,/kpi-row-label">All chats/);assert.match(html,/\$0.11/);assert.match(html,/Compaction payback/);assert.match(html,/N\/A/);assert.match(html,/provisional/);assert.match(html,/not a pre-TokenMonitor claim/);assert.match(html,/seven days without activity/);assert.doesNotMatch(html,/<details class="efficiency" open/);
 });
+
+test('collapsed KPI summary has shared labels, three headers and no definitions',()=>{
+ const html=render({panelId:'p',status:'Waiting'});const summary=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
+ for(const label of ['Thread','All chats','Cost / call','Context / call','Compaction payback'])assert.equal(summary.split('>'+label+'<').length-1,1,label);
+ assert.doesNotMatch(summary,/formula|baseline|input cost|<p>/i);assert.match(html,/Still gathering comparable history/);
+ assert.doesNotMatch(html,/Search local threads|Include archived|of .* matches/);
+ assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="efficiency-insights"'));assert.ok(html.indexOf('class="efficiency-insights"')<html.indexOf('class="latest-call"'));
+});
+test('decimal formatting preserves small positive and negative dollar differences',()=>{
+ assert.equal(money(.000001),'$0.000001');assert.equal(money(.000002),'$0.000002');assert.equal(money(-.000001),'−$0.000001');assert.equal(money(.0000001),'<$0.000001');assert.equal(money(.0234),'$0.0234');assert.equal(money(0),'$0.00');assert.equal(money(NaN),'—');
+});

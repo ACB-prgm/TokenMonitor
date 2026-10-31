@@ -10,7 +10,7 @@ export type Comparisons = {cost: Comparison; context: Comparison; cache: Compari
 // Rate identity separates long-context bands without relying on aggregated token totals.
 function cohort(b: Bucket): string | undefined {
   if (!b.model || !b.effort || !b.rateBand) return;
-  const tier = !b.serviceTier || ['auto','automatic','default','standard'].includes(b.serviceTier.toLowerCase()) ? 'standard' : b.serviceTier.toLowerCase();
+  const tier = ['fast','priority'].includes(b.serviceTier?.toLowerCase()??'')?'priority':!b.serviceTier || ['auto','automatic','default','standard'].includes(b.serviceTier.toLowerCase()) ? 'standard' : b.serviceTier.toLowerCase();
   return JSON.stringify([b.model,b.effort,tier,b.regionalProcessing === true,b.rateBand]);
 }
 export function compareCohorts(current: Bucket[], baseline: Bucket[], ready: boolean): Comparisons {

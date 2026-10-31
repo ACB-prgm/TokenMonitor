@@ -153,9 +153,19 @@ test('context ring reports consumed percentage, exact values, unknowns and post-
 });
 test('account allowances remain distinct from thread estimates and only critical resets are visible',()=>{
  const state={panelId:'p',status:'Monitoring',usage:allowanceFixture,fiveHour:{used:96,reset:'2026-11-01T01:00:00Z',source:'live'},weekly:{used:20,reset:'2026-11-02T01:00:00Z',source:'catalogue',stale:true}};
- const html=render(state);assert.match(html,/>4%<\/strong>/);assert.match(html,/>80%<\/strong>/);assert.match(html,/This thread: ≈12.9% used/);assert.match(html,/This thread: ≈2.1% used/);assert.equal((html.match(/class="critical-reset"/g)??[]).length,1);assert.match(html,/Account observation/);
+ const html=render(state);assert.match(html,/>4%<\/strong>/);assert.match(html,/>80%<\/strong>/);assert.match(html,/This thread: ≈12.9% used/);assert.match(html,/This thread: ≈2.1% used/);assert.equal((html.match(/class="critical-reset"/g)??[]).length,1);assert.match(html,/Account-level subscription allowance/);assert.doesNotMatch(html,/Account observation/);
  const awaiting=render({...state,fiveHour:{...state.fiveHour,awaitingRefresh:true},weekly:undefined});assert.doesNotMatch(awaiting,/class="critical-reset"/);assert.match(awaiting,/Awaiting refresh/);assert.doesNotMatch(awaiting,/>4%<\/strong>/);
 });
 test('insights use one collapsed disclosure and retain finding, impact and recommendations inside',()=>{
  const html=render({panelId:'p',status:'Monitoring',contextPercent:96});const insight=html.match(/<details class="efficiency-insights"[\s\S]*?<\/details>/)[0];const summary=insight.match(/<summary[\s\S]*?<\/summary>/)[0];assert.match(summary,/Efficiency insights: /);assert.match(summary,/Context approaching capacity/);assert.match(summary,/insight-chevron/);assert.doesNotMatch(summary,/<p>|Consider a new thread|96.0/);assert.doesNotMatch(insight,/<details[^>]* open/);assert.match(insight,/Review retained context/);
+});
+
+test('compaction value restores the original increasing health color scale in summary and details',()=>{
+ let previous;
+ for(const score of [0,34,80,100]){
+  const html=render({...latestFixture,compactionValue:{...latestFixture.compactionValue,score}});const bar=html.match(/<details class="latest-call"[\s\S]*?<\/details>/)[0];const summary=bar.match(/<summary[\s\S]*?<\/summary>/)[0];
+  const summaryColor=summary.match(/compaction-score[\s\S]*?<b style="([^"]+)"/)[1];const detailColor=bar.match(/Compaction Value · <b style="([^"]+)"/)[1];
+  assert.match(summaryColor,/color-mix/);assert.equal(summaryColor,detailColor);assert.notEqual(summaryColor,previous);previous=summaryColor;
+  if(score===100)assert.match(summaryColor,/var\(--health-red\)/);
+ }
 });

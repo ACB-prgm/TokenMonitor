@@ -1,3 +1,4 @@
+import {DatabaseSync} from 'node:sqlite';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
@@ -14,3 +15,19 @@ test('zero-call compactions are unprofitable; active epochs remain pending',()=>
 test('SQLite replay, restart, replacement and activation persistence',async()=>{const home=mkdtempSync(path.join(os.tmpdir(),'efficiency-'));try{mkdirSync(path.join(home,'sessions'));const file=path.join(home,'sessions','a.jsonl');const write=n=>writeFileSync(file,[JSON.stringify({type:'session_meta',payload:{id:'a'}}),JSON.stringify({type:'turn_context',payload:{model:'gpt-6.1-sol'}}),...Array.from({length:n},(_,i)=>JSON.stringify({type:'event_msg',timestamp:sample(i).timestamp,payload:{type:'token_count',info:{last_token_usage:{input_tokens:100000+i,cached_input_tokens:90000,cache_write_input_tokens:0,output_tokens:1000}}}}))].join('\n')+'\n');write(120);let store=new EfficiencyStore(home);await store.scan(home,[{id:'a',file}],true);let s=store.snapshot('a');const activation=s.activation;assert.equal(s.thread.calls,120);assert.equal(s.baselineCalls,100);assert.equal(s.baselineProvisional,false);await store.scan(home,[{id:'a',file}],true);assert.equal(store.snapshot('a').thread.calls,120);store.close();store=new EfficiencyStore(home);assert.equal(store.snapshot('a').activation,activation);write(2);await store.scan(home,[{id:'a',file}],true,Date.now()+6000);assert.equal(store.snapshot('a').thread.calls,2);assert.equal(store.snapshot('a').baselineCalls,100);store.close();}finally{rmSync(home,{recursive:true,force:true});}});
 test('inactivity boundary is exactly seven days and fresh replay reopens it',()=>{const make=()=>{const b=new HistoryBuilder();b.call(sample());b.compact(sample(1).timestamp);b.call(sample(2,{input:40000,cached:40000}));b.activity(sample(2).timestamp);return b;};const stamp=Date.parse(sample(2).timestamp);assert.equal(make().finish(stamp+7*864e5-1).paybacks[0].completed,undefined);assert.equal(make().finish(stamp+7*864e5).paybacks[0].reason,'inactivity');const resumed=make();resumed.activity(new Date(stamp+8*864e5).toISOString());assert.equal(resumed.finish(stamp+8*864e5).paybacks[0].completed,undefined);});
 test('observed retained context changes modeled overhead and recorded writes receive one credit',()=>{const b=new HistoryBuilder();b.call(sample());b.compact(sample(1).timestamp);const before=summarize(b.data.buckets).overhead;b.retainedContext(20000);assert.ok(summarize(b.data.buckets).overhead<before);const prior=summarize(b.data.buckets).overhead;b.call(sample(2,{input:30000,cached:10000,cacheWrite:20000}));assert.ok(Math.abs(summarize(b.data.buckets).overhead-(prior-.05))<1e-12);const credited=summarize(b.data.buckets).overhead;b.call(sample(3,{input:30000,cached:10000,cacheWrite:20000}));assert.equal(summarize(b.data.buckets).overhead,credited);});
+
+test('format replay enriches frozen baseline effort without choosing different calls',async()=>{
+ const home=mkdtempSync(path.join(os.tmpdir(),'efficiency-upgrade-'));
+ try {
+  mkdirSync(path.join(home,'sessions'));const file=path.join(home,'sessions','a.jsonl');
+  const write=(effort,offset=0)=>writeFileSync(file,[JSON.stringify({type:'session_meta',payload:{id:'a'}}),JSON.stringify({type:'turn_context',payload:{model:'gpt-6.1-sol',...(effort?{effort}:{})}}),...Array.from({length:100},(_,i)=>JSON.stringify({type:'event_msg',timestamp:sample(i+offset).timestamp,payload:{type:'token_count',info:{last_token_usage:{input_tokens:100000+i,cached_input_tokens:90000,cache_write_input_tokens:0,output_tokens:1000}}}}))].join('\n')+'\n');
+  write();let store=new EfficiencyStore(home);await store.scan(home,[{id:'a',file}],true);const before=store.snapshot('a');store.close();
+  // Simulate persisted pre-upgrade rows. The baseline remains frozen independently.
+  const {readdirSync}=await import('node:fs');const folder=readdirSync(home).find(n=>n.startsWith('token-monitor'));
+  const db=new DatabaseSync(path.join(home,folder,'efficiency.sqlite'));db.prepare('UPDATE threads SET basis=?').run('old-format');db.close();
+  write('high');store=new EfficiencyStore(home);await store.scan(home,[{id:'a',file}],true);const after=store.snapshot('a');
+  assert.equal(after.baselineStart,before.baselineStart);assert.equal(after.baselineEnd,before.baselineEnd);assert.equal(after.baseline.cost,before.baseline.cost);assert.equal(after.comparisons.thread.cost.provisional,false);assert.ok(after.reference.buckets.every(b=>b.effort==='high'));store.close();
+  // A later source replacement cannot silently redefine the frozen baseline.
+  write('low',200);store=new EfficiencyStore(home);await store.scan(home,[{id:'a',file}],true);const replaced=store.snapshot('a');assert.equal(replaced.baselineStart,before.baselineStart);assert.equal(replaced.comparisons.thread.cost.provisional,true);store.close();
+ }finally{rmSync(home,{recursive:true,force:true});}
+});

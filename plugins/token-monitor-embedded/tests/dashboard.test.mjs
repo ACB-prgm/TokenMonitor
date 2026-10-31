@@ -9,7 +9,7 @@ const result=await build({stdin:{resolveDir:root,contents:`import React from 're
 const mod={exports:{}};new Function('require','module','exports',result.outputFiles[0].text)(createRequire(path.join(root,'package.json')),mod,mod.exports);
 const {percent,money,migrateLayout,composition,threadAllowanceEstimate,render}=mod.exports;
 test('small nonzero and near-full percentages never round to false zero or 100',()=>{
- assert.equal(percent(.0001),'<0.1%');assert.equal(percent(99.999),'>99.9%');assert.equal(percent(0),'0%');assert.equal(percent(100),'100%');assert.equal(money(undefined),'—');assert.equal(money(.000001),'<$0.0001');
+ assert.equal(percent(.0001),'<0.1%');assert.equal(percent(99.999),'>99.9%');assert.equal(percent(0),'0%');assert.equal(percent(100),'100%');assert.equal(money(undefined),'—');assert.equal(money(.000001),'$0.000001');
 });
 test('new base scale migrates existing visual preferences exactly',()=>{
  assert.equal(migrateLayout({scale:.85}).scale,1);assert.equal(migrateLayout({scale:1}).scale,1/.85);assert.equal(migrateLayout({scale:1.15}).scale,1.15/.85);assert.equal(migrateLayout({}).scale,1);assert.equal(migrateLayout({scale:1,layoutVersion:2}).scale,1);assert.equal(migrateLayout({scale:900}).scale,1);
@@ -130,5 +130,5 @@ test('historical KPI banner precedes Latest call, stays collapsed and explains b
  const html=render({...latestFixture,efficiency:data});
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="latest-call"'));
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="history"'));
- assert.match(html,/Thread \$0.11/);assert.match(html,/All chats \$0.11/);assert.match(html,/Compaction payback/);assert.match(html,/N\/A/);assert.match(html,/provisional/);assert.match(html,/not a pre-TokenMonitor claim/);assert.match(html,/seven days without activity/);assert.doesNotMatch(html,/<details class="efficiency" open/);
+ assert.match(html,/kpi-row-label">Thread/);assert.match(html,/kpi-row-label">All chats/);assert.match(html,/\$0.11/);assert.match(html,/Compaction payback/);assert.match(html,/N\/A/);assert.match(html,/provisional/);assert.match(html,/not a pre-TokenMonitor claim/);assert.match(html,/seven days without activity/);assert.doesNotMatch(html,/<details class="efficiency" open/);
 });

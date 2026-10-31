@@ -20,8 +20,8 @@ test('mutually exclusive composition includes reasoning inside output',()=>{
 test('capacity, allowances, spending and cost chart appear in compact mode without duplicate summaries',()=>{
  const s={panelId:'p',status:'Monitoring',callCount:1,task:{id:'a',title:'Task'},selectedId:'a',contextPercent:50,input:100,contextLimit:200,fiveHour:{used:6},weekly:{used:49},samples:[],usage:{input:100,cached:60,cacheWrite:10,output:20,reasoning:8,cacheComplete:true,outputComplete:true,reasoningComplete:true,pricedCalls:1,unpricedCalls:0,cost:.12,cacheSavings:.05,costCategories:[.04,.01,.01,.02,.04,0],issues:[],models:['gpt-6.1-sol']}};
  const html=render(s);
- assert.ok(html.indexOf('header-controls')<html.indexOf('thread-selector'));assert.ok(html.indexOf('Context window')<html.indexOf('Thread usage'));assert.ok(html.indexOf('Thread usage')<html.indexOf('Recent calls'));
- assert.equal((html.match(/Context window<\/h2>/g)??[]).length,1);assert.match(html,/5 Hour/);assert.match(html,/94%/);assert.match(html,/51%/);assert.match(html,/API-equivalent/);assert.match(html,/Token composition/);assert.match(html,/Cost composition/);assert.match(html,/aria-pressed="true">Cost/);assert.match(html,/Transcript reads are incremental/);assert.doesNotMatch(html,/Lock|locked|Unlock/);assert.doesNotMatch(html,/<details[^>]* open/g);
+ assert.ok(html.indexOf('header-controls')<html.indexOf('thread-selector'));assert.ok(html.indexOf('Thread usage')<html.indexOf('Context window'));assert.ok(html.indexOf('Thread usage')<html.indexOf('Recent calls'));
+ assert.match(html,/Context window consumed/);assert.doesNotMatch(html,/<progress|class="capacity"/);assert.match(html,/5-hour allowance/);assert.match(html,/94%/);assert.match(html,/51%/);assert.match(html,/API-equivalent/);assert.match(html,/Token composition/);assert.match(html,/Cost composition/);assert.match(html,/aria-pressed="true">Cost/);assert.match(html,/Transcript reads are incremental/);assert.doesNotMatch(html,/Lock|locked|Unlock/);assert.doesNotMatch(html,/<details[^>]* open/g);
  const expanded=render(s,true);assert.match(expanded,/<details[^>]* open/g);assert.doesNotMatch(expanded,/>Compact<\/button>|>Expand<\/button>/);
 });
 test('missing pricing and cache data stay visibly unavailable',()=>{
@@ -36,11 +36,11 @@ test('single latest-call bar sits between thread usage and the graph and expands
  assert.ok(bar);assert.doesNotMatch(bar,/<details[^>]* open/);
  assert.ok(html.indexOf('class="thread-usage"')<html.indexOf('class="latest-call"'));
  assert.ok(html.indexOf('class="latest-call"')<html.indexOf('class="history"'));
- assert.ok(html.indexOf('class="latest-call"')<html.indexOf('<svg'));
+ assert.ok(html.indexOf('class="latest-call"')<html.indexOf('<svg',html.indexOf('class="history"')));
  assert.ok(html.indexOf('class="latest-call"')<html.indexOf('Exact call values'));
  const summary=bar.match(/<summary[\s\S]*?<\/summary>/)[0];
  assert.match(summary,/<b>100.0k<\/b>/);assert.match(summary,/<b>1.2k<\/b>/);
- assert.doesNotMatch(summary,/WARM|UNCERTAIN|CV|34\/100/);assert.match(bar,/Cache warmth: WARM/);assert.match(bar,/34\/100/);
+ assert.doesNotMatch(summary,/WARM|UNCERTAIN/);assert.match(bar,/Cache warmth: WARM/);assert.match(summary,/34\/100/);
  assert.match(bar,/Thinking/);assert.match(bar,/gpt-6.1-sol/);assert.match(bar,/Break-even<\/dt><dd>6 calls/);assert.match(bar,/Moderate/);assert.match(bar,/Default \(insufficient data\)/);assert.doesNotMatch(bar,/heuristic|Model-priced API break-even/);
  assert.equal((html.match(/Compaction Value ·/g)??[]).length,1);
  assert.match(render(latestFixture,true),/<details class="latest-call" open/);
@@ -66,13 +66,13 @@ test('thread allowance uses unrounded lifetime cost and fixed points per dollar 
 });
 test('allowance estimates follow selected thread totals and preserve partial/unknown independently of account telemetry',()=>{
  const renderUsage=usage=>render({panelId:'p',status:'Monitoring',callCount:200,samples:[],fiveHour:{used:6},weekly:{used:49},usage});
- const row=html=>html.match(/<div class="usage-line" aria-label="Estimated thread allowance usage"[\s\S]*?<\/div>/)[0];
- const html=renderUsage(allowanceFixture);assert.match(row(html),/≈12.9%/);assert.match(row(html),/Weekly \(7d\)/);assert.match(row(html),/≈2.1%/);assert.match(html,/94%/);assert.match(html,/51%/);assert.match(html,/across resets/);
+ const row=html=>html.match(/<div class="thread-allowances"[\s\S]*?(?=<div class="usage-line")/)[0];
+ const html=renderUsage(allowanceFixture);assert.match(row(html),/≈12.9%/);assert.match(row(html),/Weekly allowance/);assert.match(row(html),/≈2.1%/);assert.match(html,/94%/);assert.match(html,/51%/);assert.match(html,/across resets/);
  assert.match(row(renderUsage({...allowanceFixture,cost:10})),/≈129%/);
  assert.match(row(renderUsage({...allowanceFixture,cost:2})),/≈25.8%/);
  assert.match(row(renderUsage({...allowanceFixture,unpricedCalls:1})),/partial/);
  assert.match(row(renderUsage({...allowanceFixture,cumulativeMismatch:true})),/partial/);
- const unknown=row(renderUsage({...allowanceFixture,pricedCalls:0}));assert.match(unknown,/>—<\/b>/);assert.doesNotMatch(unknown,/≈0%/);
+ const unknown=row(renderUsage({...allowanceFixture,pricedCalls:0}));assert.match(unknown,/This thread: —/);assert.doesNotMatch(unknown,/≈0%/);
  assert.match(row(renderUsage({...allowanceFixture,cost:0})),/≈0%/);
  assert.doesNotMatch(row(renderUsage(undefined)),/NaN|undefined|≈0%/);
 });
@@ -142,4 +142,20 @@ test('collapsed KPI summary has shared labels, three headers and no definitions'
 });
 test('decimal formatting preserves small positive and negative dollar differences',()=>{
  assert.equal(money(.000001),'$0.000001');assert.equal(money(.000002),'$0.000002');assert.equal(money(-.000001),'−$0.000001');assert.equal(money(.0000001),'<$0.000001');assert.equal(money(.0234),'$0.0234');assert.equal(money(0),'$0.00');assert.equal(money(NaN),'—');
+});
+
+test('context ring reports consumed percentage, exact values, unknowns and post-compaction estimates',()=>{
+ const html=render({panelId:'p',status:'Monitoring',input:183300,contextLimit:475000,contextPercent:38.5894736842});
+ assert.match(html,/aria-valuenow="38.5894736842"/);assert.match(html,/183,300 \/ 475,000 tokens/);assert.match(html,/stroke-dasharray="38.5894736842 100"/);assert.match(html,/183.3k \/ 475k/);
+ const unknown=render({panelId:'p',status:'Waiting'});assert.match(unknown,/Context utilization unavailable/);assert.doesNotMatch(unknown,/aria-valuenow|NaN/);
+ const compacted=render({panelId:'p',status:'Monitoring',contextPercent:10,awaitingPostCompactionCall:true});assert.match(compacted,/Approximately 10% consumed/);assert.match(compacted,/Estimated after compaction/);
+ const full=render({panelId:'p',status:'Monitoring',contextPercent:110});assert.match(full,/aria-valuenow="100"/);assert.match(full,/stroke-dasharray="100 100"/);
+});
+test('account allowances remain distinct from thread estimates and only critical resets are visible',()=>{
+ const state={panelId:'p',status:'Monitoring',usage:allowanceFixture,fiveHour:{used:96,reset:'2026-11-01T01:00:00Z',source:'live'},weekly:{used:20,reset:'2026-11-02T01:00:00Z',source:'catalogue',stale:true}};
+ const html=render(state);assert.match(html,/>4%<\/strong>/);assert.match(html,/>80%<\/strong>/);assert.match(html,/This thread: ≈12.9% used/);assert.match(html,/This thread: ≈2.1% used/);assert.equal((html.match(/class="critical-reset"/g)??[]).length,1);assert.match(html,/Account observation/);
+ const awaiting=render({...state,fiveHour:{...state.fiveHour,awaitingRefresh:true},weekly:undefined});assert.doesNotMatch(awaiting,/class="critical-reset"/);assert.match(awaiting,/Awaiting refresh/);assert.doesNotMatch(awaiting,/>4%<\/strong>/);
+});
+test('insights use one collapsed disclosure and retain finding, impact and recommendations inside',()=>{
+ const html=render({panelId:'p',status:'Monitoring',contextPercent:96});const insight=html.match(/<details class="efficiency-insights"[\s\S]*?<\/details>/)[0];const summary=insight.match(/<summary[\s\S]*?<\/summary>/)[0];assert.match(summary,/Efficiency insights: /);assert.match(summary,/Context approaching capacity/);assert.match(summary,/insight-chevron/);assert.doesNotMatch(summary,/<p>|Consider a new thread|96.0/);assert.doesNotMatch(insight,/<details[^>]* open/);assert.match(insight,/Review retained context/);
 });

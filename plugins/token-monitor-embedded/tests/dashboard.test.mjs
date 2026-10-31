@@ -20,7 +20,7 @@ test('mutually exclusive composition includes reasoning inside output',()=>{
 test('capacity, allowances, spending and cost chart appear in compact mode without duplicate summaries',()=>{
  const s={panelId:'p',status:'Monitoring',callCount:1,task:{id:'a',title:'Task'},selectedId:'a',contextPercent:50,input:100,contextLimit:200,fiveHour:{used:6},weekly:{used:49},samples:[],usage:{input:100,cached:60,cacheWrite:10,output:20,reasoning:8,cacheComplete:true,outputComplete:true,reasoningComplete:true,pricedCalls:1,unpricedCalls:0,cost:.12,cacheSavings:.05,costCategories:[.04,.01,.01,.02,.04,0],issues:[],models:['gpt-6.1-sol']}};
  const html=render(s);
- assert.ok(html.indexOf('header-controls')<html.indexOf('task-controls'));assert.ok(html.indexOf('Context window')<html.indexOf('Thread usage'));assert.ok(html.indexOf('Thread usage')<html.indexOf('Recent calls'));
+ assert.ok(html.indexOf('header-controls')<html.indexOf('thread-selector'));assert.ok(html.indexOf('Context window')<html.indexOf('Thread usage'));assert.ok(html.indexOf('Thread usage')<html.indexOf('Recent calls'));
  assert.equal((html.match(/Context window<\/h2>/g)??[]).length,1);assert.match(html,/5 Hour/);assert.match(html,/94%/);assert.match(html,/51%/);assert.match(html,/API-equivalent/);assert.match(html,/Token composition/);assert.match(html,/Cost composition/);assert.match(html,/aria-pressed="true">Cost/);assert.match(html,/Transcript reads are incremental/);assert.doesNotMatch(html,/Lock|locked|Unlock/);assert.doesNotMatch(html,/<details[^>]* open/g);
  const expanded=render(s,true);assert.match(expanded,/<details[^>]* open/g);assert.doesNotMatch(expanded,/>Compact<\/button>|>Expand<\/button>/);
 });
@@ -39,8 +39,8 @@ test('single latest-call bar sits between thread usage and the graph and expands
  assert.ok(html.indexOf('class="latest-call"')<html.indexOf('<svg'));
  assert.ok(html.indexOf('class="latest-call"')<html.indexOf('Exact call values'));
  const summary=bar.match(/<summary[\s\S]*?<\/summary>/)[0];
- assert.match(summary,/<b>100.0k<\/b> \(90%\)/);assert.match(summary,/<b>1.2k<\/b>/);
- assert.match(summary,/Cache warmth: WARM/);assert.match(summary,/34\/100/);
+ assert.match(summary,/<b>100.0k<\/b>/);assert.match(summary,/<b>1.2k<\/b>/);
+ assert.doesNotMatch(summary,/WARM|UNCERTAIN|CV|34\/100/);assert.match(bar,/Cache warmth: WARM/);assert.match(bar,/34\/100/);
  assert.match(bar,/Thinking/);assert.match(bar,/gpt-6.1-sol/);assert.match(bar,/Break-even<\/dt><dd>6 calls/);assert.match(bar,/Moderate/);assert.match(bar,/Default \(insufficient data\)/);assert.doesNotMatch(bar,/heuristic|Model-priced API break-even/);
  assert.equal((html.match(/Compaction Value ·/g)??[]).length,1);
  assert.match(render(latestFixture,true),/<details class="latest-call" open/);
@@ -49,10 +49,10 @@ test('latest call preserves unknown cache and output while recorded zeros remain
  const sample=latestFixture.samples[0];
  const summary=s=>render(s).match(/<details class="latest-call"[^>]*><summary[\s\S]*?<\/summary>/)[0];
  const missing=summary({...latestFixture,samples:[{...sample,cachedRecorded:false,outputRecorded:false}]});
- assert.match(missing,/\(—\)/);assert.match(missing,/<b>—<\/b>/);assert.doesNotMatch(missing,/90%/);
+ assert.doesNotMatch(missing,/90%/);assert.match(missing,/<b>—<\/b>/);assert.doesNotMatch(missing,/90%/);
  const zero=summary({...latestFixture,samples:[{...sample,cached:0,output:0}]});
- assert.match(zero,/\(0%\)/);assert.match(zero,/<b>0<\/b>/);
- const empty=summary({panelId:'p',status:'Waiting'});assert.match(empty,/Cache warmth: Unavailable/);assert.doesNotMatch(empty,/NaN|undefined/);
+ assert.doesNotMatch(zero,/NaN/);assert.match(zero,/<b>0<\/b>/);
+ const empty=summary({panelId:'p',status:'Waiting'});assert.match(empty,/Cost/);assert.doesNotMatch(empty,/NaN|undefined/);
 });
 
 const allowanceFixture={input:100,cached:60,cacheWrite:0,output:20,reasoning:8,cacheComplete:true,outputComplete:true,reasoningComplete:true,pricedCalls:200,unpricedCalls:0,cost:1,cacheSavings:0,costCategories:[1,0,0,0,0,0],issues:[],models:['gpt-6.1-sol'],cumulativeMismatch:false};
@@ -80,10 +80,10 @@ test('allowance estimates follow selected thread totals and preserve partial/unk
 test('interactive refresh and task controls remain enabled and omit the global expand button',()=>{
  const html=render({panelId:'p',status:'Monitoring',selectedId:'a',tasks:[{id:'a',title:'A'}]},false,true);
  const header=html.match(/<header>[\s\S]*?<\/header>/)[0];
- const picker=html.match(/<div class="task-controls">[\s\S]*?<\/select>/)[0];
- assert.match(header,/aria-label="Refresh monitor"/);
+ const picker=html.match(/<div class="thread-selector">[\s\S]*?<\/button>/)[0];
+ assert.match(header,/aria-label="Refresh metrics"/);
  assert.doesNotMatch(header,/disabled|>Expand<|>Compact</);
- assert.doesNotMatch(picker,/select disabled/);
+ assert.doesNotMatch(picker,/thread-trigger" disabled/);
 });
 
  test('update options occupy the version position and reflect available, dismissed and unknown states',()=>{
@@ -124,11 +124,11 @@ test('compaction forecast shows observed estimates, finite-horizon break-even an
  assert.doesNotMatch(html,/allowance-source|Live account|Local fallback|Waiting for allowance/);assert.match(html,/Live Codex account/);assert.match(html,/Stale/);assert.match(html,/may be incomplete/);assert.match(html,/Observed/);assert.match(html,/75%/);assert.match(html,/Awaiting refresh/);assert.doesNotMatch(html,/60% remaining|last observed in selected thread/);
  });
 
-test('historical KPI banner follows Latest call, stays collapsed and explains both scopes',()=>{
+test('historical KPI banner precedes Latest call, stays collapsed and explains both scopes',()=>{
  const summary={calls:10,priced:8,inputPriced:9,cost:.8,inputCost:.45,overhead:.08,costPerCall:.11,contextPerCall:.05,paybackRate:null,netSavings:0,evaluable:0,profitable:0,pending:1,excluded:0,inactivity:0};
  const data={activation:'2026-10-30T00:00:00Z',baseline:summary,baselineCalls:10,baselineProvisional:true,thread:summary,rolling:summary,threadRolling:summary,threadWeeks:[],threadModels:[],baselineModels:[],paybacks:[],periods:{7:{summary,models:[],weeks:[]}},progress:{processed:1,total:1,running:false,failed:0},pricingBasis:'fixture'};
  const html=render({...latestFixture,efficiency:data});
- assert.ok(html.indexOf('class="latest-call"')<html.indexOf('class="efficiency"'));
+ assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="latest-call"'));
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="history"'));
  assert.match(html,/Thread \$0.11/);assert.match(html,/All chats \$0.11/);assert.match(html,/Compaction payback/);assert.match(html,/N\/A/);assert.match(html,/provisional/);assert.match(html,/not a pre-TokenMonitor claim/);assert.match(html,/seven days without activity/);assert.doesNotMatch(html,/<details class="efficiency" open/);
 });

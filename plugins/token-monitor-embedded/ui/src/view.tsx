@@ -1,3 +1,4 @@
+import {ThreadPicker,Settings} from './controls.js';
 import {EfficiencyBanner} from './efficiency.js';
 import type {Efficiency} from '../../server/src/efficiency.js';
 import logo from '../../assets/icon.png';
@@ -5,14 +6,14 @@ import React, {useEffect,useState} from 'react';
 import {InspectionController,type Inspection} from './inspection.js';
 import {installedVersion} from '../../shared/version.js';
 import {displayName,isDev} from '../../shared/identity.js';
-import {UpdateMenu,type UpdateAction} from './updates.js';
+import {type UpdateAction} from './updates.js';
 import type {CompactionForecast,RollingEstimate,GrowthEstimate} from '../../server/src/metrics.js';
 import type {CallActivity} from '../../server/src/activity.js';
 import type {Allowance} from '../../server/src/allowances.js';
 import type {UpdateStatus} from '../../server/src/updates.js';
 import {categories, composition, number, exact, percent, money, threadAllowanceEstimate, type Price, type Usage} from './analytics.js';
 export {number} from './analytics.js';
-export type Sample = { activity?: CallActivity; model?: string; serviceTier?: string; cachedRecorded?: boolean; cacheWriteRecorded?: boolean; price?: Price; ordinal?: number; timestamp: string; input: number; cached: number; output: number; reasoning: number; cacheWrite?: number; outputRecorded?: boolean; reasoningRecorded?: boolean };
+export type Sample = { effort?:string; regionalProcessing?:boolean;  activity?: CallActivity; model?: string; serviceTier?: string; cachedRecorded?: boolean; cacheWriteRecorded?: boolean; price?: Price; ordinal?: number; timestamp: string; input: number; cached: number; output: number; reasoning: number; cacheWrite?: number; outputRecorded?: boolean; reasoningRecorded?: boolean };
 export type Task = { id: string; title: string; workspace?: string;archived?:boolean };
 export type Monitor = { panelId: string; revision?: string; unchanged?: boolean; task?: Task; selectedId?: string;
   efficiency?:Efficiency; status: string; selectionSource?: string; followingMode?: string; disconnected?: boolean;
@@ -29,6 +30,7 @@ const quota = (a?: Allowance) => a?.awaitingRefresh ? 'Awaiting refresh' : a ? p
 const attributionHelp = 'Estimate from recorded tool arguments and result text, about 4 characters per token, bounded by latest input. Covers retained history, not the entire session. Wrapped calls count once. Images, hidden tool schemas and skill catalogs are excluded. Compaction summaries cannot be attributed.';
 const cacheHelp = 'Predicted cache availability before the next call: warm under 30 minutes; uncertain through 120 minutes; presumed cold afterward. Actual cache reuse may differ.';
 const compactionHelp = 'Compaction Value estimates the percentage of avoidable context-processing cost saved over the next 20 calls, including compaction overhead and long-context pricing.';
+function resourceColor(percent?:number){return percent==null?'var(--muted)':percent>=95?'var(--health-red)':percent>=85?'var(--health-amber)':'var(--ink)';}
 function health(level = 0) {
   const stops = ['var(--ink)','var(--health-amber)','var(--health-orange)','var(--health-red)'];
   const x = Math.min(3,Math.max(0,level)), i = Math.min(2,Math.floor(x));
@@ -77,18 +79,13 @@ function LatestCall({s, expanded}: {s: Monitor; expanded: boolean}) {
   const fresh=last&&cached!=null?last.input-cached:undefined;
   const cachedPercent=last?.input&&cached!=null?cached/last.input*100:undefined;
   const freshPercent=last?.input&&fresh!=null?fresh/last.input*100:undefined;
-  const warmthColor=s.cacheTemperature==='WARM'?'var(--green)':s.cacheTemperature==='UNCERTAIN'?health(1):s.cacheTemperature?health(2.5):'var(--muted)';
   return <details className="latest-call" open={expanded}>
     <summary title="Expand latest call details and compaction value"><span className="latest-bar">
-      <strong>Latest<span className="wide-label"> call</span></strong>
-      <span title={`Latest call input: ${exact(last?.input)} tokens; ${percent(cachedPercent)} cached`}><span className="wide-label">Input</span><span className="narrow-label">In</span> <b>{number(last?.input)}</b> ({percent(cachedPercent)})</span>
-      <span className="bar-divider" aria-hidden="true">|</span>
-      <span title="Latest call output, including thinking"><span className="wide-label">Output</span><span className="narrow-label">Out</span> <b>{number(last?.outputRecorded===false?undefined:last?.output)}</b></span>
-      <span className="bar-divider" aria-hidden="true">|</span>
-      <span title={cacheHelp} aria-label={`Cache warmth: ${s.cacheTemperature??'Unavailable'}`} style={{color:warmthColor}}><i className="warmth-dot" aria-hidden="true"/>{s.cacheTemperature??'—'}</span>
-      <span className="bar-divider" aria-hidden="true">|</span>
-      <span title={compactionHelp} aria-label={`Compaction value: ${value?.category??'Unavailable'}`}><span>CV</span> <b style={{color:health(value?.score==null?0:value.score/100*3)}}>{value?.score==null?'—':`${value.score}/100`}</b></span>
-    </span></summary><div className="latest-body"><h2>Latest call · {money(last?.price?.total)}</h2>{!last&&<p>Waiting for the first recorded call.</p>}<dl className="metrics"><Metric label={`Cached (${percent(cachedPercent)})`} value={cached}/><Metric label={`Fresh (${percent(freshPercent)})`} value={fresh}/><Metric label="Input" value={last?.input}/><Metric label="Output (incl. thinking)" value={last?.outputRecorded===false?undefined:last?.output}/><Metric label="Thinking" value={last?.reasoningRecorded===false?undefined:last?.reasoning}/><Metric label="Cache write" value={last?.cacheWriteRecorded===false?undefined:last?.cacheWrite}/></dl><p title={cacheHelp}>Cache <b style={{color:warmthColor}}>{s.cacheTemperature??'—'}</b>. {cacheHelp}</p><p>{last?.model??'Model unknown'} · {last?.serviceTier??'Standard assumed'} · {time(last?.timestamp)}</p>{last?.price?.rates&&<p>USD / 1M: input {money(last.price.rates.input)}, read {money(last.price.rates.cached)}, write {money(last.price.rates.write)}, output {money(last.price.rates.output)}.</p>}
+      <strong>Latest call</strong>
+      <span title="Latest input tokens">Input <b>{number(last?.input)}</b></span>
+      <span title="Output includes reasoning">Output <b>{number(last?.outputRecorded===false?undefined:last?.output)}</b></span>
+      <span>Cost <b>{money(last?.price?.total)}</b></span>
+    </span></summary><div className="latest-body"><p>Cache warmth: {s.cacheTemperature??'Unavailable'}. {cacheHelp} UNCERTAIN means cache availability is unknown; it does not establish a cache miss.</p><h2>Latest call · {money(last?.price?.total)}</h2>{!last&&<p>Waiting for the first recorded call.</p>}<dl className="metrics"><Metric label={`Cached (${percent(cachedPercent)})`} value={cached}/><Metric label={`Fresh (${percent(freshPercent)})`} value={fresh}/><Metric label="Input" value={last?.input}/><Metric label="Output (incl. thinking)" value={last?.outputRecorded===false?undefined:last?.output}/><Metric label="Thinking" value={last?.reasoningRecorded===false?undefined:last?.reasoning}/><Metric label="Cache write" value={last?.cacheWriteRecorded===false?undefined:last?.cacheWrite}/></dl><p title={cacheHelp}>Cache <b className="muted">{s.cacheTemperature??'—'}</b>. {cacheHelp}</p><p>{last?.model??'Model unknown'} · {last?.serviceTier??'Standard assumed'} · {time(last?.timestamp)}</p>{last?.price?.rates&&<p>USD / 1M: input {money(last.price.rates.input)}, read {money(last.price.rates.cached)}, write {money(last.price.rates.write)}, output {money(last.price.rates.output)}.</p>}
     {last?.price?.issue&&<p className="warning">{last.price.issue}</p>}
     <CompactionDetails value={value}/>
     </div></details>;
@@ -106,7 +103,7 @@ function growthSource(estimate?:GrowthEstimate) {
 }
 function CompactionDetails({value:v}:{value?:CompactionForecast}) {
   const available=v?.status==='available';
-  return <div className="latest-compaction"><h2 title={compactionHelp}>Compaction Value · <b style={{color:health(v?.score==null?0:v.score/100*3)}}>{v?.score==null?'—':`${v.score}/100`}</b>{v&&` · ${v.category}`}</h2>
+  return <div className="latest-compaction"><h2 title={compactionHelp}>Compaction Value · <b >{v?.score==null?'—':`${v.score}/100`}</b>{v&&` · ${v.category}`}</h2>
     <p>{compactionHelp}</p>
     {v?.limitation&&<p className="warning">{v.limitation}{v.status==='limited'?` (${v.completedCalls}/${v.horizonCalls} calls possible).`:''}</p>}
     <dl className="details-grid">
@@ -185,20 +182,13 @@ function History({s}: {s: Monitor}) {
 export function MonitorView({s, expanded, scale, error='', onAction, onLayout, storage='host widget state', updates, onUpdate, updateError,onFilter}:
  {updates?:UpdateStatus;onUpdate?:(action:UpdateAction)=>void;updateError?:string;s:Monitor; expanded:boolean; scale:number; error?:string; onAction?:(action?:'select'|'rescan',taskId?:string)=>void;onFilter?:(query:string,includeArchived:boolean)=>void; onLayout?:(expanded:boolean,scale:number)=>void; storage?:string}) {
   const a=s.attribution, attributed=a?.contributors.reduce((sum,c)=>sum+c.tokens,0)??0;
-  const [query,setQuery]=useState(''),[archives,setArchives]=useState(false);
-  useEffect(()=>{const timer=setTimeout(()=>onFilter?.(query,archives),200);return ()=>clearTimeout(timer);},[query,archives]);
-  const tasks=[...(s.tasks??[])];if(s.task&&!tasks.some(t=>t.id===s.task?.id))tasks.unshift(s.task);
   return <main className={`monitor ${expanded?'expanded':'compact'}`} style={{fontSize:`${scale*85}%`}}>
-    <header><div className="brand"><img className="brand-logo" src={logo} alt={displayName} title={displayName}/>{isDev?<span className="version">{installedVersion}</span>:<UpdateMenu value={updates} onAction={onUpdate} error={updateError}/>}</div><div className="header-controls"><label title="Scale dashboard text and spacing">Scale <select aria-label="Layout scale" value={scale} onChange={e=>onLayout?.(expanded,Number(e.target.value))}><option value="0.85">85%</option><option value="1">100%</option><option value={1/.85}>118%</option><option value={1.15/.85}>135%</option></select></label><button disabled={!onAction} onClick={()=>onAction?.()} aria-label="Refresh monitor" title="Refresh local metrics and task list">↻</button></div></header>
-    {onFilter&&<div className="discovery-controls"><input aria-label="Search threads" placeholder="Search local threads" value={query} maxLength={200} onChange={e=>setQuery(e.target.value)}/><label><input type="checkbox" checked={archives} onChange={e=>setArchives(e.target.checked)}/> Include archived</label><button disabled={s.discovery?.state==='scanning'} onClick={()=>onAction?.('rescan')}>Rescan threads</button></div>}
+    <header><div className="brand"><img className="brand-logo" src={logo} alt=""/><strong>{displayName}</strong></div><div className="header-controls"><button disabled={!onAction||s.discovery?.state==='scanning'} onClick={()=>onAction?.('rescan')} title="Discover restored and newly available local transcripts">Rescan threads</button><button disabled={!onAction} onClick={()=>onAction?.()} aria-label="Refresh metrics" title="Refresh current telemetry">↻</button><Settings expanded={expanded} scale={scale} onLayout={onLayout} updates={updates} onUpdate={onUpdate} error={updateError}/></div><ThreadPicker s={s} onSelect={onAction?id=>onAction('select',id):undefined} onFilter={onFilter}/></header>
     {s.discovery?.targeting&&<p className="hint" role="status">Looking for the current local thread…</p>}
-    {s.discovery?.state==='scanning'&&<p className="hint" role="status">Discovering local threads…</p>}
-    {s.matchCount!==undefined&&<p className="hint">{s.shownCount} of {s.matchCount} matches</p>}
-    <div className="task-controls"><label className="task-picker"><span className="sr-only">Monitored task</span><select disabled={!onAction||!tasks.length} value={s.selectedId??''} onChange={e=>onAction?.('select',e.target.value)} title={`Select monitored thread: ${s.task?.title??'Waiting'}`}><option value="" disabled>Waiting for local task…</option>{tasks.map(t=><option key={t.id} value={t.id}>{t.archived?'Archived · ':''}{t.title} · {t.id.slice(-8)}</option>)}</select></label></div>
-    <section className="capacity" aria-label="Thread capacity and account allowances"><div className="section-title"><h2 title="Selected thread's latest reported context occupancy; not cumulative usage">Context window{s.awaitingPostCompactionCall?' ≈':''}</h2><span style={{color:health(s.contextHealth)}} title={`${exact(s.input)} / ${exact(s.contextLimit)} tokens`}>{number(s.input)} / {number(s.contextLimit)} · {percent(s.contextPercent)}</span></div><progress aria-label="Context window used" value={Math.min(100,Math.max(0,s.contextPercent??0))} max="100" style={{'--context-color':health(s.contextHealth)} as React.CSSProperties}/><div className="allowances" aria-label="Account subscription allowances">{[['5 Hour',s.fiveHour],['Weekly',s.weekly]].map(([label,v])=>{const q=v as Monitor['fiveHour'];return <div key={label as string} title={`Account-level subscription allowance · ${q?.source==='live'?'Live Codex account':q?.source==='catalogue'?'Local catalogue fallback (may be incomplete)':'Source unavailable'} · Observed ${time(q?.observedAt)}${q?.stale?' · Stale':''}`}><div><b>{label as string}:</b> {quota(q)}{q?.awaitingRefresh?'':' remaining'}</div><small>Resets {time(q?.reset)}</small></div>;})}</div></section>
+    <section className="capacity" aria-label="Thread capacity and account allowances"><div className="section-title"><h2 title="Selected thread's latest reported context occupancy; not cumulative usage">Context window{s.awaitingPostCompactionCall?' ≈':''}</h2><span style={{color:resourceColor(s.contextPercent)}} title={`${exact(s.input)} / ${exact(s.contextLimit)} tokens`}>{number(s.input)} / {number(s.contextLimit)} · {percent(s.contextPercent)}</span></div><progress aria-label="Context window used" value={Math.min(100,Math.max(0,s.contextPercent??0))} max="100" style={{'--context-color':resourceColor(s.contextPercent)} as React.CSSProperties}/><div className="allowances" aria-label="Account subscription allowances">{[['5 Hour',s.fiveHour],['Weekly',s.weekly]].map(([label,v])=>{const q=v as Monitor['fiveHour'];return <div key={label as string} style={{color:resourceColor(q?.awaitingRefresh?undefined:q?.used)}} title={`Account-level subscription allowance · ${q?.source==='live'?'Live Codex account':q?.source==='catalogue'?'Local catalogue fallback (may be incomplete)':'Source unavailable'} · Observed ${time(q?.observedAt)}${q?.stale?' · Stale':''}`}><div><b>{label as string}:</b> {quota(q)}{q?.awaitingRefresh?'':' remaining'}</div><small>Resets {time(q?.reset)}</small></div>;})}</div></section>
     <div className="following"><span className={s.disconnected||s.available===false?'offline':'live'}/>{s.followingMode==='host-chat'?'Following this chat':'Following latest hook activity'}{s.selectionSource==='manual'?' · inspecting another task':''}<span className="model" title={`${s.model??'Model unknown'} · ${s.effort??'Effort unknown'}`}>{s.model??'Model unknown'} · {s.effort??'—'}</span></div>
     {(error||s.disconnected||s.available===false||!s.task||s.isCompacting)&&<p className="status" role="status">{error||s.status}</p>}
-    <ThreadSummary u={s.usage} calls={s.callCount??0} reported={s.outputTotals}/><LatestCall s={s} expanded={expanded}/><EfficiencyBanner data={s.efficiency}/><History key={s.selectedId??s.task?.id??s.panelId} s={s}/>
+    <ThreadSummary u={s.usage} calls={s.callCount??0} reported={s.outputTotals}/><EfficiencyBanner data={s.efficiency}/><LatestCall s={s} expanded={expanded}/><History key={s.selectedId??s.task?.id??s.panelId} s={s}/>
     <details className="attribution" open={expanded}><summary title={attributionHelp}>Skills &amp; tools · {a?.skillCount??0} skills · {a?.callCount??0} calls · ≈{number(a?attributed:undefined)} ({s.input&&a?percent(attributed/s.input*100):'—'} of context)</summary><p>{attributionHelp}</p><ul>{a?.contributors.map(c=><li key={c.name}><span title={c.name}>{c.name}</span><span>{c.calls} calls · ≈{number(c.tokens)} · {s.input?percent(c.tokens/s.input*100):'—'}</span></li>)}</ul><p>{a?.afterCompaction?'Since compaction; summary attribution unavailable.':'Estimated contribution; actual retained context may differ.'}</p></details>
     <details><summary title="Selected local task metadata">Task details</summary><dl className="details-grid"><dt>Session</dt><dd>{s.task?.id??'—'}</dd><dt>Workspace</dt><dd>{s.task?.workspace??'—'}</dd><dt>Last call</dt><dd>{time(s.lastCall)}</dd><dt>Last event</dt><dd>{time(s.lastEvent)}</dd><dt>Status</dt><dd>{s.status}</dd></dl></details>
     <footer><span>{s.isCompacting?'Compacting…':s.awaitingPostCompactionCall?'Compacted · waiting for next call':`Call ${s.callCount??0}`}</span><time title={time(s.lastCall)}>{s.lastCall?new Date(s.lastCall).toLocaleTimeString():'No call yet'}</time></footer>

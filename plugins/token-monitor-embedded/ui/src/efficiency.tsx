@@ -7,7 +7,9 @@ import {costAssessment,paybackAssessment,defaultThresholds,type Thresholds,type 
 import type {Comparison,Comparisons} from '../../server/src/comparisons.js';
 function KpiValue({value,assessment,comparison,primary=false}:{value:string;assessment:Assessment;comparison?:Comparison;primary?:boolean}) {
  const delta=comparison?.delta;
- return <span className={`kpi-value ${primary?'primary':''} tone-${assessment.tone}`}><b>{value}</b><small title={comparison?.reason??assessment.label}>{comparison&&delta!=null?<>{delta<0?'↓':delta>0?'↑':'→'} {Math.abs(delta).toFixed(1)}%{comparison.provisional?' · provisional':''}</>:assessment.label==='No evaluable events'?'':assessment.label}</small><span className="sr-only">{assessment.label}</span></span>;
+ const provisional=comparison?.provisional||assessment.label==='Provisional';
+ const hasDelta=comparison&&delta!=null;
+ return <span className={`kpi-value ${primary?'primary':''}`}><b>{value}</b>{(hasDelta||provisional)&&<small className={`kpi-badge tone-${assessment.tone}`} title={comparison?.reason??assessment.label}>{hasDelta&&<>{delta<0?'↓':delta>0?'↑':'→'} {Math.abs(delta).toFixed(1)}%</>}{provisional&&<span>Provisional</span>}</small>}<span className="sr-only">{assessment.label}</span></span>;
 }
 function KpiSummary({thread,all,comparisons,thresholds}:{thread?:Summary;all?:Summary;comparisons?:{thread?:Comparisons;all?:Comparisons};thresholds:Thresholds}) {
  const rows=[{label:'Thread',s:thread,c:comparisons?.thread},{label:'All chats',s:all,c:comparisons?.all}];

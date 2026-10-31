@@ -72,7 +72,7 @@ test('allowance estimates follow selected thread totals and preserve partial/unk
  assert.match(row(renderUsage({...allowanceFixture,cost:2})),/≈25.8%/);
  assert.match(row(renderUsage({...allowanceFixture,unpricedCalls:1})),/partial/);
  assert.match(row(renderUsage({...allowanceFixture,cumulativeMismatch:true})),/partial/);
- const unknown=row(renderUsage({...allowanceFixture,pricedCalls:0}));assert.match(unknown,/This thread: —/);assert.doesNotMatch(unknown,/≈0%/);
+ const unknown=row(renderUsage({...allowanceFixture,pricedCalls:0}));assert.match(unknown,/Est. —/);assert.doesNotMatch(unknown,/≈0%/);
  assert.match(row(renderUsage({...allowanceFixture,cost:0})),/≈0%/);
  assert.doesNotMatch(row(renderUsage(undefined)),/NaN|undefined|≈0%/);
 });
@@ -136,9 +136,9 @@ test('historical KPI banner precedes Latest call, stays collapsed and explains b
 test('collapsed KPI summary has shared labels, three headers and no definitions',()=>{
  const html=render({panelId:'p',status:'Waiting'});const summary=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
  for(const label of ['Thread','All chats','Cost / call','Context / call','Compaction payback'])assert.equal(summary.split('>'+label+'<').length-1,1,label);
- assert.doesNotMatch(summary,/formula|baseline|input cost|<p>/i);assert.match(html,/Still gathering comparable history/);
+ assert.doesNotMatch(summary,/formula|baseline|input cost|<p>/i);assert.doesNotMatch(html,/Still gathering comparable history|class="efficiency-insights"/);
  assert.doesNotMatch(html,/Search local threads|Include archived|of .* matches/);
- assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="efficiency-insights"'));assert.ok(html.indexOf('class="efficiency-insights"')<html.indexOf('class="latest-call"'));
+ assert.doesNotMatch(html,/class="efficiency-insights"/);
 });
 test('decimal formatting preserves small positive and negative dollar differences',()=>{
  assert.equal(money(.000001),'$0.000001');assert.equal(money(.000002),'$0.000002');assert.equal(money(-.000001),'−$0.000001');assert.equal(money(.0000001),'<$0.000001');assert.equal(money(.0234),'$0.0234');assert.equal(money(0),'$0.00');assert.equal(money(NaN),'—');
@@ -153,7 +153,7 @@ test('context ring reports consumed percentage, exact values, unknowns and post-
 });
 test('account allowances remain distinct from thread estimates and only critical resets are visible',()=>{
  const state={panelId:'p',status:'Monitoring',usage:allowanceFixture,fiveHour:{used:96,reset:'2026-11-01T01:00:00Z',source:'live'},weekly:{used:20,reset:'2026-11-02T01:00:00Z',source:'catalogue',stale:true}};
- const html=render(state);assert.match(html,/>4%<\/strong>/);assert.match(html,/>80%<\/strong>/);assert.match(html,/This thread: ≈12.9% used/);assert.match(html,/This thread: ≈2.1% used/);assert.equal((html.match(/class="critical-reset"/g)??[]).length,1);assert.match(html,/Account-level subscription allowance/);assert.doesNotMatch(html,/Account observation/);
+ const html=render(state);assert.match(html,/>4%<\/strong>/);assert.match(html,/>80%<\/strong>/);assert.match(html,/Est. ≈12.9% used/);assert.match(html,/Est. ≈2.1% used/);assert.equal((html.match(/class="critical-reset"/g)??[]).length,1);assert.match(html,/Account-level subscription allowance/);assert.doesNotMatch(html,/Account observation/);
  const awaiting=render({...state,fiveHour:{...state.fiveHour,awaitingRefresh:true},weekly:undefined});assert.doesNotMatch(awaiting,/class="critical-reset"/);assert.match(awaiting,/Awaiting refresh/);assert.doesNotMatch(awaiting,/>4%<\/strong>/);
 });
 test('insights use one collapsed disclosure and retain finding, impact and recommendations inside',()=>{
@@ -168,4 +168,12 @@ test('compaction value restores the original increasing health color scale in su
   assert.match(summaryColor,/color-mix/);assert.equal(summaryColor,detailColor);assert.notEqual(summaryColor,previous);previous=summaryColor;
   if(score===100)assert.match(summaryColor,/var\(--health-red\)/);
  }
+});
+
+test('actionable insights precede thread usage while empty and healthy placeholders are hidden',()=>{
+ const html=render({panelId:'p',status:'Monitoring',contextPercent:95});assert.ok(html.indexOf('</header>')<html.indexOf('class="efficiency-insights"'));assert.ok(html.indexOf('class="efficiency-insights"')<html.indexOf('class="thread-usage"'));
+ assert.doesNotMatch(render({panelId:'p',status:'Waiting'}),/class="efficiency-insights"/);
+});
+test('thread allowance estimate leads account remaining in each group',()=>{
+ const html=render({panelId:'p',status:'Monitoring',usage:allowanceFixture,fiveHour:{used:7},weekly:{used:20}});const group=html.match(/<div class="allowance-group"[\s\S]*?(?=<div class="allowance-group")/)[0];assert.ok(group.indexOf('Est. ≈12.9% used')<group.indexOf('93%'));assert.match(group,/class="thread-contribution"/);
 });

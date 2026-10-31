@@ -12,12 +12,22 @@ test('weighted cohorts compare like models without changing overall spending',()
  const r=compareCohorts(current,baseline,true);assert.ok(Math.abs(r.cost.delta)<1e-10);assert.equal(r.cost.provisional,false);assert.equal(r.cost.coverage,1);
  assert.ok(Math.abs(r.context.delta)<1e-10);assert.equal(r.cache.current,90);
 });
-test('effort, pricing band, tier and missing metadata prevent misleading assessments',()=>{
- for(const extra of [{effort:undefined},{effort:'low'},{model:'unknown'},{input:300000,cached:290000},{serviceTier:'priority'},{regionalProcessing:true}]){
+test('different or missing model and effort prevent comparable assessments',()=>{
+ for(const extra of [{effort:undefined},{effort:'low'},{model:undefined},{model:'unknown'}]){
   const r=compareCohorts(calls(20,extra),calls(100),true);assert.equal(r.cost.provisional,true);assert.equal(r.cost.coverage,0);
  }
- assert.equal(compareCohorts(calls(20,{serviceTier:'auto'}),calls(100),true).cost.provisional,false);
- assert.equal(compareCohorts(calls(20,{serviceTier:'fast'}),calls(100,{serviceTier:'priority'}),true).cost.provisional,false);
+ });
+test('cohorts ignore tier, region and pricing band while retaining their cost effects',()=>{
+ for(const extra of [{serviceTier:'auto'},{serviceTier:'priority'},{serviceTier:'fast'},{serviceTier:'batch'},{regionalProcessing:true},{input:300000,cached:290000}]){
+  const current=calls(20,extra),baseline=calls(100);
+  const r=compareCohorts(current,baseline,true);
+  for(const metric of ['cost','context','cache']){assert.equal(r[metric].provisional,false);assert.equal(r[metric].coverage,1);assert.equal(r[metric].baselineCalls,100);}
+  assert.ok(Math.abs(r.cost.current-current[0].cost)<1e-10);
+  assert.ok(Math.abs(r.cost.reference-baseline[0].cost)<1e-10);
+  if(extra.serviceTier!=='auto')assert.notEqual(r.cost.delta,0);
+ }
+ const missingBand=calls(20).map(({rateBand,...rest})=>rest);
+ assert.equal(compareCohorts(missingBand,calls(100),true).cost.provisional,false);
 });
 test('sample, import, pricing and zero-reference gates are neutral',()=>{
  assert.equal(compareCohorts(calls(19),calls(100),true).cost.provisional,true);

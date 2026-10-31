@@ -7,11 +7,11 @@ export type Comparison = {
 };
 export type Comparisons = {cost: Comparison; context: Comparison; cache: Comparison};
 
-// Rate identity separates long-context bands without relying on aggregated token totals.
+// Cohorts intentionally match only recorded model and reasoning effort.
+// Tier, region and input-dependent rates still determine each call's cost.
 function cohort(b: Bucket): string | undefined {
-  if (!b.model || !b.effort || !b.rateBand) return;
-  const tier = ['fast','priority'].includes(b.serviceTier?.toLowerCase()??'')?'priority':!b.serviceTier || ['auto','automatic','default','standard'].includes(b.serviceTier.toLowerCase()) ? 'standard' : b.serviceTier.toLowerCase();
-  return JSON.stringify([b.model,b.effort,tier,b.regionalProcessing === true,b.rateBand]);
+  if (!b.model || !b.effort) return;
+  return JSON.stringify([b.model,b.effort]);
 }
 export function compareCohorts(current: Bucket[], baseline: Bucket[], ready: boolean): Comparisons {
   function compare(metric: 'cost' | 'context' | 'cache'): Comparison {
@@ -37,7 +37,7 @@ export function compareCohorts(current: Bucket[], baseline: Bucket[], ready: boo
     const coverage=total?calls/total:0;
     const completePricing=current.every(b=>count(b)===b.calls);
     const provisional=!ready||!sufficient||coverage<1||!completePricing||!calls;
-    const reason=!total?'No qualifying calls':coverage<1?'Missing comparable model, effort, or pricing cohort':!completePricing?'Partial pricing coverage':!ready?'Baseline import is provisional':!sufficient?'At least 20 current and baseline calls are required per cohort':undefined;
+    const reason=!total?'No qualifying calls':coverage<1?'Missing comparable model or effort cohort':!completePricing?'Partial pricing coverage':!ready?'Baseline import is provisional':!sufficient?'At least 20 current and baseline calls are required per cohort':undefined;
     return {current:a,reference:r,delta:a!=null&&r!=null&&r>0?(a-r)/r*100:null,currentCalls:total,baselineCalls:baseCalls,coverage,provisional,reason};
   }
   return {cost:compare('cost'),context:compare('context'),cache:compare('cache')};

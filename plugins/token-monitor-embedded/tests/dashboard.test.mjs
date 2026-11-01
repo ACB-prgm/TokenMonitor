@@ -209,7 +209,7 @@ test('KPI deltas equal the visible Thread and Comp values without cohort weighti
  const summary=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
  assert.ok(summary.indexOf('Context / call')<summary.indexOf('Cost / call'));
  assert.match(summary,/↑ 50.0/);assert.match(summary,/100.0/);
- assert.match(summary,/1\/2 \(50%\)/);assert.doesNotMatch(summary,/\bpending\b/i);assert.match(html,/Pending compactions: Thread 1 · Comp 1/);
+ assert.match(summary,/1\/2 \(50%\)/);assert.doesNotMatch(summary,/\bpending\b/i);assert.match(html,/Pending compactions: Thread 1 · Comp \(Last 7 days\) 1/);
  assert.doesNotMatch(summary,/tone-bad|tone-amber/);
  const missing=render({panelId:'p',status:'Waiting'});assert.doesNotMatch(missing,/N\/A|NaN/);
 });

@@ -130,7 +130,7 @@ test('historical KPI banner precedes Latest call, stays collapsed and explains b
  const html=render({...latestFixture,efficiency:data});
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="latest-call"'));
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="history"'));
- assert.match(html,/kpi-row-label">Thread/);assert.match(html,/kpi-row-label">All chats/);assert.match(html,/\$0.11/);assert.match(html,/Compaction payback/);assert.match(html,/N\/A/);assert.match(html,/Provisional/);assert.match(html,/not a pre-TokenMonitor claim/);assert.match(html,/seven days without activity/);assert.doesNotMatch(html,/<details class="efficiency" open/);
+ assert.match(html,/kpi-row-label">Thread/);assert.match(html,/kpi-row-label">All chats/);assert.match(html,/\$0.11/);assert.match(html,/Compaction payback/);assert.match(html,/N\/A/);assert.match(html,/Provisional/);assert.match(html,/Total input cost ÷ calls with priceable input/);assert.match(html,/Share of completed, evaluable compactions/);assert.doesNotMatch(html,/<details class="efficiency" open/);
 });
 
 test('collapsed KPI summary has shared labels, three headers and no definitions',()=>{
@@ -186,5 +186,18 @@ test('thread allowance estimate leads account remaining in each group',()=>{
  const html=render({...latestFixture,efficiency:data});const collapsed=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
  assert.equal((collapsed.match(/class="provisional-mark"/g)??[]).length,6);
  assert.equal((collapsed.match(/class="kpi-badge tone-neutral"/g)??[]).length,4);
- assert.doesNotMatch(collapsed.replace(/<span class="sr-only">[^<]*<\/span>/g,''),/>Provisional</);assert.match(html,/\* Provisional<\/strong> means/);assert.match(html,/20 current and 20 reference/);assert.match(html,/five by default/);assert.match(html,/10 current \/ 100 reference calls/);assert.match(html,/excludes the selected chat/);assert.match(html,/Context\/call and cache-read share match model only/);assert.doesNotMatch(html,/Fixed reference|Cost \/ context change/);
+ assert.doesNotMatch(collapsed.replace(/<span class="sr-only">[^<]*<\/span>/g,''),/>Provisional</);assert.match(html,/\* Provisional:<\/strong>/);assert.match(html,/20 current and 20 reference/);assert.match(html,/5 completed, evaluable events/);assert.match(html,/10 current \/ 100 reference calls/);assert.match(html,/Thread uses other chats/);assert.match(html,/context cost matches model/);assert.doesNotMatch(html,/Fixed reference|Cost \/ context change/);
  });
+
+test('expanded KPI guide has only three definitions, formulas and numeric substitutions',()=>{
+ const summary={calls:10,priced:10,inputPriced:10,cost:.274,inputCost:.218,overhead:.01,costPerCall:.0284,contextPerCall:.0218,paybackRate:50,netSavings:-.001234,evaluable:6,profitable:3};
+ const html=render({panelId:'p',status:'Monitoring',efficiency:{thread:summary,periods:{7:{summary}}}});
+ const guide=html.match(/<div class="efficiency-details kpi-guide">[\s\S]*?<\/dl>/)[0];
+ assert.equal((guide.match(/<dt>/g)??[]).length,3);assert.match(guide,/Context \/ call <span>\(USD\)/);
+ assert.match(guide,/fresh, cached and cache-write input/);assert.match(guide,/output and reasoning tokens are excluded/);
+ assert.match(guide,/Thread: \$0.284 \/ 10 = \$0.0284/);assert.match(guide,/Thread: \$0.218 \/ 10 = \$0.0218/);assert.match(guide,/3 \/ 6 × 100 = 50%/);
+ assert.match(guide,/Final net savings: Thread −\$0.001234/);assert.match(guide,/Exact numerator: 0.218 USD/);
+ assert.doesNotMatch(guide,/<table|<details|Model breakdown|Weekly historical trend|Thread compaction results|historical reference/);
+ assert.match(html,/All chats period/);
+ const loading=render({panelId:'p',status:'Waiting'});assert.match(loading,/Historical analytics are loading/);assert.doesNotMatch(loading,/NaN|undefined/);
+});

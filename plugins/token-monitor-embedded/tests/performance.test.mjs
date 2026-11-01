@@ -36,3 +36,14 @@ test('cache insight uses percentage points and provisional observations never in
  assert.equal(efficiencyInsights(s)[0].id,'cache');s.efficiency.comparisons.thread.cache.current=70.01;assert.equal(efficiencyInsights(s)[0].id,'healthy');
  assert.equal(efficiencyInsights({})[0].id,'gathering');assert.equal(efficiencyInsights({contextPercent:90})[0].id,'capacity');
 });
+
+const forecastState=(epoch=4)=>state({available:true,compactionTurnPayback:{status:'available',turns:4,calls:6,epochCompleted:epoch,threadTurns:5,historyTurns:20,threadMean:4,historyMean:2,bufferedMean:1.5,source:'both',buffer:.75,netSavingsUsd:.1}});
+test('compaction guidance appears at equality and above epoch threshold, never earlier',()=>{
+ for(const [epoch,expected] of [[3,false],[4,true],[5,true]]){const list=efficiencyInsights(forecastState(epoch));assert.equal(list.some(i=>i.id==='compaction-forecast'),expected);}
+ const item=efficiencyInsights(forecastState())[0];assert.match(item.title,/≈4 more turns/);assert.match(item.recommendation,/Continuing work that needs this chat’s context/);assert.match(item.recommendation,/Starting unrelated work/);assert.match(item.details.map(d=>d.value).join(' '),/heuristic, not a statistical confidence bound/);
+ for(const extra of [{available:false},{disconnected:true},{compactionTurnPayback:{status:'unavailable',turns:4,epochCompleted:5}},{compactionTurnPayback:undefined}])assert.equal(efficiencyInsights({...forecastState(),...extra}).some(i=>i.id==='compaction-forecast'),false);
+});
+test('capacity and negative completed compaction economics precede turn guidance, which precedes context findings',()=>{
+ const s=forecastState();s.contextPercent=95;s.efficiency.thread={evaluable:5,netSavings:-1};s.efficiency.comparisons.thread.context=comparison(30);
+ assert.deepEqual(efficiencyInsights(s).map(i=>i.id),['capacity','compaction']);s.contextPercent=20;assert.deepEqual(efficiencyInsights(s).map(i=>i.id),['compaction','compaction-forecast']);s.efficiency.thread.netSavings=0;assert.deepEqual(efficiencyInsights(s).map(i=>i.id),['compaction-forecast','context']);
+});

@@ -1,3 +1,4 @@
+import type {TurnStats,TurnPayback} from '../../server/src/turns.js';
 import {compareCohorts} from '../../server/src/comparisons.js';
 import type {Bucket} from '../../server/src/efficiency.js';
 import {loadThresholds,saveThresholds} from './performance.js';
@@ -5,11 +6,10 @@ import {EfficiencyInsights} from './insights.js';
 import {ThreadPicker,Settings,ThresholdEditor} from './controls.js';
 import {EfficiencyBanner} from './efficiency.js';
 import type {Efficiency} from '../../server/src/efficiency.js';
-import logo from '../../assets/icon.png';
-import React, {useEffect,useState} from 'react';
+import React, {useEffect,useState,useId} from 'react';
 import {InspectionController,type Inspection} from './inspection.js';
 import {installedVersion} from '../../shared/version.js';
-import {displayName,isDev} from '../../shared/identity.js';
+import {isDev} from '../../shared/identity.js';
 import {type UpdateAction} from './updates.js';
 import type {CompactionForecast,RollingEstimate,GrowthEstimate} from '../../server/src/metrics.js';
 import type {CallActivity} from '../../server/src/activity.js';
@@ -26,7 +26,7 @@ export type Monitor = { panelId: string; revision?: string; unchanged?: boolean;
   samples?: Sample[]; compactions?: {timestamp: string; callPosition: number}[]; isCompacting?: boolean;
   awaitingPostCompactionCall?: boolean; lastCall?: string; lastEvent?: string; cacheTemperature?: string;
   fiveHour?: Allowance; weekly?: Allowance;
-  compactionValue?: CompactionForecast;
+  compactionValue?: CompactionForecast;turnStats?:TurnStats;compactionTurnPayback?:TurnPayback;sessionEnded?:boolean;
   attribution?: {contributors: {name: string; calls: number; tokens: number}[]; skillCount: number; callCount: number; afterCompaction: boolean};
   usage?: Usage; outputTotals?: {total?: number; reasoning?: number; source: string}; catalogueQuery?:string;matchCount?:number;shownCount?:number;discovery?:{targeting?:boolean;state:string;index:string;lastCompleted?:string;readable:number;missing:number;unreadable:number;malformed:number;excluded:number};tasks?: Task[]; completedAt?: string };
 const time = (date?: string) => date ? new Date(date).toLocaleString() : '—';
@@ -55,6 +55,14 @@ function ContextGauge({s}:{s:Monitor}) {
     <div className="context-caption"><span>Context window</span><small>{number(s.input).replace('.0k','k')} / {number(s.contextLimit).replace('.0k','k')}</small></div>
   </div>;
 }
+function CacheWarmth({s}:{s:Monitor}) {
+  const id=useId(),[dismissed,setDismissed]=useState(false);
+  const values:Record<string,{label:string;tone:string}>={'WARM':{label:'Warm',tone:'good'},'UNCERTAIN':{label:'Uncertain',tone:'amber'},'PRES. COLD':{label:'Presumed cold',tone:'bad'}};
+  const state=values[s.cacheTemperature??'']??{label:'Unknown',tone:'muted'};
+  const elapsed=s.lastCall?Date.now()-Date.parse(s.lastCall):NaN;
+  const age=Number.isFinite(elapsed)&&elapsed>=0?`${Math.floor(elapsed/60000)} minutes ago`:'unknown';
+  return <span className="cache-warmth" tabIndex={0} aria-label={`Estimated cache warmth: ${state.label}`} aria-describedby={id} data-dismissed={dismissed} onFocus={()=>setDismissed(false)} onMouseEnter={()=>setDismissed(false)} onKeyDown={e=>{if(e.key==='Escape'){e.stopPropagation();setDismissed(true);}}}><span className={`tone-${state.tone}`}>{state.label}</span><span className="warmth-tooltip" role="tooltip" id={id}>{cacheHelp} Last recorded call: {age}. Cached % measures recorded cache reads, not current availability.</span></span>;
+}
 function ThreadSummary({s}: {s:Monitor}) {
   const u=s.usage,calls=s.callCount??0,reported=s.outputTotals;
   const partial = !!u && (u.unpricedCalls>0 || u.cumulativeMismatch);
@@ -71,7 +79,7 @@ function ThreadSummary({s}: {s:Monitor}) {
       return <div className="allowance-group" key={label} aria-label={`${label} allowance`}><span className="allowance-label">{label}</span><strong className="thread-contribution" title="Estimated from this thread's full recorded cost × fixed calibration, across resets; not a rolling-window measurement. May exceed 100%.">Est. {estimate==null?'—':`≈${percent(estimate)} used`}{partial?' · partial':''}</strong><div className="account-remaining" title={help} tabIndex={0} style={{color:resourceColor(q?.awaitingRefresh?undefined:q?.used)}}><strong>{quota(q)}</strong>{!q?.awaitingRefresh&&<span> remaining</span>}</div>{critical&&<small className="critical-reset">Low allowance · Resets {time(q.reset)}</small>}</div>;
     })}</div>
     <div className="usage-line"><span title="Sum of recorded per-call inputs, including repeated context reads">Input <b>{number(u?.input)}</b></span><span title="Cumulative recorded output; thinking included">Output <b>{number(u?.outputComplete?u.output:undefined)}</b></span><span title="Recorded input + output; repeated context is counted on every call">Volume <b>{number(u?.outputComplete?u.input+u.output:undefined)}</b></span></div>
-    <div className="usage-line muted"><span title="Cache-read tokens divided by all recorded input tokens">Cached {u?.cacheComplete && u.input ? percent(u.cached/u.input*100):'—'}</span><span title="Hypothetical ordinary-input cost minus observed input cost. Includes reported cache-write premiums. Priced calls only.">Cache savings {u?.pricedCalls?money(u.cacheSavings):'—'}{u?.unpricedCalls?' (priced calls)':''}</span></div>
+    <div className="usage-line muted cache-summary"><span title="Cache-read tokens divided by all recorded input tokens">Cached {u?.cacheComplete && u.input ? percent(u.cached/u.input*100):'—'}</span><CacheWarmth s={s}/><span title="Hypothetical ordinary-input cost minus observed input cost. Includes reported cache-write premiums. Priced calls only.">Cache savings {u?.pricedCalls?money(u.cacheSavings):'—'}{u?.unpricedCalls?' (priced calls)':''}</span></div>
     <Stack label="Token composition" values={tokens}/><Stack label={u?.unpricedCalls?"Cost composition (priced calls)":"Cost composition"} values={u?.pricedCalls?u.costCategories:undefined} cost/>
     <div className="legend">{categories.filter((_,i)=>i!==5 || (tokens?.[5]??u?.costCategories[5]??0)>0).map(c=><span key={c.label}><i style={{background:c.color}}/>{c.label}</span>)}</div>
     <details><summary title="Show exact category totals, rates and coverage">Pricing &amp; accounting details</summary>
@@ -93,21 +101,21 @@ function sampleTokens(c: Sample) {
   return composition(c.input,c.cached,c.cacheWrite??0,c.output,c.reasoningRecorded===false?undefined:c.reasoning);
 }
 function LatestCall({s, expanded}: {s: Monitor; expanded: boolean}) {
-  const last=s.samples?.at(-1), value=s.compactionValue;
+  const last=s.samples?.at(-1);
   const cached=last?.cachedRecorded===false?undefined:last?.cached;
   const fresh=last&&cached!=null?last.input-cached:undefined;
   const cachedPercent=last?.input&&cached!=null?cached/last.input*100:undefined;
   const freshPercent=last?.input&&fresh!=null?fresh/last.input*100:undefined;
   return <details className="latest-call" open={expanded}>
-    <summary title="Expand latest call details and compaction value"><span className="latest-bar">
+    <summary title="Expand latest call details"><span className="latest-bar">
       <strong>Latest<span className="latest-title-suffix"> call</span></strong>
       <span title="Latest input tokens"><span className="call-label-full">Input</span><span className="call-label-short" aria-hidden="true">In</span> <b>{number(last?.input)}</b></span>
       <span title="Output includes reasoning"><span className="call-label-full">Output</span><span className="call-label-short" aria-hidden="true">Out</span> <b>{number(last?.outputRecorded===false?undefined:last?.output)}</b></span>
       <span>Cost <b>{money(last?.price?.total)}</b></span>
-      <span className="compaction-score" title={compactionHelp} aria-label={`Compaction Value: ${value?.score==null?'Unavailable':value.score+' out of 100'}. ${value?.category??''}`}><span className="compval-full">Compaction value</span><span className="compval-short" aria-hidden="true">ComVal</span> <b style={{color:health(value?.score==null?0:value.score/100*3)}}>{value?.score==null?'—':`${value.score}/100`}</b></span>
+
     </span></summary><div className="latest-body"><p>Cache warmth: {s.cacheTemperature??'Unavailable'}. {cacheHelp} UNCERTAIN means cache availability is unknown; it does not establish a cache miss.</p><h2>Latest call · {money(last?.price?.total)}</h2>{!last&&<p>Waiting for the first recorded call.</p>}<dl className="metrics"><Metric label={`Cached (${percent(cachedPercent)})`} value={cached}/><Metric label={`Fresh (${percent(freshPercent)})`} value={fresh}/><Metric label="Input" value={last?.input}/><Metric label="Output (incl. thinking)" value={last?.outputRecorded===false?undefined:last?.output}/><Metric label="Thinking" value={last?.reasoningRecorded===false?undefined:last?.reasoning}/><Metric label="Cache write" value={last?.cacheWriteRecorded===false?undefined:last?.cacheWrite}/></dl><p title={cacheHelp}>Cache <b className="muted">{s.cacheTemperature??'—'}</b>. {cacheHelp}</p><p>{last?.model??'Model unknown'} · {last?.serviceTier??'Standard assumed'} · {time(last?.timestamp)}</p>{last?.price?.rates&&<p>USD / 1M: input {money(last.price.rates.input)}, read {money(last.price.rates.cached)}, write {money(last.price.rates.write)}, output {money(last.price.rates.output)}.</p>}
     {last?.price?.issue&&<p className="warning">{last.price.issue}</p>}
-    <CompactionDetails value={value}/>
+    <CompactionDetails value={s.compactionValue} turnPayback={s.compactionTurnPayback}/>
     </div></details>;
 }
 function estimateSource(estimate?:RollingEstimate) {
@@ -121,7 +129,7 @@ function growthSource(estimate?:GrowthEstimate) {
   if(estimate.source==='user')return `Your same-model average · ${estimate.userSampleCount} intervals · ${progress}`;
   return `Default (insufficient history) · ${progress}`;
 }
-function CompactionDetails({value:v}:{value?:CompactionForecast}) {
+function CompactionDetails({value:v,turnPayback:t}:{value?:CompactionForecast;turnPayback?:TurnPayback}) {
   const available=v?.status==='available';
   return <div className="latest-compaction"><h2 title={compactionHelp}>Compaction Value · <b style={{color:health(v?.score==null?0:v.score/100*3)}}>{v?.score==null?'—':`${v.score}/100`}</b>{v&&` · ${v.category}`}</h2>
     <p>{compactionHelp}</p>
@@ -132,6 +140,8 @@ function CompactionDetails({value:v}:{value?:CompactionForecast}) {
       <dt>Output / call (incl. thinking)</dt><dd>{number(v?.typicalOutput)} tokens · {estimateSource(v?.assumptions.output)}{v?.assumptions.output&&(v.assumptions.output.activeModelOnly?' · active model':' · thread samples')}</dd>
       <dt>Forecast horizon</dt><dd>{v?.horizonCalls??20} normal calls</dd>
       <dt>Break-even</dt><dd>{available?(v.breakEvenCalls==null?`>${v.horizonCalls} calls`:`${v.breakEvenCalls} calls`):'Unavailable'}</dd>
+      <dt>Turn-based payback</dt><dd>{t?.status==='available'?`≈${t.turns} more turns (${t.calls} calls); ${t.epochCompleted} completed turns in this epoch`:t?.reason??'Unavailable: completed-turn history has not been supplied'}</dd>
+      {t&&<><dt>Turn conversion</dt><dd>This chat: {t.threadTurns} completed turns, {t.threadMean?.toFixed(2)??'—'} calls/turn; other chats: {t.historyTurns} turns, {t.historyMean?.toFixed(2)??'—'} calls/turn. {t.bufferedMean!=null&&`Using ${t.source}: ${t.bufferedMean.toFixed(2)} calls/turn after a 25% downward buffer, then rounding payback up.`} Heuristic, not a statistical confidence bound.</dd></>}
       <dt>Compaction overhead</dt><dd>{money(v?.compactionOverheadUsd??undefined)} · {number(v?.compactionOutput)} output tokens + replacement cache write</dd>
       <dt>Net estimated savings</dt><dd>{money(v?.netSavingsUsd??undefined)}</dd>
       <dt>Avoidable cost baseline</dt><dd>{money(v?.avoidableCostUsd??undefined)}</dd>
@@ -211,7 +221,7 @@ export function MonitorView({s, expanded, scale, error='', onAction, onLayout, s
   const [thresholds,setThresholds]=useState(loadThresholds);
   const a=s.attribution, attributed=a?.contributors.reduce((sum,c)=>sum+c.tokens,0)??0;
   return <main className={`monitor ${expanded?'expanded':'compact'}`} style={{fontSize:`${scale*85}%`}}>
-    <header><div className="brand"><img className="brand-logo" src={logo} alt=""/><strong>{displayName}</strong></div><div className="header-controls"><button disabled={!onAction||s.discovery?.state==='scanning'} onClick={()=>onAction?.('rescan')} title="Discover restored and newly available local transcripts">Rescan threads</button><button disabled={!onAction} onClick={()=>onAction?.()} aria-label="Refresh metrics" title="Refresh current telemetry">↻</button><Settings expanded={expanded} scale={scale} onLayout={onLayout} updates={updates} onUpdate={onUpdate} error={updateError}><ThresholdEditor value={thresholds} onChange={t=>{setThresholds(t);saveThresholds(t);}}/></Settings></div><ThreadPicker s={s} onSelect={onAction?id=>onAction('select',id):undefined} onFilter={onFilter}/></header>
+    <header className="compact-header"><ThreadPicker s={s} onSelect={onAction?id=>onAction('select',id):undefined} onFilter={onFilter}/><div className="header-controls"><button className="rescan-button" disabled={!onAction||s.discovery?.state==='scanning'} onClick={()=>onAction?.('rescan')} aria-label="Rescan threads" title="Rescan threads: discover restored and newly available local transcripts"><span className="rescan-text">Rescan threads</span><span className="rescan-icon" aria-hidden="true">⟳</span></button><button disabled={!onAction} onClick={()=>onAction?.()} aria-label="Refresh metrics" title="Refresh current telemetry">↻</button><Settings expanded={expanded} scale={scale} onLayout={onLayout} updates={updates} onUpdate={onUpdate} error={updateError}><ThresholdEditor value={thresholds} onChange={t=>{setThresholds(t);saveThresholds(t);}}/></Settings></div></header>
     <EfficiencyInsights s={s} thresholds={thresholds}/>
     {s.discovery?.targeting&&<p className="hint" role="status">Looking for the current local thread…</p>}
     {(error||s.disconnected||s.available===false||!s.task||s.isCompacting)&&<p className="status" role="status">{error||s.status}</p>}

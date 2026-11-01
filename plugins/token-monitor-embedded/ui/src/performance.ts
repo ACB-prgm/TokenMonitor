@@ -1,6 +1,7 @@
 import type {Comparison} from '../../server/src/comparisons.js';
 import type {Summary} from '../../server/src/efficiency.js';
 import type {Monitor} from './view.js';
+import {money} from './analytics.js';
 import {isDev} from '../../shared/identity.js';
 export type Thresholds={efficient:number;elevated:number;significant:number;paybackLow:number;paybackGood:number;minimumEvents:number};
 export const defaultThresholds:Thresholds={efficient:10,elevated:10,significant:30,paybackLow:50,paybackGood:80,minimumEvents:5};
@@ -29,12 +30,23 @@ export function paybackAssessment(s:Summary,t=defaultThresholds):Assessment {
  if(s.paybackRate<t.paybackGood)return {tone:'amber',label:'Mixed recovery'};
  return {tone:'good',label:'Positive savings'};
 }
-export type Insight={id:string;title:string;finding:string;impact:string;recommendation:string;tone:Assessment['tone']};
+export type Insight={id:string;title:string;finding:string;impact:string;recommendation:string;tone:Assessment['tone'];details?:{label:string;value:string}[]};
 export function efficiencyInsights(s:Monitor,t=defaultThresholds):Insight[] {
  const found:Insight[]=[],d=s.efficiency,c=d?.comparisons?.thread;
  if(s.contextPercent!=null&&s.contextPercent>=85)found.push({id:'capacity',title:'Context approaching capacity',finding:`The context window is ${s.contextPercent.toFixed(1)}% utilized.`,impact:'Less space remains for additional context; this alone does not establish inefficient spending.',recommendation:'Review retained context before adding large inputs. Consider a new thread if you are switching to an unrelated task.',tone:s.contextPercent>=95?'bad':'amber'});
  if(d&&d.thread.evaluable>=t.minimumEvents&&d.thread.netSavings < -1e-12)found.push({id:'compaction',title:'Compaction costs not recovered',finding:`${d.thread.evaluable} completed, evaluable compactions have negative modeled net savings.`,impact:'Their estimated processing savings have not covered their modeled overhead.',recommendation:'Review the compaction results before repeating this strategy; allow for the amount of subsequent work.',tone:'bad'});
- if(c?.context&&!c.context.provisional&&c.context.delta!=null&&c.context.delta>t.elevated)found.push({id:'context',title:'Elevated context overhead',finding:`Average input cost is ${c.context.delta.toFixed(1)}% above the comparable baseline.`,impact:'Repeated input processing is costing more per call within matching model and reasoning settings.',recommendation:'Review carried context. Consider a new thread when switching to an unrelated task.',tone:costAssessment(c.context,t).tone});
+ const forecast=s.compactionTurnPayback,f=s.compactionValue;
+ if(s.available===true&&!s.disconnected&&forecast?.status==='available'&&forecast.turns!=null&&forecast.turns<=forecast.epochCompleted){
+  const mean=(n?:number)=>n==null?'Unavailable':n.toFixed(2);
+  found.push({id:'compaction-forecast',title:`Compaction may pay back in ≈${forecast.turns} more ${forecast.turns===1?'turn':'turns'}`,finding:`Projected break-even is ${forecast.calls} model calls, or approximately ${forecast.turns} more user turns. This epoch has ${forecast.epochCompleted} completed turns.`,impact:`Modeled net savings are ${money(forecast.netSavingsUsd)} over the next ${f?.horizonCalls??20} calls.`,recommendation:'Continuing work that needs this chat’s context? Consider compacting. Starting unrelated work? Consider a new chat.',tone:'neutral',details:[
+   {label:'Completed turns',value:`This chat: ${forecast.threadTurns}; other chats: ${forecast.historyTurns}`},
+   {label:'Mean calls per turn',value:`This chat: ${mean(forecast.threadMean)}; other chats: ${mean(forecast.historyMean)}`},
+   {label:'Conservative conversion',value:`Source: ${forecast.source}; ${mean(forecast.bufferedMean)} calls/turn after a 25% downward buffer; payback rounded up. This is a heuristic, not a statistical confidence bound.`},
+   {label:'Forecast assumptions',value:`Warm prefix reuse; retained context ${f?.estimatedInput??'—'} tokens; compaction output ${f?.compactionOutput??'—'} tokens; growth ${f?.growthPerCall??'—'} tokens/call (${f?.assumptions.growth?.source??'—'}, ${f?.assumptions.growth?.source==='user'?f.assumptions.growth.userSampleCount:f?.assumptions.growth?.sampleCount??0} intervals); typical output ${f?.typicalOutput??'—'} tokens (${f?.assumptions.output?.sampleCount??0} samples).`},
+   {label:'Pricing and overhead',value:`${f?.model??'Unknown model'}; ${f?.serviceTier??'standard assumed'}; regional pricing ${f?.regionalProcessing?'enabled':'disabled'}; compaction overhead ${money(f?.compactionOverheadUsd)}. API-equivalent estimates, not subscription charges.`}
+  ]});
+ }
+ if(c?.context&&!c.context.provisional&&c.context.delta!=null&&c.context.delta>t.elevated)found.push({id:'context',title:'Elevated context overhead',finding:`Average input cost is ${c.context.delta.toFixed(1)}% above the comparable baseline.`,impact:'Repeated input processing is costing more per call within matching models.',recommendation:'Review carried context. Consider a new thread when switching to an unrelated task.',tone:costAssessment(c.context,t).tone});
  if(c?.cost&&!c.cost.provisional&&c.cost.delta!=null&&c.cost.delta>t.elevated)found.push({id:'cost',title:'Elevated cost per call',finding:`Comparable cost per call is ${c.cost.delta.toFixed(1)}% above baseline.`,impact:'Estimated resource spending per call increased; these measurements cannot establish task complexity or quality.',recommendation:'Inspect call composition to see whether input, output, or compaction charges explain the increase.',tone:costAssessment(c.cost,t).tone});
  if(c?.cache&&!c.cache.provisional&&c.cache.current!=null&&c.cache.reference!=null&&c.cache.reference-c.cache.current>=20)found.push({id:'cache',title:'Lower comparable cache reuse',finding:`Cache-read share is ${(c.cache.reference-c.cache.current).toFixed(1)} percentage points below baseline.`,impact:'A smaller share of recorded input benefits from cache-read pricing.',recommendation:'Inspect fresh-input composition and recent call details for changes in reusable context.',tone:'amber'});
  if(found.length)return found.slice(0,2);

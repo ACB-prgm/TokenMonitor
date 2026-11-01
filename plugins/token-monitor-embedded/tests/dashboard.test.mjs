@@ -20,7 +20,7 @@ test('mutually exclusive composition includes reasoning inside output',()=>{
 test('capacity, allowances, spending and cost chart appear in compact mode without duplicate summaries',()=>{
  const s={panelId:'p',status:'Monitoring',callCount:1,task:{id:'a',title:'Task'},selectedId:'a',contextPercent:50,input:100,contextLimit:200,fiveHour:{used:6},weekly:{used:49},samples:[],usage:{input:100,cached:60,cacheWrite:10,output:20,reasoning:8,cacheComplete:true,outputComplete:true,reasoningComplete:true,pricedCalls:1,unpricedCalls:0,cost:.12,cacheSavings:.05,costCategories:[.04,.01,.01,.02,.04,0],issues:[],models:['gpt-6.1-sol']}};
  const html=render(s);
- assert.ok(html.indexOf('header-controls')<html.indexOf('thread-selector'));assert.ok(html.indexOf('Thread usage')<html.indexOf('Context window'));assert.ok(html.indexOf('Thread usage')<html.indexOf('Recent calls'));
+ assert.ok(html.indexOf('thread-selector')<html.indexOf('header-controls'));assert.ok(html.indexOf('Thread usage')<html.indexOf('Context window'));assert.ok(html.indexOf('Thread usage')<html.indexOf('Recent calls'));
  assert.match(html,/Context window consumed/);assert.doesNotMatch(html,/<progress|class="capacity"/);assert.match(html,/5-hour allowance/);assert.match(html,/94%/);assert.match(html,/51%/);assert.match(html,/API-equivalent/);assert.match(html,/Token composition/);assert.match(html,/Cost composition/);assert.match(html,/aria-pressed="true">Cost/);assert.match(html,/Transcript reads are incremental/);assert.doesNotMatch(html,/Lock|locked|Unlock/);assert.doesNotMatch(html,/<details[^>]* open/g);
  const expanded=render(s,true);assert.match(expanded,/<details[^>]* open/g);assert.doesNotMatch(expanded,/>Compact<\/button>|>Expand<\/button>/);
 });
@@ -40,7 +40,7 @@ test('single latest-call bar sits between thread usage and the graph and expands
  assert.ok(html.indexOf('class="latest-call"')<html.indexOf('Exact call values'));
  const summary=bar.match(/<summary[\s\S]*?<\/summary>/)[0];
  assert.match(summary,/<b>100.0k<\/b>/);assert.match(summary,/<b>1.2k<\/b>/);
- assert.doesNotMatch(summary,/WARM|UNCERTAIN/);assert.match(bar,/Cache warmth: WARM/);assert.match(summary,/34\/100/);
+ assert.doesNotMatch(summary,/WARM|UNCERTAIN/);assert.match(bar,/Cache warmth: WARM/);assert.doesNotMatch(summary,/34\/100/);assert.match(bar,/34\/100/);
  assert.match(bar,/Thinking/);assert.match(bar,/gpt-6.1-sol/);assert.match(bar,/Break-even<\/dt><dd>6 calls/);assert.match(bar,/Moderate/);assert.match(bar,/Default \(insufficient data\)/);assert.doesNotMatch(bar,/heuristic|Model-priced API break-even/);
  assert.equal((html.match(/Compaction Value ·/g)??[]).length,1);
  assert.match(render(latestFixture,true),/<details class="latest-call" open/);
@@ -79,7 +79,7 @@ test('allowance estimates follow selected thread totals and preserve partial/unk
 
 test('interactive refresh and task controls remain enabled and omit the global expand button',()=>{
  const html=render({panelId:'p',status:'Monitoring',selectedId:'a',tasks:[{id:'a',title:'A'}]},false,true);
- const header=html.match(/<header>[\s\S]*?<\/header>/)[0];
+ const header=html.match(/<header[^>]*>[\s\S]*?<\/header>/)[0];
  const picker=html.match(/<div class="thread-selector">[\s\S]*?<\/button>/)[0];
  assert.match(header,/aria-label="Refresh metrics"/);
  assert.doesNotMatch(header,/disabled|>Expand<|>Compact</);
@@ -89,7 +89,7 @@ test('interactive refresh and task controls remain enabled and omit the global e
  test('update options occupy the version position and reflect available, dismissed and unknown states',()=>{
   const updates={installedVersion:'1.5.0',latestVersion:'1.6.0',status:'available',automatic:true,dismissed:false,checking:false,stale:false,downloadURL:'https://github.com/ACB-prgm/TokenMonitor/releases/download/v1.6.0/package.zip',checksumURL:'https://github.com/ACB-prgm/TokenMonitor/releases/download/v1.6.0/package.zip.sha256',releaseURL:'https://github.com/ACB-prgm/TokenMonitor/releases/tag/v1.6.0'};
   const html=render({panelId:'p',status:'Monitoring'},false,true,updates);
-  assert.match(html,/<header>[\s\S]*v1.6.0 available[\s\S]*<\/header>/);
+  assert.match(html,/<header[^>]*>[\s\S]*v1.6.0 available[\s\S]*<\/header>/);
   assert.match(html,/Update and install/);assert.doesNotMatch(html,/Download Update|Download SHA-256/);assert.match(html,/Check at each panel opening/);assert.match(html,/Update package platform and architecture/);
   const dismissed=render({panelId:'p',status:'Monitoring'},false,true,{...updates,dismissed:true});assert.doesNotMatch(dismissed,/has-update/);assert.match(dismissed,/Update dismissed/);
   const unknown=render({panelId:'p',status:'Monitoring'},false,true,{...updates,status:'unknown',error:'Unable to check for updates.'});assert.match(unknown,/Unable to check/);assert.doesNotMatch(unknown,/Up to date/);
@@ -160,13 +160,13 @@ test('insights use one collapsed disclosure and retain finding, impact and recom
  const html=render({panelId:'p',status:'Monitoring',contextPercent:96});const insight=html.match(/<details class="efficiency-insights"[\s\S]*?<\/details>/)[0];const summary=insight.match(/<summary[\s\S]*?<\/summary>/)[0];assert.match(summary,/Efficiency insights: /);assert.match(summary,/Context approaching capacity/);assert.match(summary,/insight-chevron/);assert.doesNotMatch(summary,/<p>|Consider a new thread|96.0/);assert.doesNotMatch(insight,/<details[^>]* open/);assert.match(insight,/Review retained context/);
 });
 
-test('compaction value restores the original increasing health color scale in summary and details',()=>{
+test('compaction value retains its health colors only in expanded details',()=>{
  let previous;
  for(const score of [0,34,80,100]){
   const html=render({...latestFixture,compactionValue:{...latestFixture.compactionValue,score}});const bar=html.match(/<details class="latest-call"[\s\S]*?<\/details>/)[0];const summary=bar.match(/<summary[\s\S]*?<\/summary>/)[0];
-  const summaryColor=summary.match(/compaction-score[\s\S]*?<b style="([^"]+)"/)[1];const detailColor=bar.match(/Compaction Value · <b style="([^"]+)"/)[1];
-  assert.match(summaryColor,/color-mix/);assert.equal(summaryColor,detailColor);assert.notEqual(summaryColor,previous);previous=summaryColor;
-  if(score===100)assert.match(summaryColor,/var\(--health-red\)/);
+  assert.doesNotMatch(summary,/compaction-score|ComVal|Compaction value/i);const detailColor=bar.match(/Compaction Value · <b style="([^"]+)"/)[1];
+  assert.match(detailColor,/color-mix/);assert.notEqual(detailColor,previous);previous=detailColor;
+  if(score===100)assert.match(detailColor,/var\(--health-red\)/);
  }
 });
 
@@ -212,4 +212,17 @@ test('KPI deltas equal the visible Thread and Comp values without cohort weighti
  assert.match(summary,/1\/2 \(50%\)/);assert.doesNotMatch(summary,/\bpending\b/i);assert.match(html,/Pending compactions: Thread 1 · Comp 1/);
  assert.doesNotMatch(summary,/tone-bad|tone-amber/);
  const missing=render({panelId:'p',status:'Waiting'});assert.doesNotMatch(missing,/N\/A|NaN/);
+});
+
+test('cache warmth sits between recorded cache share and savings with text, colors and focusable help',()=>{
+ for(const [value,label,tone] of [['WARM','Warm','good'],['UNCERTAIN','Uncertain','amber'],['PRES. COLD','Presumed cold','bad'],[undefined,'Unknown','muted']]){
+ const html=render({...latestFixture,usage:allowanceFixture,cacheTemperature:value,lastCall:'2026-11-01T00:00:00Z'});
+ const row=html.match(/<div class="usage-line muted cache-summary">[\s\S]*?<\/div>/)[0];
+ assert.ok(row.indexOf('Cached ')<row.indexOf('class="cache-warmth"'));assert.ok(row.indexOf('class="cache-warmth"')<row.indexOf('Cache savings'));
+ assert.match(row,new RegExp('tone-'+tone+'">'+label));assert.match(row,/tabindex="0"/);assert.match(row,/aria-describedby=/);assert.match(row,/role="tooltip"/);assert.match(row,/Actual cache reuse may differ/);assert.match(row,/Last recorded call:/);
+ }
+});
+test('header leads with the searchable selector and keeps independently named actions without branding',()=>{
+ const html=render({...latestFixture,tasks:[{id:'a',title:'A long selected chat'}],selectedId:'a'});const header=html.match(/<header[\s\S]*?<\/header>/)[0];
+ assert.ok(header.indexOf('thread-selector')<header.indexOf('header-controls'));assert.doesNotMatch(header,/brand-logo|class="brand"/);assert.match(header,/aria-label="Rescan threads"/);assert.match(header,/aria-label="Refresh metrics"/);assert.match(header,/Dashboard settings/);
 });

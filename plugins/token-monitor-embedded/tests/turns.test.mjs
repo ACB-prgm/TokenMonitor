@@ -42,8 +42,8 @@ test('turn conversion uses smaller qualifying mean, 25% buffer and upward roundi
  const f=args().forecast;assert.equal(estimateTurnPayback(args({forecast:{...f,breakEvenCalls:7}})).turns,5);
 });
 test('guidance gates require recent telemetry, observed forecasts and recovered prior compaction',()=>{
- const original=args();for(const extra of [{ready:false},{available:false},{ended:true},{lastCall:undefined},{lastCall:new Date(now-7200001).toISOString()},{lastCall:new Date(now+1).toISOString()},{isCompacting:true},{awaitingPostCompactionCall:true},{hasCompactions:true},{hasCompactions:true,latestPayback:{valid:true,breakEven:null}},{hasCompactions:true,latestPayback:{valid:false,breakEven:1}}])assert.equal(estimateTurnPayback(args(extra)).status,'unavailable',JSON.stringify(extra));
- for(const patch of [{status:'limited'},{breakEvenCalls:null},{breakEvenCalls:21},{breakEvenCalls:Infinity},{netSavingsUsd:0},{netSavingsUsd:-1},{netSavingsUsd:.0000009},{assumptions:{...original.forecast.assumptions,growth:{source:'default'}}},{assumptions:{...original.forecast.assumptions,output:{fallback:true}}},{assumptions:{...original.forecast.assumptions,contextLimitKnown:false}}])assert.equal(estimateTurnPayback(args({forecast:{...original.forecast,...patch}})).status,'unavailable');
+ const original=args();for(const extra of [{ready:false},{available:false},{ended:true},{lastCall:undefined},{lastCall:new Date(now-7200001).toISOString()},{lastCall:new Date(now+1).toISOString()},{isCompacting:true},{awaitingPostCompactionCall:true},{hasCompactions:true},{hasCompactions:true,latestPayback:{valid:true,breakEven:null}},{hasCompactions:true,latestPayback:{valid:false,breakEven:1}},{hasCompactions:true,latestCompaction:stamp,latestPayback:{valid:true,breakEven:1,timestamp:'older'}}])assert.equal(estimateTurnPayback(args(extra)).status,'unavailable',JSON.stringify(extra));
+ for(const patch of [{status:'limited'},{breakEvenCalls:null},{breakEvenCalls:21},{breakEvenCalls:Infinity},{netSavingsUsd:0},{netSavingsUsd:-1},{netSavingsUsd:.0000009},{assumptions:{...original.forecast.assumptions,growth:{source:'default'}}},{assumptions:{...original.forecast.assumptions,growth:{}}},{assumptions:{...original.forecast.assumptions,output:{}}},{assumptions:{...original.forecast.assumptions,output:{fallback:true}}},{assumptions:{...original.forecast.assumptions,contextLimitKnown:false}}])assert.equal(estimateTurnPayback(args({forecast:{...original.forecast,...patch}})).status,'unavailable');
  assert.equal(estimateTurnPayback(args({hasCompactions:true,latestPayback:{valid:true,breakEven:2}})).status,'available');
  assert.equal(estimateTurnPayback(args({forecast:{...original.forecast,netSavingsUsd:.000001}})).status,'available');
 });
@@ -60,4 +60,8 @@ test('versioned historical replay preserves totals, restart and other-chat-only 
  const read=new DatabaseSync(path.join(home,process.env.TOKEN_MONITOR_DEV==='1'?'token-monitor-dev':'token-monitor-embedded','efficiency.sqlite'));assert.equal(read.prepare("SELECT value FROM meta WHERE key='baseline'").get().value,'frozen-record');read.close();
  s=new EfficiencyStore(home);assert.deepEqual(s.snapshot('a',now).turns,before.turns);s.close();
  }finally{rmSync(home,{recursive:true,force:true});}
+});
+
+test('a second user message after calls without a fresh turn boundary is ambiguous',()=>{
+ const c=new TurnCounter();start(c,'a');c.call('m');c.consume('event_msg',{type:'user_message'},new Date(now+1000).toISOString());end(c,'a');assert.equal(c.snapshot().epochCompleted,0);
 });

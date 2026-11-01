@@ -121,7 +121,7 @@ export class Collector {
     this.account.touch();
     const local=this.catalogue.read(()=>this.store.allowanceFiles(params.taskId as string));
     const snapshot=this.store.snapshot(params.taskId),efficiency=this.store.efficiency?.snapshot(params.taskId);
-    const state={...snapshot,efficiency,compactionTurnPayback:estimateTurnPayback({forecast:snapshot?.compactionValue,stats:snapshot?.turnStats,history:efficiency?.turns?.other,ready:!!efficiency?.reference?.ready,available:snapshot?.available===true,lastCall:snapshot?.lastCall,now:Date.now(),isCompacting:snapshot?.isCompacting,awaitingPostCompactionCall:snapshot?.awaitingPostCompactionCall,ended:snapshot?.sessionEnded,latestPayback:efficiency?.paybacks.at(-1),hasCompactions:!!(efficiency?.paybacks.length||snapshot?.compactions.length)})};
+    const state={...snapshot,efficiency,compactionTurnPayback:estimateTurnPayback({forecast:snapshot?.compactionValue,stats:snapshot?.turnStats,history:efficiency?.turns?.other,ready:!!efficiency?.reference?.ready&&!efficiency.progress.running,available:snapshot?.available===true,lastCall:snapshot?.lastCall,now:Date.now(),isCompacting:snapshot?.isCompacting,awaitingPostCompactionCall:snapshot?.awaitingPostCompactionCall,ended:snapshot?.sessionEnded,latestPayback:efficiency?.paybacks.at(-1),latestCompaction:snapshot?.compactions.at(-1)?.timestamp,hasCompactions:!!(efficiency?.paybacks.length||snapshot?.compactions.length)})};
     const allowances=chooseAllowances(this.account.snapshot(),local);
     state.fiveHour=allowances.fiveHour;state.weekly=allowances.weekly;
     const revision=createHash('sha256').update(JSON.stringify(state)).digest('hex');return params.revision===revision?{revision,unchanged:true}:{revision,state};

@@ -192,7 +192,7 @@ export function estimateCompactionValue(input:CompactionForecastInput):Compactio
     projectedCompactedCostBeforeOverheadUsd:compacted,grossSavingsUsd:gross,netSavingsUsd:net,avoidableCostUsd:avoidable};
 }
 export function health(value: number|undefined,stops:number[]) {if(value==null||!Number.isFinite(value)||value<=stops[0])return 0;for(let i=1;i<stops.length;i++)if(value<stops[i])return i-1+(value-stops[i-1])/(stops[i]-stops[i-1]);return 3;}
-export function cacheTemperature(lastCall?:string,now=Date.now()) {if(!lastCall)return;const age=now-Date.parse(lastCall);return age<1800000?'WARM':age<=7200000?'UNCERTAIN':'PRES. COLD';}
+export function cacheTemperature(lastCall?:string,now=Date.now()) {if(!lastCall)return;const age=now-Date.parse(lastCall);if(!Number.isFinite(age)||age<0)return;return age<1800000?'WARM':age<=7200000?'UNCERTAIN':'PRES. COLD';}
 export function cleanTitle(value:unknown):string|undefined {if(typeof value!=='string')return;const title=value.trim().replace(/\s+/g,' ');if(!title||['# Files mentioned by the user:','<environment_context>','<permissions instructions>'].some(s=>title.startsWith(s)))return;let result='',count=0;for(const {segment}of segmenter.segment(title)){result+=segment;if(++count===90)break;}return result;}
 export function date(value:unknown):string|undefined {return typeof value==='string'&&Number.isFinite(Date.parse(value))?new Date(value).toISOString():undefined;}
 // Fixed-size fingerprints bound replay memory. Cumulative and timestamp identities

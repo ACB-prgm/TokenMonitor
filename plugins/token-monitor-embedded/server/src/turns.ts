@@ -21,7 +21,7 @@ export class TurnCounter {
   }
   if(p.type==='user_message'){
    if(!this.messages.add(JSON.stringify([id,timestamp])))return;
-   if(this.active&&(!id||id===this.active.id)){this.active.user=true;return;}
+   if(this.active&&(!id||id===this.active.id)){if(this.active.user&&this.active.calls>0)this.active.invalid=true;this.active.user=true;return;}
    this.active={id,started:timestamp,user:true,calls:0,invalid:false,spanning:false};return;
   }
   if(['task_aborted','turn_aborted'].includes(p.type)){if(!id||this.active?.id===id)this.active=undefined;return;}
@@ -38,7 +38,7 @@ export class TurnCounter {
  snapshot():TurnStats{return {models:[...this.groups.values()].map(g=>({...g})),epochCompleted:this.epochCompleted};}
 }
 export type TurnPayback={status:'available'|'unavailable';reason?:string;turns?:number;calls?:number;epochCompleted:number;threadTurns:number;historyTurns:number;threadMean?:number;historyMean?:number;bufferedMean?:number;source?:'thread'|'history'|'both';buffer:number;netSavingsUsd?:number};
-export function estimateTurnPayback(input:{forecast?:CompactionForecast;stats?:TurnStats;history?:TurnAggregate[];ready:boolean;available:boolean;lastCall?:string;now:number;isCompacting?:boolean;awaitingPostCompactionCall?:boolean;ended?:boolean;latestPayback?:{valid:boolean;breakEven:number|null};hasCompactions?:boolean}):TurnPayback {
+export function estimateTurnPayback(input:{forecast?:CompactionForecast;stats?:TurnStats;history?:TurnAggregate[];ready:boolean;available:boolean;lastCall?:string;now:number;isCompacting?:boolean;awaitingPostCompactionCall?:boolean;ended?:boolean;latestPayback?:{valid:boolean;breakEven:number|null;timestamp?:string};latestCompaction?:string;hasCompactions?:boolean}):TurnPayback {
  const f=input.forecast,model=f?.model,t=input.stats?.models.find(g=>g.model===model),h=input.history?.find(g=>g.model===model);
  const mean=(g?:TurnAggregate)=>g&&g.turns>0&&Number.isFinite(g.calls)&&g.calls>0?g.calls/g.turns:undefined;
  const result:TurnPayback={status:'unavailable',epochCompleted:input.stats?.epochCompleted??0,threadTurns:t?.turns??0,historyTurns:h?.turns??0,threadMean:mean(t),historyMean:mean(h),buffer:.75};
@@ -46,8 +46,8 @@ export function estimateTurnPayback(input:{forecast?:CompactionForecast;stats?:T
  if(!input.available||input.ended||!date(input.lastCall)||input.now-Date.parse(input.lastCall!)>7200000||input.now<Date.parse(input.lastCall!))return fail('Current transcript or recent call unavailable');
  if(!input.ready)return fail('Historical turn import is incomplete');
  if(input.isCompacting||input.awaitingPostCompactionCall)return fail('Waiting for reliable post-compaction telemetry');
- if(input.hasCompactions&&(!input.latestPayback?.valid||input.latestPayback.breakEven==null))return fail('The latest compaction has not demonstrably reached break-even');
- if(!f||f.status!=='available'||!f.assumptions.pricingAvailable||!f.assumptions.contextLimitKnown||!f.assumptions.growth||f.assumptions.growth.source==='default'||!f.assumptions.output||f.assumptions.output.fallback)return fail('Observed growth, output, context and pricing are required');
+ if(input.hasCompactions&&(!input.latestPayback?.valid||input.latestPayback.breakEven==null||input.latestCompaction&&input.latestPayback.timestamp!==input.latestCompaction))return fail('The latest compaction has not demonstrably reached break-even');
+ if(!f||f.status!=='available'||!f.assumptions.pricingAvailable||!f.assumptions.contextLimitKnown||!f.assumptions.growth||!['thread','user'].includes(f.assumptions.growth.source)||f.assumptions.growth.fallback===true||!f.assumptions.output||f.assumptions.output.fallback!==false)return fail('Observed growth, output, context and pricing are required');
  if(f.breakEvenCalls==null||!Number.isFinite(f.breakEvenCalls)||f.breakEvenCalls<=0||f.breakEvenCalls>f.completedCalls||f.breakEvenCalls>f.horizonCalls||f.netSavingsUsd==null||!Number.isFinite(f.netSavingsUsd)||f.netSavingsUsd<.000001)return fail('No supported positive payback within the forecast horizon');
  const thread=result.threadTurns>=5&&result.threadMean!=null,history=result.historyTurns>=20&&result.historyMean!=null;
  if(!thread&&!history)return fail('Need 5 completed same-model turns in this chat or 20 in other chats');

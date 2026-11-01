@@ -130,12 +130,12 @@ test('historical KPI banner precedes Latest call, stays collapsed and explains b
  const html=render({...latestFixture,efficiency:data});
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="latest-call"'));
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="history"'));
- assert.match(html,/kpi-row-label">Thread/);assert.match(html,/kpi-row-label">All chats/);assert.match(html,/\$0.11/);assert.match(html,/Compaction payback/);assert.match(html,/N\/A/);assert.match(html,/Provisional/);assert.match(html,/Total input cost ÷ calls with priceable input/);assert.match(html,/Share of completed, evaluable compactions/);assert.doesNotMatch(html,/<details class="efficiency" open/);
+ assert.match(html,/kpi-row-label">Thread/);assert.match(html,/kpi-row-label">Comp/);assert.match(html,/\$0.11/);assert.match(html,/Compaction payback/);assert.doesNotMatch(html,/N\/A/);assert.match(html,/Provisional/);assert.match(html,/Total input cost ÷ calls with priceable input/);assert.match(html,/Share of completed, evaluable compactions/);assert.doesNotMatch(html,/<details class="efficiency" open/);
 });
 
 test('collapsed KPI summary has shared labels, three headers and no definitions',()=>{
  const html=render({panelId:'p',status:'Waiting'});const summary=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
- for(const label of ['Thread','All chats','Cost / call','Context / call','Compaction payback'])assert.equal(summary.split('>'+label+'<').length-1,1,label);
+ for(const label of ['Thread','Comp','Cost / call','Context / call','Compaction payback'])assert.equal(summary.split('>'+label+'<').length-1,1,label);
  assert.doesNotMatch(summary,/formula|baseline|input cost|<p>/i);assert.doesNotMatch(html,/Still gathering comparable history|class="efficiency-insights"/);
  assert.doesNotMatch(html,/Search local threads|Include archived|\b\d+ of \d+ matches/);
  assert.doesNotMatch(html,/class="efficiency-insights"/);
@@ -182,11 +182,11 @@ test('thread allowance estimate leads account remaining in each group',()=>{
  const summary={calls:10,priced:10,inputPriced:10,cost:.274,inputCost:.218,overhead:0,costPerCall:.0274,contextPerCall:.0218,paybackRate:100,netSavings:.1,evaluable:2,profitable:2,pending:0,excluded:0,inactivity:0};
  const c={current:.0274,reference:.02,delta:37,currentCalls:10,baselineCalls:100,coverage:1,provisional:true,reason:'Fewer than 20 current calls'};
  const comparisons={cost:{...c,cohorts:[{model:'gpt-6.1-sol',effort:'high',currentCalls:10,referenceCalls:100}]},context:c,cache:c,referenceLabel:'All available calls from other chats; excludes the selected chat.'};
- const data={activation:'2026-10-30',baseline:summary,baselineCalls:100,baselineProvisional:false,thread:summary,rolling:summary,threadRolling:summary,threadWeeks:[],threadModels:[],baselineModels:[],paybacks:[],comparisons:{thread:comparisons,periods:{7:comparisons}},periods:{7:{summary,models:[],weeks:[]}},progress:{processed:1,total:1,running:false,failed:0},pricingBasis:'fixture'};
+ const data={activation:'2026-10-30',baseline:summary,baselineCalls:100,baselineProvisional:false,thread:summary,rolling:summary,threadRolling:summary,threadWeeks:[],threadModels:[],baselineModels:[],paybacks:[],comparisons:{thread:comparisons,periods:{7:comparisons}},periods:{7:{summary,previousSummary:{...summary,costPerCall:.02,contextPerCall:.015,priced:100,inputPriced:100,calls:100},models:[],weeks:[]}},progress:{processed:1,total:1,running:false,failed:0},pricingBasis:'fixture'};
  const html=render({...latestFixture,efficiency:data});const collapsed=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
  assert.equal((collapsed.match(/class="provisional-mark"/g)??[]).length,6);
  assert.equal((collapsed.match(/class="kpi-badge tone-neutral"/g)??[]).length,4);
- assert.doesNotMatch(collapsed.replace(/<span class="sr-only">[^<]*<\/span>/g,''),/>Provisional</);assert.match(html,/\* Provisional:<\/strong>/);assert.match(html,/20 current and 20 reference/);assert.match(html,/5 completed, evaluable events/);assert.match(html,/10 current \/ 100 reference calls/);assert.match(html,/Thread uses other chats/);assert.match(html,/context cost matches model/);assert.doesNotMatch(html,/Fixed reference|Cost \/ context change/);
+ assert.doesNotMatch(collapsed.replace(/<span class="sr-only">[^<]*<\/span>/g,''),/>Provisional</);assert.match(html,/\* Provisional:<\/strong>/);assert.match(html,/20 current and 20 reference/);assert.match(html,/5 completed, evaluable events/);assert.match(html,/10 current \/ 10 reference calls/);assert.match(html,/Thread compares directly with the Comp row/);assert.match(html,/preceding equal-length period/);assert.doesNotMatch(html,/Fixed reference|Cost \/ context change/);
  });
 
 test('expanded KPI guide has only three definitions, formulas and numeric substitutions',()=>{
@@ -198,6 +198,18 @@ test('expanded KPI guide has only three definitions, formulas and numeric substi
  assert.match(guide,/Thread: \$0.284 \/ 10 = \$0.0284/);assert.match(guide,/Thread: \$0.218 \/ 10 = \$0.0218/);assert.match(guide,/3 \/ 6 × 100 = 50%/);
  assert.match(guide,/Final net savings: Thread −\$0.001234/);assert.match(guide,/Exact numerator: 0.218 USD/);
  assert.doesNotMatch(guide,/<table|<details|Model breakdown|Weekly historical trend|Thread compaction results|historical reference/);
- assert.match(html,/All chats period/);
+ assert.match(html,/Comparison period/);
  const loading=render({panelId:'p',status:'Waiting'});assert.match(loading,/Historical analytics are loading/);assert.doesNotMatch(loading,/NaN|undefined/);
+});
+
+
+test('KPI deltas equal the visible Thread and Comp values without cohort weighting',()=>{
+ const base={calls:40,priced:40,inputPriced:40,cost:1.2,inputCost:.8,overhead:0,costPerCall:.03,contextPerCall:.02,paybackRate:50,netSavings:.1,evaluable:2,profitable:1,pending:1};
+ const html=render({panelId:'p',status:'Monitoring',efficiency:{thread:{...base,costPerCall:.06,contextPerCall:.03},periods:{7:{summary:base,previousSummary:{...base,costPerCall:.02,contextPerCall:.01}}},progress:{running:false,failed:0},baselineProvisional:false}});
+ const summary=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
+ assert.ok(summary.indexOf('Context / call')<summary.indexOf('Cost / call'));
+ assert.match(summary,/↑ 50.0/);assert.match(summary,/100.0/);
+ assert.match(summary,/1\/2 \(50%\)/);assert.match(summary,/1 pending/);
+ assert.doesNotMatch(summary,/tone-bad|tone-amber/);
+ const missing=render({panelId:'p',status:'Waiting'});assert.doesNotMatch(missing,/N\/A|NaN/);
 });

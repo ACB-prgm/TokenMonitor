@@ -1,24 +1,34 @@
 import React,{useState} from 'react';
 import type {Efficiency,Summary} from '../../server/src/efficiency.js';
 import {money,percent} from './analytics.js';
-const usd=(n:number|null)=>n==null?'N/A':money(n);
+const usd=(n:number|null)=>n==null?'—':money(n);
 const preciseUsd=(n:number)=>n!==0&&Math.abs(n)<.000001?money(n):n.toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:6});
-import {costAssessment,paybackAssessment,defaultThresholds,type Thresholds,type Assessment} from './performance.js';
-import type {Comparison,Comparisons} from '../../server/src/comparisons.js';
+import {paybackAssessment,defaultThresholds,type Thresholds,type Assessment} from './performance.js';
+import type {Comparison} from '../../server/src/comparisons.js';
 function KpiValue({value,assessment,comparison,primary=false}:{value:string;assessment:Assessment;comparison?:Comparison;primary?:boolean}) {
  const delta=comparison?.delta;
- const provisional=comparison?.provisional||assessment.label==='Provisional';
+ const provisional=value!=='—'&&(comparison?.provisional||assessment.label==='Provisional');
  const hasDelta=comparison&&delta!=null;
- return <span className={`kpi-value ${primary?'primary':''}`}><b>{value}{provisional&&<sup className="provisional-mark" title={comparison?.reason?`Provisional: ${comparison.reason}. Expand for calculation.`:"Provisional: expand Efficiency KPIs for sample requirements"} aria-label="Provisional; expand Efficiency KPIs for explanation">*</sup>}</b>{hasDelta&&<small className={`kpi-badge tone-${assessment.tone}`} title={comparison?`Matched current ${comparison.current??'N/A'} / reference ${comparison.reference??'N/A'}; ${comparison.currentCalls} current / ${comparison.baselineCalls} reference calls. ${comparison.reason??assessment.label}`:assessment.label}>{hasDelta&&<>{delta<0?'↓':delta>0?'↑':'→'} {Math.abs(delta).toFixed(1)}%</>}</small>}<span className="sr-only">{assessment.label}</span></span>;
+ return <span className={`kpi-value ${primary?'primary':''}`}><b>{value}{provisional&&<sup className="provisional-mark" title={comparison?.reason?`Provisional: ${comparison.reason}. Expand for calculation.`:"Provisional: expand Efficiency KPIs for sample requirements"} aria-label="Provisional; expand Efficiency KPIs for explanation">*</sup>}</b>{hasDelta&&<small className={`kpi-badge tone-${assessment.tone}`} title={comparison?`Current average ${comparison.current??'—'} / reference ${comparison.reference??'—'}; ${comparison.currentCalls} current / ${comparison.baselineCalls} reference calls. ${comparison.reason??assessment.label}`:assessment.label}>{hasDelta&&<>{delta<0?'↓':delta>0?'↑':'→'} {Math.abs(delta).toFixed(1)}%</>}</small>}<span className="sr-only">{assessment.label}</span></span>;
 }
-function KpiSummary({thread,all,comparisons,thresholds}:{thread?:Summary;all?:Summary;comparisons?:{thread?:Comparisons;all?:Comparisons};thresholds:Thresholds}) {
- const rows=[{label:'Thread',s:thread,c:comparisons?.thread},{label:'All chats',s:all,c:comparisons?.all}];
- return <summary aria-label="Expand historical efficiency KPIs"><span className="kpi-heading">Efficiency KPIs <span className="kpi-chevron" aria-hidden="true">⌄</span></span><span className="kpi-grid"><span aria-hidden="true"/><span className="kpi-label">Cost / call</span><span className="kpi-label">Context / call</span><span className="kpi-label">Compaction payback</span>{rows.map(({label,s,c},i)=><React.Fragment key={label}><span className="kpi-row-label">{label}</span><KpiValue value={s?usd(s.costPerCall):'N/A'} primary={!i} comparison={c?.cost} assessment={costAssessment(c?.cost,thresholds)}/><KpiValue value={s?usd(s.contextPerCall):'N/A'} primary={!i} comparison={c?.context} assessment={costAssessment(c?.context,thresholds)}/><KpiValue value={s?.paybackRate==null?'N/A':percent(s.paybackRate)} primary={!i} assessment={s?paybackAssessment(s,thresholds):{tone:'neutral',label:'Unavailable'}}/></React.Fragment>)}</span></summary>;
+// Display comparisons use the same aggregate values as the visible rows. Cohort
+// comparisons remain separate in the telemetry payload for supported insights.
+function directComparison(current:Summary|undefined,reference:Summary|undefined,metric:'cost'|'context',ready:boolean):Comparison {
+ const a=current?.[metric==='cost'?'costPerCall':'contextPerCall']??null,r=reference?.[metric==='cost'?'costPerCall':'contextPerCall']??null;
+ const count=metric==='cost'?'priced':'inputPriced',n=current?.[count]??0,bn=reference?.[count]??0;
+ const complete=!!current&&!!reference&&n===current.calls&&bn===reference.calls;
+ const provisional=!ready||n<20||bn<20||!complete;
+ return {current:a,reference:r,delta:a!=null&&r!=null&&r>0?(a/r-1)*100:null,currentCalls:n,baselineCalls:bn,coverage:complete?1:0,provisional,reason:!ready?'Historical import is incomplete':!complete?'Missing or partial pricing coverage':n<20||bn<20?'At least 20 current and 20 reference calls required':undefined};
+}
+function KpiSummary({thread,all,previous,ready,thresholds}:{thread?:Summary;all?:Summary;previous?:Summary;ready:boolean;thresholds:Thresholds}) {
+ const rows=[{label:'Thread',s:thread,reference:all},{label:'Comp',s:all,reference:previous}];
+ const assessment=(c:Comparison):Assessment=>({tone:'neutral',label:c.delta==null?'Unavailable':c.provisional?'Provisional':'Spending change'});
+ return <summary aria-label="Expand historical efficiency KPIs"><span className="kpi-heading">Efficiency KPIs <span className="kpi-chevron" aria-hidden="true">⌄</span></span><span className="kpi-grid"><span aria-hidden="true"/><span className="kpi-label">Context / call</span><span className="kpi-label">Cost / call</span><span className="kpi-label">Compaction payback</span>{rows.map(({label,s,reference},i)=><React.Fragment key={label}><span className="kpi-row-label">{label}</span>{(['context','cost'] as const).map(metric=>{const c=directComparison(s,reference,metric,ready);return <KpiValue key={metric} value={usd(s?.[metric==='cost'?'costPerCall':'contextPerCall']??null)} primary={!i} comparison={reference?c:undefined} assessment={reference?assessment(c):{tone:'neutral',label:'Unavailable'}}/>;})}<span className="kpi-payback"><KpiValue value={s?.paybackRate==null?'—':`${s.profitable}/${s.evaluable} (${percent(s.paybackRate)})`} primary={!i} assessment={s?paybackAssessment(s,thresholds):{tone:'neutral',label:'Unavailable'}}/>{!!s?.pending&&<small className="pending-paybacks">{s.pending} pending</small>}</span></React.Fragment>)}</span></summary>;
 }
 function Calculation({thread,all,metric}:{thread?:Summary;all?:Summary;metric:'cost'|'context'|'payback'}) {
  const formula=(s?:Summary)=>{
-  if(!s)return 'N/A';
-  if(metric==='payback')return `${s.profitable} / ${s.evaluable} × 100 = ${s.paybackRate==null?'N/A':percent(s.paybackRate)}`;
+  if(!s)return '—';
+  if(metric==='payback')return `${s.profitable} / ${s.evaluable} × 100 = ${s.paybackRate==null?'—':percent(s.paybackRate)}`;
   const numerator=metric==='cost'?s.cost+s.overhead:s.inputCost;
   const count=metric==='cost'?s.priced:s.inputPriced;
   return `${preciseUsd(numerator)} / ${count} = ${usd(metric==='cost'?s.costPerCall:s.contextPerCall)}`;
@@ -29,15 +39,15 @@ function Calculation({thread,all,metric}:{thread?:Summary;all?:Summary;metric:'c
 export function EfficiencyBanner({data:d,thresholds=defaultThresholds}:{data?:Efficiency;thresholds?:Thresholds}){
  const [period,setPeriod]=useState('7');
  const all=d?.periods[period]?.summary,t=d?.thread;
- return <details className="efficiency"><KpiSummary thread={t} all={all} comparisons={{thread:d?.comparisons?.thread,all:d?.comparisons?.periods[period]}} thresholds={thresholds}/><div className="efficiency-details kpi-guide">
- <label className="kpi-period">All chats period <select value={period} onChange={e=>setPeriod(e.target.value)}><option value="7">7 days</option><option value="30">30 days</option><option value="all">All history</option></select></label>
+ const ready=!!d&&!d.progress?.running&&!d.progress?.failed&&!d.baselineProvisional;
+ return <div className="efficiency-panel"><label className="kpi-period">Compare with <select aria-label="Comparison period" value={period} onChange={e=>setPeriod(e.target.value)}><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="all">All history</option></select></label><details className="efficiency"><KpiSummary thread={t} all={all} previous={d?.periods[period]?.previousSummary} ready={ready} thresholds={thresholds}/><div className="efficiency-details kpi-guide">
  {!d&&<p role="status">Historical analytics are loading.</p>}
  <dl className="kpi-definitions">
- <div><dt>Cost / call</dt><dd>Average estimated input and output cost per call, including compaction charges.<p className="kpi-formula">(Priced call cost + compaction charges) ÷ priced calls</p><Calculation thread={t} all={all} metric="cost"/></dd></div>
  <div><dt>Context / call <span>(USD)</span></dt><dd>Average estimated input cost per call: fresh, cached and cache-write input. Repeated context reads count each time; output and reasoning tokens are excluded.<p className="kpi-formula">Total input cost ÷ calls with priceable input</p><Calculation thread={t} all={all} metric="context"/></dd></div>
- <div><dt>Compaction payback</dt><dd>Share of completed, evaluable compactions that reached break-even.<p className="kpi-formula">Compactions reaching break-even ÷ evaluable compactions × 100</p><Calculation thread={t} all={all} metric="payback"/><p className="kpi-net">Final net savings: Thread {usd(t?.netSavings??null)} · All chats {usd(all?.netSavings??null)}. Reaching break-even does not guarantee positive final savings.</p></dd></div>
+ <div><dt>Cost / call</dt><dd>Average estimated input and output cost per call, including compaction charges.<p className="kpi-formula">(Priced call cost + compaction charges) ÷ priced calls</p><Calculation thread={t} all={all} metric="cost"/></dd></div>
+ <div><dt>Compaction payback</dt><dd>Share of completed, evaluable compactions that reached break-even.<p className="kpi-formula">Compactions reaching break-even ÷ evaluable compactions × 100</p><Calculation thread={t} all={all} metric="payback"/><p className="kpi-net">Final net savings: Thread {usd(t?.netSavings??null)} · All chats {usd(all?.netSavings??null)}. Pending compactions are excluded until completed. Closing a session can complete a pending compaction and change the fraction. Reaching break-even does not guarantee positive final savings.</p></dd></div>
  </dl>
- <p className="kpi-comparison-note">Arrow % = (matched current average ÷ historical reference − 1) × 100. Cost matches model + effort; context cost matches model. Thread uses other chats; All chats uses earlier history. All history has no earlier comparison.</p>
- <p className="provisional-explanation"><strong>* Provisional:</strong> comparisons need 20 current and 20 reference calls per group and complete pricing/import coverage; compaction payback needs {thresholds.minimumEvents} completed, evaluable events. Estimates use API-equivalent pricing, not subscription charges.</p>
- </div></details>;
+ <p className="kpi-comparison-note">Arrow % = (current average ÷ comparison average − 1) × 100. Thread compares directly with the Comp row: all chats in the selected period, including this thread. Comp compares with the preceding equal-length period; All history has no preceding period. These are spending comparisons; model mix, effort and output can affect them.</p>
+ <p className="provisional-explanation"><strong>* Provisional:</strong> comparisons need 20 current and 20 reference priced calls and complete pricing/import coverage; compaction payback needs {thresholds.minimumEvents} completed, evaluable events. Estimates use API-equivalent pricing, not subscription charges.</p>
+ </div></details></div>;
 }

@@ -29,7 +29,7 @@ export class HistoryBuilder {
  finish(now:number,end?:string){const e=this.epoch;if(e&&!e.completed){if(end&&end>=(this.data.activity??'')){e.completed=end;e.reason='session-end';}else if(this.data.activity&&now-Date.parse(this.data.activity)>=7*864e5){e.completed=new Date(Date.parse(this.data.activity)+7*864e5).toISOString();e.reason='inactivity';}}return this.data;}
 }
 export function weekly(buckets:Bucket[]){const weeks=new Map<string,Bucket[]>();for(const b of buckets){const d=new Date(b.timestamp.slice(0,10));d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);const key=d.toISOString().slice(0,10);weeks.set(key,[...(weeks.get(key)??[]),b]);}return [...weeks].sort().map(([week,b])=>({week,summary:summarize(b)}));}
-export type Efficiency={reference?:{buckets:Bucket[];ready:boolean};comparisons?:{thread:Comparisons;periods:Record<string,Comparisons>};activation:string;baseline:Summary;baselineCalls:number;baselineProvisional:boolean;baselineStart?:string;baselineEnd?:string;thread:Summary;threadWeeks:ReturnType<typeof weekly>;threadModels:{model:string;summary:Summary;baseline:Summary}[];baselineModels:{model:string;summary:Summary}[];paybacks:Payback[];periods:Record<string,{summary:Summary;models:{model:string;summary:Summary}[];weeks:{week:string;summary:Summary}[]}>;rolling:Summary;threadRolling:Summary;progress:{processed:number;total:number;running:boolean;failed:number};pricingBasis:string};
+export type Efficiency={reference?:{buckets:Bucket[];ready:boolean};comparisons?:{thread:Comparisons;periods:Record<string,Comparisons>};activation:string;baseline:Summary;baselineCalls:number;baselineProvisional:boolean;baselineStart?:string;baselineEnd?:string;thread:Summary;threadWeeks:ReturnType<typeof weekly>;threadModels:{model:string;summary:Summary;baseline:Summary}[];baselineModels:{model:string;summary:Summary}[];paybacks:Payback[];periods:Record<string,{summary:Summary;previousSummary?:Summary;models:{model:string;summary:Summary}[];weeks:{week:string;summary:Summary}[]}>;rolling:Summary;threadRolling:Summary;progress:{processed:number;total:number;running:boolean;failed:number};pricingBasis:string};
 export class EfficiencyStore {
  private db:DatabaseSync;private lastScan=-Infinity;private busy=false;private closed=false;private processed=0;private failed=0;private total=0;private importComplete=false;
  constructor(home:string){const root=stateRoot(home);privateDirectory(root);const file=path.join(root,'efficiency.sqlite');this.db=new DatabaseSync(file);chmodSync(file,0o600);this.db.exec('PRAGMA busy_timeout=1000; CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT); CREATE TABLE IF NOT EXISTS threads(id TEXT PRIMARY KEY,signature TEXT,basis TEXT,data TEXT)');this.db.prepare('INSERT OR IGNORE INTO meta VALUES (?,?)').run('activation',new Date().toISOString());}
@@ -48,11 +48,12 @@ export class EfficiencyStore {
   for(const days of ['7','30','all']){
     const start=days==='all'?'':new Date(now-(Number(days)-1)*864e5).toISOString().slice(0,10);
     const buckets=all.filter(b=>b.timestamp.slice(0,10)>=start);
-    const earlier=days==='all'?[]:all.filter(b=>b.timestamp.slice(0,10)<start);
+    const previousStart=days==='all'?'':new Date(Date.parse(start)-Number(days)*864e5).toISOString().slice(0,10);
+    const earlier=days==='all'?[]:all.filter(b=>b.timestamp.slice(0,10)>=previousStart&&b.timestamp.slice(0,10)<start);
     const events=pays.filter(p=>(p.completed??p.timestamp).slice(0,10)>=start);
-    comparisonPeriods[days]={...compareCohorts(buckets,earlier,ready),referenceLabel:days==='all'?'No earlier reference exists when All history is selected.':`All available calls before ${start} (UTC); excludes the selected period.`};
+    comparisonPeriods[days]={...compareCohorts(buckets,earlier,ready),referenceLabel:days==='all'?'No earlier reference exists when All history is selected.':`Previous ${days} days: ${previousStart} to before ${start} (UTC); excludes the selected period.`};
     if(days==='all')for(const metric of ['cost','context','cache'] as const)comparisonPeriods[days][metric].reason='All history has no earlier comparison period';
-    periods[days]={summary:summarize(buckets,events),models:[...new Set(buckets.map(b=>b.model??'Unknown model'))].map(model=>({model,summary:summarize(buckets.filter(b=>(b.model??'Unknown model')===model))})),weeks:weekly(buckets)};
+    periods[days]={summary:summarize(buckets,events),previousSummary:days==='all'?undefined:summarize(earlier),models:[...new Set(buckets.map(b=>b.model??'Unknown model'))].map(model=>({model,summary:summarize(buckets.filter(b=>(b.model??'Unknown model')===model))})),weeks:weekly(buckets)};
   }
   const last=rows.flatMap(r=>r.data.last).sort((a,b)=>a.timestamp.localeCompare(b.timestamp)).slice(-100);
   const charges=rows.flatMap(r=>r.data.charges??[]);

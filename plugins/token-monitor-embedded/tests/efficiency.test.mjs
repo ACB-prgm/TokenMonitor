@@ -46,13 +46,13 @@ test('historical reference includes all other-chat calls, including efforts abse
 test('period references precede UTC boundaries and all-history never compares against itself',async()=>{
  const home=mkdtempSync(path.join(os.tmpdir(),'efficiency-period-'));const now=Date.parse('2026-10-31T18:00:00Z');
  try{
-  mkdirSync(path.join(home,'sessions'));const files=[transcript(home,'prior',20,'high','2026-10-24'),transcript(home,'boundary',20,'high','2026-10-25'),transcript(home,'current',20,'high','2026-10-31')];
+  mkdirSync(path.join(home,'sessions'));const files=[transcript(home,'old',20,'high','2026-10-17'),transcript(home,'prior',20,'high','2026-10-24'),transcript(home,'boundary',20,'high','2026-10-25'),transcript(home,'current',20,'high','2026-10-31')];
   const store=new EfficiencyStore(home);await store.scan(home,files,true,now);const s=store.snapshot('current',now);
   assert.equal(s.periods['7'].summary.calls,40);assert.equal(s.comparisons.periods['7'].cost.currentCalls,40);assert.equal(s.comparisons.periods['7'].cost.baselineCalls,20);assert.equal(s.comparisons.periods['7'].cost.provisional,false);assert.match(s.comparisons.periods['7'].referenceLabel,/before 2026-10-25/);
-  assert.equal(s.periods['30'].summary.calls,60);assert.equal(s.comparisons.periods['30'].cost.reference,null);assert.equal(s.comparisons.periods['30'].cost.provisional,true);
-  assert.equal(s.periods.all.summary.calls,60);
+  assert.equal(s.periods['30'].summary.calls,80);assert.equal(s.comparisons.periods['30'].cost.reference,null);assert.equal(s.comparisons.periods['30'].cost.provisional,true);
+  assert.equal(s.periods.all.summary.calls,80);
   for(const metric of ['cost','context','cache']){assert.equal(s.comparisons.periods.all[metric].delta,null);assert.equal(s.comparisons.periods.all[metric].provisional,true);assert.match(s.comparisons.periods.all[metric].reason,/no earlier comparison/);}
-  assert.equal(s.baselineCalls,40);assert.equal(s.comparisons.thread.cost.provisional,false);store.close();
+  assert.equal(s.baselineCalls,60);assert.equal(s.periods[7].previousSummary.calls,20);assert.equal(s.periods.all.previousSummary,undefined);assert.equal(s.comparisons.thread.cost.provisional,false);store.close();
  }finally{rmSync(home,{recursive:true,force:true});}
 });
 test('twenty matching reference calls suffice without 100-call freeze and import gates remain',async()=>{

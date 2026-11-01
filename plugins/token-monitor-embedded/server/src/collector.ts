@@ -1,3 +1,4 @@
+import {estimateTurnPayback} from './turns.js';
 import {AccountLimits,CatalogueAllowances,chooseAllowances} from './allowances.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {readFileSync,readdirSync,lstatSync,existsSync} from 'node:fs';
@@ -119,7 +120,8 @@ export class Collector {
     if(typeof params.taskId!=='string'||!validID(params.taskId))return {unavailable:true};
     this.account.touch();
     const local=this.catalogue.read(()=>this.store.allowanceFiles(params.taskId as string));
-    const state={...this.store.snapshot(params.taskId),efficiency:this.store.efficiency?.snapshot(params.taskId)};
+    const snapshot=this.store.snapshot(params.taskId),efficiency=this.store.efficiency?.snapshot(params.taskId);
+    const state={...snapshot,efficiency,compactionTurnPayback:estimateTurnPayback({forecast:snapshot?.compactionValue,stats:snapshot?.turnStats,history:efficiency?.turns?.other,ready:!!efficiency?.reference?.ready,available:snapshot?.available===true,lastCall:snapshot?.lastCall,now:Date.now(),isCompacting:snapshot?.isCompacting,awaitingPostCompactionCall:snapshot?.awaitingPostCompactionCall,ended:snapshot?.sessionEnded,latestPayback:efficiency?.paybacks.at(-1),hasCompactions:!!(efficiency?.paybacks.length||snapshot?.compactions.length)})};
     const allowances=chooseAllowances(this.account.snapshot(),local);
     state.fiveHour=allowances.fiveHour;state.weekly=allowances.weekly;
     const revision=createHash('sha256').update(JSON.stringify(state)).digest('hex');return params.revision===revision?{revision,unchanged:true}:{revision,state};

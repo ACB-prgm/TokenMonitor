@@ -17,6 +17,34 @@ test('different or missing model and effort prevent comparable assessments',()=>
   const r=compareCohorts(calls(20,extra),calls(100),true);assert.equal(r.cost.provisional,true);assert.equal(r.cost.coverage,0);
  }
  });
+test('input cost and cache cohorts pool efforts but still require a recorded model',()=>{
+ for(const effort of [undefined,'low']){
+  const r=compareCohorts(calls(20,{effort}),calls(20),true);
+  assert.equal(r.cost.provisional,true);
+  assert.equal(r.context.provisional,false);assert.equal(r.cache.provisional,false);
+  assert.equal(r.context.cohorts[0].effort,undefined);
+ }
+ assert.equal(compareCohorts(calls(20,{model:undefined}),calls(20),true).context.provisional,true);
+});
+test('input and output references use their own cohort weights',()=>{
+ const current=[...calls(80),...calls(20,{effort:'medium',input:200000,cached:100000})];
+ const baseline=[...calls(20),...calls(80,{effort:'medium',input:200000,cached:100000})];
+ const r=compareCohorts(current,baseline,true);
+ assert.ok(Math.abs(r.cost.delta)<1e-10);
+ const expected=baseline.reduce((n,b)=>n+b.inputCost,0)/100;
+ assert.ok(Math.abs(r.context.reference-expected)<1e-10);
+ assert.notEqual(r.context.delta,0);assert.equal(r.context.cohorts.length,1);
+});
+test('missing and sparse references identify the exact cohort and counts',()=>{
+ const r=compareCohorts([...calls(128,{effort:'medium'}),...calls(33)],calls(100,{effort:'medium'}),true);
+ assert.match(r.cost.reason,/No reference calls for gpt-6.1-sol \/ high/);
+ assert.deepEqual(r.cost.cohorts.find(c=>c.effort==='high'),{model:'gpt-6.1-sol',effort:'high',currentCalls:33,referenceCalls:0});
+ assert.equal(r.context.provisional,false);
+ assert.match(compareCohorts(calls(20),calls(19),true).cost.reason,/20 current \/ 19 reference/);
+ const partial=[...calls(20),...calls(1,{outputRecorded:false})];
+ assert.equal(compareCohorts(calls(20),partial,true).cost.provisional,true);
+ assert.equal(compareCohorts(calls(20),partial,true).context.provisional,false);
+});
 test('cohorts ignore tier, region and pricing band while retaining their cost effects',()=>{
  for(const extra of [{serviceTier:'auto'},{serviceTier:'priority'},{serviceTier:'fast'},{serviceTier:'batch'},{regionalProcessing:true},{input:300000,cached:290000}]){
   const current=calls(20,extra),baseline=calls(100);

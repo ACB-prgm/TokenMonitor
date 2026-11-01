@@ -137,7 +137,7 @@ test('collapsed KPI summary has shared labels, three headers and no definitions'
  const html=render({panelId:'p',status:'Waiting'});const summary=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
  for(const label of ['Thread','All chats','Cost / call','Context / call','Compaction payback'])assert.equal(summary.split('>'+label+'<').length-1,1,label);
  assert.doesNotMatch(summary,/formula|baseline|input cost|<p>/i);assert.doesNotMatch(html,/Still gathering comparable history|class="efficiency-insights"/);
- assert.doesNotMatch(html,/Search local threads|Include archived|of .* matches/);
+ assert.doesNotMatch(html,/Search local threads|Include archived|\b\d+ of \d+ matches/);
  assert.doesNotMatch(html,/class="efficiency-insights"/);
 });
 test('decimal formatting preserves small positive and negative dollar differences',()=>{
@@ -181,10 +181,10 @@ test('thread allowance estimate leads account remaining in each group',()=>{
  test('provisional KPIs use asterisks with a disclosure explanation and badges in both scopes',()=>{
  const summary={calls:10,priced:10,inputPriced:10,cost:.274,inputCost:.218,overhead:0,costPerCall:.0274,contextPerCall:.0218,paybackRate:100,netSavings:.1,evaluable:2,profitable:2,pending:0,excluded:0,inactivity:0};
  const c={current:.0274,reference:.02,delta:37,currentCalls:10,baselineCalls:100,coverage:1,provisional:true,reason:'Fewer than 20 current calls'};
- const comparisons={cost:c,context:c,cache:c};
+ const comparisons={cost:{...c,cohorts:[{model:'gpt-6.1-sol',effort:'high',currentCalls:10,referenceCalls:100}]},context:c,cache:c,referenceLabel:'All available calls from other chats; excludes the selected chat.'};
  const data={activation:'2026-10-30',baseline:summary,baselineCalls:100,baselineProvisional:false,thread:summary,rolling:summary,threadRolling:summary,threadWeeks:[],threadModels:[],baselineModels:[],paybacks:[],comparisons:{thread:comparisons,periods:{7:comparisons}},periods:{7:{summary,models:[],weeks:[]}},progress:{processed:1,total:1,running:false,failed:0},pricingBasis:'fixture'};
  const html=render({...latestFixture,efficiency:data});const collapsed=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
  assert.equal((collapsed.match(/class="provisional-mark"/g)??[]).length,6);
  assert.equal((collapsed.match(/class="kpi-badge tone-neutral"/g)??[]).length,4);
- assert.doesNotMatch(collapsed.replace(/<span class="sr-only">[^<]*<\/span>/g,''),/>Provisional</);assert.match(html,/\* Provisional<\/strong> means/);assert.match(html,/20 current and 20 baseline/);assert.match(html,/five by default/);
+ assert.doesNotMatch(collapsed.replace(/<span class="sr-only">[^<]*<\/span>/g,''),/>Provisional</);assert.match(html,/\* Provisional<\/strong> means/);assert.match(html,/20 current and 20 reference/);assert.match(html,/five by default/);assert.match(html,/10 current \/ 100 reference calls/);assert.match(html,/excludes the selected chat/);assert.match(html,/Context\/call and cache-read share match model only/);assert.doesNotMatch(html,/Fixed reference|Cost \/ context change/);
  });

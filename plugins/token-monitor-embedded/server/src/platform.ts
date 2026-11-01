@@ -10,14 +10,17 @@ export const validID=(value:unknown):value is string=>typeof value==='string'&&/
 export function contained(root:string,candidate:string,flavor: 'win32'|'posix'=process.platform==='win32'?'win32':'posix') {
   const p=path[flavor];if(!p.isAbsolute(candidate))return false;const relative=p.relative(p.resolve(root),p.resolve(candidate));return !!relative&&relative!=='..'&&!relative.startsWith('..'+p.sep)&&!p.isAbsolute(relative);
 }
+const acceptedHeaders=new Map<string,string>();
 export function acceptedTranscript(candidate:unknown,id:string,home:string):candidate is string {
   if(!validID(id)||typeof candidate!=='string'||!path.isAbsolute(candidate))return false;
   let fd:number|undefined;try {
     const root=realpathSync(home),file=realpathSync(candidate);if(!contained(root,file))return false;
-    fd=openSync(file,constants.O_RDONLY);if(!fstatSync(fd).isFile())return false;
+    fd=openSync(file,constants.O_RDONLY);const stat=fstatSync(fd);if(!stat.isFile())return false;
+    const cacheKey=JSON.stringify([root,file,id]),signature=JSON.stringify([stat.dev,stat.ino,stat.size,stat.mtimeMs,stat.ctimeMs]);if(acceptedHeaders.get(cacheKey)===signature)return true;
     const buffer=Buffer.alloc(65536),size=readSync(fd,buffer,0,buffer.length,0),end=buffer.subarray(0,size).indexOf(10);if(end<0)return false;
     const record=JSON.parse(buffer.subarray(0,end).toString('utf8')),p=record?.payload;
-    return record.type==='session_meta'&&p?.id===id&&!(p.source&&typeof p.source==='object'&&Object.hasOwn(p.source,'subagent'))&&!(typeof p.source==='string'&&p.source.toLowerCase().startsWith('subagent'));
+    const accepted=record.type==='session_meta'&&p?.id===id&&!(p.source&&typeof p.source==='object'&&Object.hasOwn(p.source,'subagent'))&&!(typeof p.source==='string'&&p.source.toLowerCase().startsWith('subagent'));
+    if(accepted){if(acceptedHeaders.size>=2048)acceptedHeaders.delete(acceptedHeaders.keys().next().value!);acceptedHeaders.set(cacheKey,signature);}return accepted;
   }catch{return false;}finally{if(fd!=null)closeSync(fd);}
 }
 export function privateDirectory(directory:string) {

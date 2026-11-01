@@ -6,7 +6,10 @@ export class TurnCounter {
  private active?:{id?:string;started:string;user:boolean;calls:number;model?:string;invalid:boolean;spanning:boolean};
  private seen=new BoundedSet();private starts=new BoundedSet();private messages=new BoundedSet();
  private groups=new Map<string,TurnAggregate>();epochCompleted=0;
- constructor(private completed?:(turn:TurnAggregate)=>void){}
+ constructor(private completed?:(turn:TurnAggregate,timestamp:string)=>void,private replay?:(group:string,key:string)=>boolean){}
+ checkpoint(){return {active:this.active,epochCompleted:this.epochCompleted};}
+ restore(state:ReturnType<TurnCounter['checkpoint']>){this.active=state.active;this.epochCompleted=state.epochCompleted;}
+ private accept(group:string,key:string,set:BoundedSet){return this.replay?this.replay(group,key):set.add(key);}
  consume(type:string,p:RecordValue,timestamp?:string){
   if(!timestamp)return;
   const id=typeof p.turn_id==='string'?p.turn_id:undefined;
@@ -15,12 +18,12 @@ export class TurnCounter {
   if(type==='response_item'&&p.type==='message'&&p.role==='user'){if(this.active)this.active.user=true;return;}
   if(type!=='event_msg')return;
   if(p.type==='task_started'){
-   if(!id||!this.starts.add(id))return;
+   if(!id||!this.accept('turn-start',id,this.starts))return;
    const trigger=p.turn_attribution?.turn_trigger;
    this.active={id,started:timestamp,user:trigger==='composer',calls:0,invalid:typeof trigger==='string'&&trigger!=='composer',spanning:false};return;
   }
   if(p.type==='user_message'){
-   if(!this.messages.add(JSON.stringify([id,timestamp])))return;
+   if(!this.accept('turn-message',JSON.stringify([id,timestamp]),this.messages))return;
    if(this.active&&(!id||id===this.active.id)){if(this.active.user&&this.active.calls>0)this.active.invalid=true;this.active.user=true;return;}
    this.active={id,started:timestamp,user:true,calls:0,invalid:false,spanning:false};return;
   }
@@ -28,11 +31,11 @@ export class TurnCounter {
   if(p.type!=='task_complete')return;
   const a=this.active;if(!a||id&&a.id!==id)return;
   this.active=undefined;
-  const key=a.id??JSON.stringify([a.started,timestamp]);if(!this.seen.add(key)||timestamp<a.started||!a.user||a.invalid||!a.calls||!a.model)return;
+  const key=a.id??JSON.stringify([a.started,timestamp]);if(!this.accept('turn-end',key,this.seen)||timestamp<a.started||!a.user||a.invalid||!a.calls||!a.model)return;
   if(!a.spanning)this.epochCompleted++;
   const turn={model:a.model,turns:1,calls:a.calls},old=this.groups.get(a.model);
   if(old){old.turns++;old.calls+=a.calls;}else this.groups.set(a.model,{...turn});
-  this.completed?.(turn);
+  this.completed?.(turn,timestamp);
  }
  call(model?:string){const a=this.active;if(!a)return;a.calls++;if(!model||a.model&&a.model!==model)a.invalid=true;else a.model=model;}
  snapshot():TurnStats{return {models:[...this.groups.values()].map(g=>({...g})),epochCompleted:this.epochCompleted};}

@@ -79,6 +79,10 @@ server.registerTool('get_monitor_state', {
   try { return { content: [], _meta: { monitor: await panels.state(args.panelId, args, hostID(extra)), updates: await updateState() } }; }
   catch { return { isError: true, content: [], _meta: { error: 'Task unavailable. Refresh the local task list.' } }; }
 });
+server.registerTool('get_history_storage', {
+ title:'Inspect local history storage',description:'Read aggregate local storage diagnostics on demand.',
+ inputSchema:{panelId:z.string().uuid()},annotations,_meta:{ui:{visibility:['app']}},
+},async()=>{try{return {content:[],_meta:{storage:await collector.store.efficiency?.diagnostics()}};}catch{return {isError:true,content:[],_meta:{error:'Local history storage is temporarily unavailable.'}};}});
 server.registerTool('manage_updates', {
   title: 'TokenMonitor updates', description: 'Panel-only release checks, preferences, and explicitly requested verified installation through Codex.',
   inputSchema: { action: z.enum(['opening','check','configure','dismiss','install']), automatic: z.boolean().optional(),

@@ -118,7 +118,7 @@ function Panel() {
     return ()=>{active.current=false;serial.current++;clearInterval(interval);document.removeEventListener('visibilitychange',visible);app.close();};
   },[]);
   return <MonitorView s={state} expanded={layout.expanded} scale={layout.scale} error={error}
-    updates={updates} onUpdate={summary?undefined:action=>void manageUpdate(action)} updateError={updateError}
+    onStorage={summary?undefined:async()=>{const result=await app.callServerTool({name:'get_history_storage',arguments:{panelId:current.current.panelId}});if(result.isError||!(result._meta as any)?.storage)throw Error('Storage diagnostics unavailable.');return (result._meta as any).storage;}} updates={updates} onUpdate={summary?undefined:action=>void manageUpdate(action)} updateError={updateError}
     onFilter={summary?undefined:(query,includeArchived)=>{filters.current={query,includeArchived};pendingFilter.current=fetching.current;retry.current.at=0;void refresh();}}
     onAction={summary ? undefined : (action,id)=>{retry.current.at=0;void refresh(action,id);}} onLayout={changeLayout}
     storage={legacy()?.setWidgetState ? 'host widget state' : 'frame session storage (host state API unavailable)'} />;

@@ -24,10 +24,13 @@ function fingerprint(value:any) {
   }
   return hash.update(buffer).digest('hex');
 }
-export type NumericEvent = {kind:"turn";turn:TurnAggregate}|{kind:"call";sample:Sample;contextLimit?:number}|{kind:"compaction";timestamp:string}|{kind:"activity";timestamp:string}|{kind:"retained";tokens:number};
+export type NumericEvent = {kind:"turn";turn:TurnAggregate;timestamp?:string}|{kind:"call";sample:Sample;contextLimit?:number}|{kind:"compaction";timestamp:string}|{kind:"activity";timestamp:string}|{kind:"retained";tokens:number};
 export class TelemetryParser {
   readonly turns:TurnCounter;
-  constructor(private numericEvent?:(event:NumericEvent)=>void){this.turns=new TurnCounter(turn=>this.numericEvent?.({kind:"turn",turn}));}
+  constructor(private numericEvent?:(event:NumericEvent)=>void,private options:{numericOnly?:boolean;replay?:(group:string,key:string)=>boolean}={}){this.turns=new TurnCounter((turn,timestamp)=>this.numericEvent?.({kind:"turn",turn,timestamp}),options.replay);}
+  numericCheckpoint(){return {model:this.model,effort:this.effort,serviceTier:this.serviceTier,regionalProcessing:this.regionalProcessing,contextLimit:this.contextLimit,awaitingPostCompactionCall:this.awaitingPostCompactionCall,compactedContext:this.compactedContext,compactions:this.compactions.slice(-1),lastCallModel:this.lastCallModel,callCount:this.callCount,turns:this.turns.checkpoint()};}
+  restoreNumeric(s:ReturnType<TelemetryParser['numericCheckpoint']>){this.model=s.model;this.effort=s.effort;this.serviceTier=s.serviceTier;this.regionalProcessing=s.regionalProcessing;this.contextLimit=s.contextLimit;this.awaitingPostCompactionCall=s.awaitingPostCompactionCall;this.compactedContext=s.compactedContext;this.compactions=s.compactions;this.lastCallModel=s.lastCallModel;this.callCount=s.callCount;this.turns.restore(s.turns);}
+  private accept(group:string,key:string,set:BoundedSet){return this.options.replay?this.options.replay(group,key):set.add(key);}
   awaitingPostCompactionCall=false; compactedContext?:number; compactions:{timestamp:string;callPosition:number}[]=[];
   samples:Sample[]=[]; contextLimit?:number; fiveHour?:{used:number;reset?:string}; weekly?:{used:number;reset?:string};
   model?:string; effort?:string; title?:string; lastCallModel?:string; lastCallEffort?:string; lastEvent?:string; callCount=0;
@@ -43,31 +46,31 @@ export class TelemetryParser {
     let r:RecordValue;try{r=typeof line==='string'||Buffer.isBuffer(line)?JSON.parse(line.toString()):line;}catch{return;}
     if(!object(r)||!object(r.payload))return;const p=r.payload,type=r.type,time=date(r.timestamp);
     if(time)this.numericEvent?.({kind:"activity",timestamp:time});
-    this.activity.consume(type,p);
+    if(!this.options.numericOnly)this.activity.consume(type,p);
     // Only accept monotonically new compaction boundaries, just as call accounting does.
     if(type!=='compacted'||time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp))this.turns.consume(type,p,time);
     if(type==='compacted'&&time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp)){this.numericEvent?.({kind:"compaction",timestamp:time});this.contextSegment++;this.forecastSamples=[];this.awaitingPostCompactionCall=true;this.compactedContext=undefined;this.pendingAttribution=undefined;this.contextAttribution=emptyAttribution();}
     const response=['reasoning','function_call','custom_tool_call'].includes(p.type)||(p.type==='message'&&p.role==='assistant');
-    if(type==='response_item'&&!this.pendingAttribution&&response)this.pendingAttribution=this.attribution.snapshot();
-    this.attribution.consume(type,p);if(time)this.lastEvent=time;
+    if(!this.options.numericOnly&&type==='response_item'&&!this.pendingAttribution&&response)this.pendingAttribution=this.attribution.snapshot();
+    if(!this.options.numericOnly)this.attribution.consume(type,p);if(time)this.lastEvent=time;
     if(type==='compacted'&&time&&this.compactions.at(-1)?.timestamp!==time){this.compactions.push({timestamp:time,callPosition:this.callCount-.5});if(this.compactions.length>120)this.compactions.shift();}
     if(type==='turn_context'){
       const next=typeof p.model==='string'?p.model:this.model;if(next!==this.model){this.contextSegment++;this.contextLimit=undefined;this.serviceTier=undefined;this.regionalProcessing=undefined;}
       this.model=next;this.serviceTier=typeof p.service_tier==='string'?p.service_tier:undefined;this.regionalProcessing=typeof p.regional_processing==='boolean'?p.regional_processing:undefined;
       this.effort=typeof p.effort==='string'?p.effort:typeof p.reasoning_effort==='string'?p.reasoning_effort:undefined;
     }
-    if(type==='session_meta'&&typeof p.title==='string')this.title=p.title;
+    if(!this.options.numericOnly&&type==='session_meta'&&typeof p.title==='string')this.title=p.title;
     if(type!=='event_msg')return;
-    if(p.type==='user_message'&&!this.title)this.title=cleanTitle(p.message);
+    if(!this.options.numericOnly&&p.type==='user_message'&&!this.title)this.title=cleanTitle(p.message);
     if(p.type!=='token_count')return;
     const allowances=normalizeAllowances(p.rate_limits,'catalogue',time??'');
     if(allowances.fiveHour)this.fiveHour={used:allowances.fiveHour.used,reset:allowances.fiveHour.reset};
     if(allowances.weekly)this.weekly={used:allowances.weekly.used,reset:allowances.weekly.reset};
     const info=p.info;if(!object(info))return;
-    if(typeof r.timestamp==='string'&&!this.seenRecords.add(fingerprint([r.timestamp,info])))return;
+    if(typeof r.timestamp==='string'&&!this.accept('record',fingerprint([r.timestamp,info]),this.seenRecords))return;
     if(integer(info.model_context_window)&&info.model_context_window>0)this.contextLimit=info.model_context_window;
     const cumulative=object(info.total_token_usage)?info.total_token_usage:undefined,u=object(info.last_token_usage)?info.last_token_usage:undefined;
-    if(cumulative&&nonnegative(cumulative.input_tokens)&&nonnegative(cumulative.output_tokens)&&u&&integer(u.input_tokens)&&u.input_tokens>0&&nonnegative(u.cached_input_tokens)&&u.cached_input_tokens<=u.input_tokens&&!this.seenCumulativeCalls.add(fingerprint(cumulative)))return;
+    if(cumulative&&nonnegative(cumulative.input_tokens)&&nonnegative(cumulative.output_tokens)&&u&&integer(u.input_tokens)&&u.input_tokens>0&&nonnegative(u.cached_input_tokens)&&u.cached_input_tokens<=u.input_tokens&&!this.accept('cumulative',fingerprint(cumulative),this.seenCumulativeCalls))return;
     let reportedThisRecord=false;
     if(cumulative&&nonnegative(cumulative.output_tokens)){reportedThisRecord=true;this.reportedOutput=cumulative.output_tokens;this.reportedReasoning=nonnegative(cumulative.reasoning_output_tokens)&&cumulative.reasoning_output_tokens<=cumulative.output_tokens?cumulative.reasoning_output_tokens:undefined;}
     if(!u&&cumulative){if(integer(cumulative.input_tokens))this.usage.cumulativeMismatch=cumulative.input_tokens!==this.usage.input;if(integer(cumulative.output_tokens)&&cumulative.output_tokens!==this.usage.output)this.usage.cumulativeMismatch=true;}
@@ -81,12 +84,13 @@ export class TelemetryParser {
       model:typeof info.model==='string'?info.model:this.model,serviceTier:typeof p.service_tier==='string'?p.service_tier:typeof info.service_tier==='string'?info.service_tier:this.serviceTier,regionalProcessing:this.regionalProcessing,
       cachedRecorded:nonnegative(u.cached_input_tokens),cacheWriteRecorded:nonnegative(u.cache_write_input_tokens)&&u.cache_write_input_tokens<=input-cached};
     s.price=price(s);
-    if(!this.seenIdentities.add(fingerprint([r.timestamp,s.input,s.cached,s.output,s.total??-1])))return;
+    if(!this.accept('call',fingerprint([r.timestamp,s.input,s.cached,s.output,s.total??-1]),this.seenIdentities))return;
     if(this.lastCallModel&&s.model!==this.lastCallModel&&!(integer(info.model_context_window)&&info.model_context_window>0))this.contextLimit=undefined;
     const activity=this.activity.take();if(activity)s.activity=activity;
     this.awaitingPostCompactionCall=false;this.compactedContext=undefined;this.contextAttribution=bounded(this.pendingAttribution??this.attribution.snapshot(),input);this.pendingAttribution=undefined;
     this.turns.call(s.model);
     this.numericEvent?.({kind:"call",sample:{...s,activity:undefined},contextLimit:this.contextLimit});
+    if(this.options.numericOnly){this.lastCallModel=s.model;this.callCount++;return;}
     this.usage.add(s);if(cumulative){if(integer(cumulative.input_tokens))this.usage.cumulativeMismatch=cumulative.input_tokens!==this.usage.input;if(integer(cumulative.output_tokens)&&cumulative.output_tokens!==this.usage.output)this.usage.cumulativeMismatch=true;}
     this.lastCallModel=s.model;this.lastCallEffort=this.effort;this.callCount++;
     if(!reportedThisRecord&&this.reportedOutput!=null){this.reportedOutput=nonnegative(u.output_tokens)&&Number.isSafeInteger(this.reportedOutput+output)?this.reportedOutput+output:undefined;this.reportedReasoning=this.reportedReasoning!=null&&s.reasoningRecorded&&Number.isSafeInteger(this.reportedReasoning+reasoning)?this.reportedReasoning+reasoning:undefined;}

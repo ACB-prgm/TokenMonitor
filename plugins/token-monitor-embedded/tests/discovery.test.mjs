@@ -13,7 +13,7 @@ async function transcript(root,id,{archived=false,source='cli',name=`rollout-202
 async function complete(store){await store.catalogue();for(let i=0;i<300&&store.discovery.status.state==='scanning';i++)await new Promise(r=>setTimeout(r,5));assert.notEqual(store.discovery.status.state,'scanning');return store.catalogue();}
 test('cold discovery finds historical usage without SQLite, hooks or full usage parsing',async()=>{
  const root=await home();await transcript(root,'old');const store=new TelemetryStore(root);
- try{const first=await store.catalogue();assert.equal(first.discovery.state,'scanning');const list=await complete(store);assert.equal(list.tasks[0].id,'old');assert.equal(store.activeCollectorCount,0);assert.equal(store.snapshot('old').input,1234);assert.doesNotMatch(JSON.stringify(list),/transcript_path|\.jsonl|\/private/);}finally{store.close();}
+ try{const first=await store.catalogue();assert.ok(['scanning','complete'].includes(first.discovery.state));const list=await complete(store);assert.equal(list.tasks[0].id,'old');assert.equal(store.activeCollectorCount,0);assert.equal(store.snapshot('old').input,1234);assert.doesNotMatch(JSON.stringify(list),/transcript_path|\.jsonl|\/private/);}finally{store.close();}
 });
 test('search reaches beyond 100 results and archive toggle preserves selected thread',async()=>{
  const root=await home();for(let i=0;i<110;i++)await transcript(root,`old-${i}`);await transcript(root,'archived',{archived:true});
@@ -32,9 +32,9 @@ test('discovery rejects subagents, oversized headers, malformed records and syml
  const root=await home(),outside=await home();await transcript(root,'sub',{source:{subagent:{}}});const file=await transcript(root,'large');await writeFile(file,'x'.repeat(65537)+'\n');const external=await transcript(outside,'escape');await mkdir(path.join(root,'sessions'),{recursive:true});await symlink(external,path.join(root,'sessions','escape.jsonl'));
  const store=new TelemetryStore(root);try{const list=await complete(store);assert.equal(list.tasks.length,0);assert.ok(list.discovery.excluded>=2);assert.ok(list.discovery.malformed>=1);}finally{store.close();}
 });
-test('corrupt cache and database do not prevent discovery; removed files are hidden',async()=>{
+test('corrupt catalogue sources do not prevent discovery; imported summaries survive removed files',async()=>{
  const root=await home();const file=await transcript(root,'old');await mkdir(path.join(root,'token-monitor-embedded'));await writeFile(path.join(root,'token-monitor-embedded','discovery.json'),'broken');await writeFile(path.join(root,'state_5.sqlite'),'broken');const store=new TelemetryStore(root);
- try{assert.equal((await complete(store)).tasks.length,1);await rm(file);assert.equal((await store.catalogue()).tasks.length,0);}finally{store.close();}
+ try{assert.equal((await complete(store)).tasks.length,1);await store.efficiency.scan(root,[{id:'old',file}],true);await rm(file);const saved=await store.catalogue();assert.equal(saved.tasks.length,1);assert.equal(saved.tasks[0].saved,true);assert.equal(saved.tasks[0].sourceAvailable,false);}finally{store.close();}
 });
 
 test('concurrent discovery caches merge and closing interrupts scans safely',async()=>{

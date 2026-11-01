@@ -33,5 +33,5 @@ test('dimensions are interned and duplicate replacement does not multiply rows',
  const history=new HistoryDatabase(file);for(let i=0;i<10;i++)history.replace('a','same','basis',data);
  assert.equal(history.db.prepare('SELECT COUNT(*) AS n FROM history_dimensions').get().n,1);
  assert.equal(history.db.prepare('SELECT COUNT(*) AS n FROM history_samples').get().n,1);
- assert.equal(history.db.prepare('SELECT COUNT(*) AS n FROM history_buckets').get().n,1);history.close();
+ assert.equal(history.db.prepare('SELECT COUNT(*) AS n FROM history_daily').get().n,1);history.close();
 }));

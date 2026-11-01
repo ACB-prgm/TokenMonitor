@@ -1,6 +1,7 @@
 import type {TurnAggregate} from './turns.js';
 import {compareCohorts,type Comparisons} from './comparisons.js';
-import {DatabaseSync} from 'node:sqlite';
+import {HistoryDatabase} from './history-database.js';
+import type {DatabaseSync} from 'node:sqlite';
 import {createReadStream,chmodSync,statSync} from 'node:fs';
 import {createInterface} from 'node:readline';
 import path from 'node:path';
@@ -31,21 +32,29 @@ export class HistoryBuilder {
  finish(now:number,end?:string){const e=this.epoch;if(e&&!e.completed){if(end&&end>=(this.data.activity??'')){e.completed=end;e.reason='session-end';}else if(this.data.activity&&now-Date.parse(this.data.activity)>=7*864e5){e.completed=new Date(Date.parse(this.data.activity)+7*864e5).toISOString();e.reason='inactivity';}}return this.data;}
 }
 export function weekly(buckets:Bucket[]){const weeks=new Map<string,Bucket[]>();for(const b of buckets){const d=new Date(b.timestamp.slice(0,10));d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);const key=d.toISOString().slice(0,10);weeks.set(key,[...(weeks.get(key)??[]),b]);}return [...weeks].sort().map(([week,b])=>({week,summary:summarize(b)}));}
-export type Efficiency={turns?:{other:TurnAggregate[]};reference?:{buckets:Bucket[];ready:boolean};comparisons?:{thread:Comparisons;periods:Record<string,Comparisons>};activation:string;baseline:Summary;baselineCalls:number;baselineProvisional:boolean;baselineStart?:string;baselineEnd?:string;thread:Summary;threadWeeks:ReturnType<typeof weekly>;threadModels:{model:string;summary:Summary;baseline:Summary}[];baselineModels:{model:string;summary:Summary}[];paybacks:Payback[];periods:Record<string,{summary:Summary;previousSummary?:Summary;models:{model:string;summary:Summary}[];weeks:{week:string;summary:Summary}[]}>;rolling:Summary;threadRolling:Summary;progress:{processed:number;total:number;running:boolean;failed:number};pricingBasis:string};
+// Historical chart references require cohort totals, not every chat/day bucket.
+function cohortTotals(buckets:Bucket[]):Bucket[]{const groups=new Map<string,Bucket>();for(const b of buckets){const key=JSON.stringify([b.model,b.effort,b.serviceTier,b.regionalProcessing,b.rateBand]);const old=groups.get(key);if(!old)groups.set(key,{...b});else for(const k of ['cacheInput','cacheRead','input','cached','cacheWrite','output','calls','priced','inputPriced','inputCost','cost','overhead'] as const)old[k]+=b[k];}return [...groups.values()];}
+export type Efficiency={history?:{retentionDays:number;frozenThreads:number};turns?:{other:TurnAggregate[]};reference?:{buckets:Bucket[];ready:boolean};comparisons?:{thread:Comparisons;periods:Record<string,Comparisons>};activation:string;baseline:Summary;baselineCalls:number;baselineProvisional:boolean;baselineStart?:string;baselineEnd?:string;thread:Summary;threadWeeks:ReturnType<typeof weekly>;threadModels:{model:string;summary:Summary;baseline:Summary}[];baselineModels:{model:string;summary:Summary}[];paybacks:Payback[];periods:Record<string,{summary:Summary;previousSummary?:Summary;models:{model:string;summary:Summary}[];weeks:{week:string;summary:Summary}[]}>;rolling:Summary;threadRolling:Summary;progress:{processed:number;total:number;running:boolean;failed:number};pricingBasis:string};
 export class EfficiencyStore {
- private db:DatabaseSync;private lastScan=-Infinity;private busy=false;private closed=false;private processed=0;private failed=0;private total=0;private importComplete=false;
- constructor(home:string){const root=stateRoot(home);privateDirectory(root);const file=path.join(root,'efficiency.sqlite');this.db=new DatabaseSync(file);chmodSync(file,0o600);this.db.exec('PRAGMA busy_timeout=1000; CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT); CREATE TABLE IF NOT EXISTS threads(id TEXT PRIMARY KEY,signature TEXT,basis TEXT,data TEXT)');this.db.prepare('INSERT OR IGNORE INTO meta VALUES (?,?)').run('activation',new Date().toISOString());}
- async scan(home:string,files:{id:string;file:string;end?:string}[],complete:boolean,now=Date.now()) {if(this.busy||this.closed||now-this.lastScan<5000)return;this.lastScan=now;this.busy=true;this.total=files.length;this.processed=0;this.failed=0;
- try{for(const f of files){if(this.closed)break;try{if(!acceptedTranscript(f.file,f.id,home))continue;const st=statSync(f.file),sig=JSON.stringify([st.dev,st.ino,st.size,st.mtimeMs,f.end]);const old=this.db.prepare('SELECT signature,basis FROM threads WHERE id=?').get(f.id);if(old?.signature===sig&&old.basis===basis){this.processed++;continue;}const b=new HistoryBuilder(),p=new TelemetryParser(e=>{if(e.kind==='activity')b.activity(e.timestamp);else if(e.kind==='compaction')b.compact(e.timestamp);else if(e.kind==='retained')b.retainedContext(e.tokens);else if(e.kind==='turn')b.turn(e.turn);else b.call(e.sample,e.contextLimit);});const lines=createInterface({input:createReadStream(f.file),crlfDelay:Infinity});for await(const line of lines){if(this.closed)break;if(line.length<=4*1024*1024)p.consume(line);}if(this.closed)break;this.db.prepare('INSERT OR REPLACE INTO threads VALUES (?,?,?,?)').run(f.id,sig,basis,JSON.stringify(b.finish(now,f.end)));this.processed++;}catch{this.failed++;}await new Promise<void>(r=>setImmediate(r));}}
+ private snapshots=new Map<string,{value:Efficiency;bytes:number;expires:number}>();private snapshotBytes=0;private storage:HistoryDatabase;private db:DatabaseSync;private cachedHistories?:{revision:string;rows:{id:string;basis:string;data:ThreadHistory}[]};private lastScan=-Infinity;private busy=false;private closed=false;private processed=0;private failed=0;private total=0;private importComplete=false;
+ constructor(home:string){const root=stateRoot(home);privateDirectory(root);this.storage=new HistoryDatabase(path.join(root,'efficiency.sqlite'));this.db=this.storage.db;this.db.prepare('INSERT OR IGNORE INTO meta VALUES (?,?)').run('activation',new Date().toISOString());}
+ storageDiagnostics(){return this.storage.diagnostics();}
 
- finally{this.importComplete=complete&&!this.failed;this.busy=false;if(this.closed)this.db.close();}}
+ async scan(home:string,files:{id:string;file:string;end?:string}[],complete:boolean,now=Date.now()) {if(this.busy||this.closed||now-this.lastScan<5000)return;this.lastScan=now;this.busy=true;this.total=files.length;this.processed=0;this.failed=0;
+ try{for(const f of files){if(this.closed)break;try{if(!acceptedTranscript(f.file,f.id,home))continue;const st=statSync(f.file),sig=JSON.stringify([st.dev,st.ino,st.size,st.mtimeMs,f.end]);const old=this.storage.signature(f.id);if(old?.signature===sig&&old.basis===basis){this.processed++;continue;}const detail:NumericCall[]=[],b=new HistoryBuilder(),p=new TelemetryParser(e=>{if(e.kind==='activity')b.activity(e.timestamp);else if(e.kind==='compaction')b.compact(e.timestamp);else if(e.kind==='retained')b.retainedContext(e.tokens);else if(e.kind==='turn')b.turn(e.turn);else {b.call(e.sample,e.contextLimit);if(e.sample.timestamp.slice(0,10)>=new Date(now-89*864e5).toISOString().slice(0,10))detail.push(e.sample);}});const lines=createInterface({input:createReadStream(f.file),crlfDelay:Infinity});for await(const line of lines){if(this.closed)break;if(line.length<=4*1024*1024)p.consume(line);}if(this.closed)break;this.storage.replace(f.id,sig,basis,b.finish(now,f.end),detail);this.processed++;}catch{this.failed++;}await new Promise<void>(r=>setImmediate(r));}}
+
+ finally{if(!this.closed)try{this.storage.maintenance(now);}catch{this.failed++;}this.importComplete=complete&&!this.failed;this.busy=false;if(this.closed)this.db.close();}}
  private completeInactive(data:ThreadHistory,now:number){const e=data.paybacks.at(-1);if(e&&!e.completed&&data.activity&&now-Date.parse(data.activity)>=7*864e5){e.completed=new Date(Date.parse(data.activity)+7*864e5).toISOString();e.reason='inactivity';}return data;}
- private histories(now=Date.now()){return (this.db.prepare('SELECT id,data,basis FROM threads').all() as {id:string;data:string;basis:string}[]).filter(r=>r.basis===basis).map(r=>({id:r.id,data:this.completeInactive(JSON.parse(r.data),now)}));}
+ private histories(now=Date.now()){const revision=this.storage.revision();if(this.cachedHistories?.revision!==revision)this.cachedHistories={revision,rows:this.storage.histories()};return this.cachedHistories.rows.map(r=>({id:r.id,data:this.completeInactive(structuredClone(r.data),now)}));}
+
  snapshot(id?:string,now=Date.now()):Efficiency {
+  const key=JSON.stringify([this.storage.revision(),id,now-(now%864e5),this.importComplete,this.busy,this.failed,this.processed,this.total]);
+  const cached=this.snapshots.get(key);if(cached&&now<cached.expires){this.snapshots.delete(key);this.snapshots.set(key,cached);return cached.value;}
   const rows=this.histories(now),all=rows.flatMap(r=>r.data.buckets),pays=rows.flatMap(r=>r.data.paybacks);
   const thread=rows.find(r=>r.id===id)?.data;
   const reference=rows.filter(r=>r.id!==id).flatMap(r=>r.data.buckets);
-  const ready=this.importComplete&&!this.failed;
+  const frozenThreads=this.cachedHistories?.rows.filter(r=>r.basis!==basis).length??0;
+  const ready=this.importComplete&&!this.failed&&!frozenThreads;
   const other:TurnAggregate[]=[];for(const r of rows.filter(r=>r.id!==id))for(const g of r.data.turns??[]){const old=other.find(x=>x.model===g.model);if(old){old.turns+=g.turns;old.calls+=g.calls;}else other.push({...g});}
   const periods:Efficiency['periods']={},comparisonPeriods:Record<string,Comparisons>={};
   for(const days of ['7','30','all']){
@@ -62,8 +71,8 @@ export class EfficiencyStore {
   const charges=rows.flatMap(r=>r.data.charges??[]);
   const withCharges=(calls:NumericCall[],cs=charges)=>[...calls.map(callBucket),...cs.filter(c=>calls.length&&c.timestamp>=calls[0].timestamp&&c.timestamp<=calls.at(-1)!.timestamp)];
   const dates=reference.map(b=>b.timestamp).sort();
-  return {
-    turns:{other},reference:{buckets:reference,ready},
+  const result:Efficiency={
+    history:{retentionDays:90,frozenThreads},turns:{other},reference:{buckets:cohortTotals(reference),ready},
     comparisons:{thread:{...compareCohorts(thread?.buckets??[],reference,ready),referenceLabel:'All available calls from other chats; excludes the selected chat.'},periods:comparisonPeriods},
     activation:String(this.db.prepare('SELECT value FROM meta WHERE key=?').get('activation')!.value),
     // Retained payload fields now describe the other-chat reference. Saved legacy
@@ -74,8 +83,12 @@ export class EfficiencyStore {
     threadModels:[...new Set((thread?.buckets??[]).map(b=>b.model??'Unknown model'))].map(model=>({model,summary:summarize((thread?.buckets??[]).filter(b=>(b.model??'Unknown model')===model)),baseline:summarize(reference.filter(b=>b.model===model))})),
     baselineModels:[...new Set(reference.map(b=>b.model??'Unknown model'))].map(model=>({model,summary:summarize(reference.filter(b=>(b.model??'Unknown model')===model))})),
     paybacks:thread?.paybacks??[],periods,rolling:summarize(withCharges(last)),threadRolling:summarize(withCharges(thread?.last??[],thread?.charges??[])),
-    progress:{processed:this.processed,total:this.total,running:this.busy,failed:this.failed},pricingBasis:`Current bundled rates · verified ${pricingMetadata.verifiedAt} · effective ${pricingMetadata.configurationEffectiveDate}`
+    progress:{processed:this.processed,total:this.total,running:this.busy,failed:this.failed},pricingBasis:`Current bundled rates · verified ${pricingMetadata.verifiedAt} · effective ${pricingMetadata.configurationEffectiveDate}${frozenThreads?` · ${frozenThreads} saved chats retain their original calculation basis`: ""}`
   };
+  const bytes=Buffer.byteLength(JSON.stringify(result));const boundaries=rows.map(r=>Date.parse(r.data.activity??'')+7*864e5).filter(t=>t>now);const expires=Math.min(...boundaries,now-(now%864e5)+864e5);
+  const prior=this.snapshots.get(key);if(prior)this.snapshotBytes-=prior.bytes;this.snapshots.delete(key);if(bytes<=16*1024*1024){this.snapshots.set(key,{value:result,bytes,expires});this.snapshotBytes+=bytes;}
+  while(this.snapshots.size>64||this.snapshotBytes>16*1024*1024){const oldest=this.snapshots.keys().next().value!;this.snapshotBytes-=this.snapshots.get(oldest)!.bytes;this.snapshots.delete(oldest);}
+  return result;
  }
  close(){this.closed=true;if(!this.busy)this.db.close();}
 }

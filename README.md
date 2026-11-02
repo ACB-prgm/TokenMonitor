@@ -17,7 +17,7 @@ Costs are estimates using the bundled rate table, not invoices. Subscription all
 
 ## Platforms and installation
 
-Packages target macOS Apple silicon (`macos-arm64`), macOS Intel (`macos-x64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop rendering and trusted lifecycle delivery require separate verification.
+Published 1.9.0 packages target macOS Apple silicon (`macos-arm64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Intel macOS and Linux packages are not published for this release. Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop rendering and trusted lifecycle delivery require separate verification.
 
 Version 1.9.0 introduces a compact dashboard, searchable local threads, historical efficiency comparisons, conservative compaction guidance, and durable local numeric history. **Update and install** is available in Settings → About. See the [release notes](docs/RELEASE-1.9.0.md) and [validation scope](docs/VALIDATION-1.9.0.md).
 
@@ -47,7 +47,7 @@ Restart Codex, review DEV hook trust, then ask to open Token Monitor DEV. Run th
 same command after edits to rebuild and refresh the local installation. See
 [the DEV workflow](docs/DEVELOPMENT.md) for setup, build-only, and removal commands.
 
-Use Node 24 LTS and Python 3.12+ for build-time archive extraction only. Run `npm ci` in `plugins/token-monitor-embedded`, followed by `node scripts/build-release.mjs --target macos-arm64` from the repository root. Supported `--target` values are the four platform names above and `all`. Archives and SHA-256 files are written to `dist/`.
+Use Node 24 LTS and Python 3.12+ for build-time archive extraction only. Run `npm ci` in `plugins/token-monitor-embedded`, followed by `node scripts/build-release.mjs --target macos-arm64` from the repository root. Supported local-build `--target` values are the three platform names above, `macos-x64`, and `all`. Archives and SHA-256 files are written to `dist/`.
 
 See [Contributing](CONTRIBUTING.md) for tests and the staged release process. The shared TypeScript collector runs inside the MCP server. Platform adapters cover path validation, data locations, safe writes and runtime launch. Linux packaging is deferred.
 

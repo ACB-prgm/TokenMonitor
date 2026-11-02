@@ -6,7 +6,7 @@ Release preparation validates the production build, TypeScript types, plugin reg
 
 Both disposable-profile installation tests passed clean installation, update, rollback, user-state retention and Git marketplace refresh; a fresh MCP connection loaded 1.9.0. The isolated hook-discovery test found all six hooks without granting trust. The loopback Git marketplace fixture required execution outside the network sandbox.
 
-The protected-branch CI and annotated-tag release workflows run package, installation/update/rollback, user-state retention and hook-discovery validation natively on macOS ARM64/Intel and Windows ARM64/x64. Publication requires successful workflows and eight ZIPs with matching SHA-256 companions identifying the same tagged main commit. The GitHub Actions run records provide the final platform results.
+The protected-branch CI and annotated-tag release workflows run package, installation/update/rollback, user-state retention and hook-discovery validation natively on macOS ARM64 and Windows ARM64/x64. Publication requires successful workflows and six ZIPs with matching SHA-256 companions identifying the same tagged main commit. The GitHub Actions run records provide the final platform results.
 
 Prior dashboard browser checks and durable-history scale measurements are recorded in [DASHBOARD-REDESIGN.md](DASHBOARD-REDESIGN.md), [HISTORICAL-EFFICIENCY.md](HISTORICAL-EFFICIENCY.md), and [HISTORY-BENCHMARK.json](HISTORY-BENCHMARK.json). These are development evidence, not new desktop checks performed during release preparation. Automated hook discovery does not grant trust or verify real desktop lifecycle delivery. Windows desktop interaction remains unverified locally.
 
@@ -17,3 +17,5 @@ After path correction, both Windows runs reported a failure deleting the hook fi
 With cleanup corrected, the underlying hook assertion showed that cold SQLite schema initialization on Windows can consume the existing 500 ms best-effort import budget. The integration fixture now allows bounded later lifecycle deliveries to resume that import, then verifies exactly one collected chat/call and idempotence without any panel or background service. Each delivery retains its existing timeout assertion; production hook budgets are unchanged.
 
 Native Intel macOS validation exposed the same background-import revision race in the packaged MCP smoke check. That check now waits up to five seconds for discovery/history to settle before asserting an unchanged refresh, while retaining runtime, metrics, inventory and shutdown assertions.
+
+The maintainer narrowed publication to macOS ARM64, Windows x64 and Windows ARM64. CI and release packaging now use those three native targets, with six ZIPs and six checksum companions. Intel macOS and Linux are excluded from this release; local Intel build support is retained. Earlier four-platform results above describe the investigation before this scope change.

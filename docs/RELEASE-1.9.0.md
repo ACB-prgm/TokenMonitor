@@ -11,4 +11,6 @@ A redesigned dashboard and durable local history make thread usage and historica
 
 See the [validation record](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/VALIDATION-1.9.0.md), [history documentation](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/HISTORICAL-EFFICIENCY.md), and [dashboard details](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/DASHBOARD-REDESIGN.md). Automated package validation is separate from trusted desktop rendering and lifecycle delivery; Windows desktop interaction remains unverified locally.
 
+This release provides macOS Apple silicon, Windows x64 and Windows ARM64 packages. Intel macOS and Linux packages are not included.
+
 Existing local release installations can use **Update and install** in Settings → About after publication. For manual installation, use the complete `token-monitor-1.9.0-TARGET.zip` and matching checksum, following the [installation instructions](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/INSTALL.md). Restart Codex after installation and review hook trust if prompted. Account and Git installations retain their original update mechanism.

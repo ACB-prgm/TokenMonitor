@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,appendFileSync,readFileSync,rmSync} from 'node:fs';
@@ -5,7 +6,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {build} from 'esbuild';
 import {createRequire} from 'node:module';
-const bundle=await build({stdin:{resolveDir:new URL('..',import.meta.url).pathname,contents:`export {HistoryDatabase} from './server/src/history-database';export {importHistory} from './server/src/history-import';export {HistoryBuilder,summarize,historyBasis,EfficiencyStore} from './server/src/efficiency';export {TelemetryParser} from './server/src/parser';`},bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);const {HistoryDatabase,importHistory,HistoryBuilder,summarize,historyBasis,TelemetryParser}=mod.exports;
+const bundle=await build({stdin:{resolveDir:fileURLToPath(new URL('..',import.meta.url)),contents:`export {HistoryDatabase} from './server/src/history-database';export {importHistory} from './server/src/history-import';export {HistoryBuilder,summarize,historyBasis,EfficiencyStore} from './server/src/efficiency';export {TelemetryParser} from './server/src/parser';`},bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);const {HistoryDatabase,importHistory,HistoryBuilder,summarize,historyBasis,TelemetryParser}=mod.exports;
 const now=Date.now(),stamp=i=>new Date(now-100000+i*1000).toISOString();
 const call=(i,input=100000)=>({type:'event_msg',timestamp:stamp(i),payload:{type:'token_count',info:{model_context_window:475000,last_token_usage:{input_tokens:input,cached_input_tokens:Math.min(90000,input),cache_write_input_tokens:0,output_tokens:1000,reasoning_output_tokens:100}}}});
 const lines=rs=>rs.map(r=>JSON.stringify(r)).join('\n')+'\n';

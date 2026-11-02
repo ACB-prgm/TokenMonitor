@@ -1,8 +1,9 @@
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {createRequire} from 'node:module';
-const bundle=await build({entryPoints:[new URL('../ui/src/performance.ts',import.meta.url).pathname],bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);
+const bundle=await build({entryPoints:[fileURLToPath(new URL('../ui/src/performance.ts',import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);
 const {costAssessment,paybackAssessment,defaultThresholds:t,efficiencyInsights}=mod.exports;
 const comparison=delta=>({delta,current:1,reference:1,currentCalls:100,baselineCalls:100,coverage:1,provisional:false});
 const state=(extra={})=>({contextPercent:20,efficiency:{thread:{evaluable:0,paybackRate:null,netSavings:0},comparisons:{thread:{cost:comparison(0),context:comparison(0),cache:{...comparison(0),current:90,reference:90}}}},...extra});

@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync,readdirSync} from 'node:fs';
@@ -6,7 +7,7 @@ import {execFileSync} from 'node:child_process';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {performance} from 'node:perf_hooks';
-const plugin=new URL('..',import.meta.url).pathname;
+const plugin=fileURLToPath(new URL('..',import.meta.url));
 test('real hooks durably collect only their chat with no panel or background service',()=>{
  const home=mkdtempSync(path.join(tmpdir(),'tm-hook-history-'));
  try{

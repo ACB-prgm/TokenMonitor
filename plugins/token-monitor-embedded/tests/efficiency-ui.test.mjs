@@ -1,10 +1,11 @@
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url),React=require('react');
 const {renderToStaticMarkup}=require('react-dom/server');
-const bundle=await build({entryPoints:[new URL('../ui/src/efficiency.tsx',import.meta.url).pathname],bundle:true,platform:'node',format:'cjs',write:false,external:['react']});
+const bundle=await build({entryPoints:[fileURLToPath(new URL('../ui/src/efficiency.tsx',import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false,external:['react']});
 function banner(data){
  let period='7';
  const mock={...React,useState:()=>[period,value=>{period=value;}]};

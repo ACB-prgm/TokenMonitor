@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 import {createRequire} from 'node:module';
 import {mkdtempSync,mkdirSync,rmSync,writeFileSync,appendFileSync,readdirSync} from 'node:fs';
@@ -6,7 +7,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {performance} from 'node:perf_hooks';
 import assert from 'node:assert/strict';
-const root=new URL('..',import.meta.url).pathname;
+const root=fileURLToPath(new URL('..',import.meta.url));
 const bundle=await build({stdin:{resolveDir:root,contents:`export {EfficiencyStore,historyBasis,summarize} from './server/src/efficiency';export {importHistory} from './server/src/history-import';`},bundle:true,platform:'node',format:'cjs',write:false});
 const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);
 const {EfficiencyStore,historyBasis,summarize,importHistory}=mod.exports;

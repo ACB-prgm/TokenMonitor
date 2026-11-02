@@ -1,9 +1,10 @@
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url),React=require('react');
-const bundle=await build({entryPoints:[new URL('../ui/src/controls.tsx',import.meta.url).pathname],bundle:true,platform:'node',format:'cjs',write:false,external:['react']});
+const bundle=await build({entryPoints:[fileURLToPath(new URL('../ui/src/controls.tsx',import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false,external:['react']});
 function nodes(n){return !n||typeof n!=='object'?[]:[n,...[n.props?.children].flat(Infinity).flatMap(nodes)];}
 function picker(){
  const slots=[],deps=[],cleanups=[],effects=[],timers=new Map();let cursor=0,serial=0,focus=0;const filters=[],selections=[];

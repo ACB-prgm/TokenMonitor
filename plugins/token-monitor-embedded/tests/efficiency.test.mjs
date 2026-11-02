@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import {DatabaseSync} from 'node:sqlite';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import {createRequire} from 'node:module';
 import {mkdtempSync,rmSync,writeFileSync,mkdirSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-const bundle=await build({entryPoints:[new URL('../server/src/efficiency.ts',import.meta.url).pathname],bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);const {HistoryBuilder,EfficiencyStore,inputCost,callBucket,summarize}=mod.exports;
+const bundle=await build({entryPoints:[fileURLToPath(new URL('../server/src/efficiency.ts',import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);const {HistoryBuilder,EfficiencyStore,inputCost,callBucket,summarize}=mod.exports;
 const sample=(i=0,extra={})=>({timestamp:new Date(Date.UTC(2026,9,1,0,0,i)).toISOString(),input:100000,cached:90000,cacheWrite:0,output:1000,reasoning:500,cachedRecorded:true,cacheWriteRecorded:true,outputRecorded:true,reasoningRecorded:true,model:'gpt-6.1-sol',...extra});
 test('independent input pricing, missing output, reasoning inclusion and weighted averages',()=>{assert.equal(inputCost(sample()),.029);assert.equal(inputCost(sample(0,{outputRecorded:false})),.029);assert.equal(callBucket(sample()).cost,.039);assert.equal(inputCost(sample(0,{cachedRecorded:false})),undefined);const s=summarize([callBucket(sample()),callBucket(sample(1,{model:'gpt-6-astra'}))]);assert.equal(s.costPerCall,(.039+.24)/2);assert.equal(s.calls,2);assert.equal(summarize([]).paybackRate,null);});
 test('rolling buffers are exactly 100 normal calls and legacy first-call buffers retain earliest calls',()=>{const b=new HistoryBuilder();for(let i=0;i<150;i++)b.call(sample(i));assert.equal(b.data.first.length,100);assert.equal(b.data.last.length,100);assert.equal(b.data.first[0].timestamp,sample(0).timestamp);assert.equal(b.data.last[0].timestamp,sample(50).timestamp);assert.equal(summarize(b.data.buckets).calls,150);});

@@ -1,8 +1,9 @@
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
 import {createRequire} from 'node:module';
-const result=await build({stdin:{resolveDir:new URL('..',import.meta.url).pathname,contents:`export {compareCohorts} from './server/src/comparisons';export {TelemetryParser} from './server/src/parser';export {callBucket,HistoryBuilder} from './server/src/efficiency';`},bundle:true,platform:'node',format:'cjs',write:false});
+const result=await build({stdin:{resolveDir:fileURLToPath(new URL('..',import.meta.url)),contents:`export {compareCohorts} from './server/src/comparisons';export {TelemetryParser} from './server/src/parser';export {callBucket,HistoryBuilder} from './server/src/efficiency';`},bundle:true,platform:'node',format:'cjs',write:false});
 const mod={exports:{}};new Function('require','module','exports',result.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);
 const {compareCohorts,callBucket,HistoryBuilder}=mod.exports;
 const call=(extra={})=>({timestamp:'2026-10-01T00:00:00Z',input:100000,cached:90000,cacheWrite:0,output:1000,reasoning:500,cachedRecorded:true,cacheWriteRecorded:true,outputRecorded:true,reasoningRecorded:true,model:'gpt-6.1-sol',effort:'high',...extra});

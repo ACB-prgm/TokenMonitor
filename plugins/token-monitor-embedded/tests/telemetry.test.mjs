@@ -38,8 +38,14 @@ test('real TypeScript metrics bind exactly to the host, stay UI-only, and return
   assert.equal(s.outputTotals.total,1000000);assert.equal(s.outputTotals.reasoning,400000);assert.equal(s.callCount,1);assert.match(s.samples[0].timestamp,/Z$/);
   assert.doesNotMatch(JSON.stringify(s),/SECRET|transcriptPath|transcript_path|\.jsonl/);
   let settled=await f.refresh(s.panelId,{},'a');
-  for(let i=0;i<30&&(settled.discovery?.state==='scanning'||settled.efficiency?.progress.running);i++){await new Promise(r=>setTimeout(r,10));settled=await f.refresh(s.panelId,{},'a');}
-  assert.equal((await f.refresh(s.panelId,{revision:settled.revision},'a')).unchanged,true);
+  const deadline=Date.now()+5000;let unchanged;
+  do{
+   await new Promise(r=>setTimeout(r,25));
+   unchanged=await f.refresh(s.panelId,{revision:settled.revision},'a');
+   if(unchanged.unchanged&&settled.discovery?.state!=='scanning'&&!settled.efficiency?.progress.running)break;
+   settled=await f.refresh(s.panelId,{},'a');
+  }while(Date.now()<deadline);
+  assert.equal(unchanged.unchanged,true,'background discovery and history must settle before checking an unchanged revision');
   assert.equal((await f.call('get_monitor_state',{panelId:s.panelId,action:'select',taskId:'/etc/passwd'},'a')).isError,true);
   const unknown=await f.open('not-a-local-thread');assert.equal(unknown.followingMode,'latest-hook');assert.equal(unknown.selectedId,undefined);
   assert.equal((await f.call('list_tasks',{panelId:s.panelId},'a'))._meta.tasks.length,2);

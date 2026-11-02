@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
@@ -6,7 +7,7 @@ import {mkdtempSync,rmSync,readdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
-const bundle=await build({entryPoints:[new URL('../server/src/history-database.ts',import.meta.url).pathname],bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);const {HistoryDatabase}=mod.exports;
+const bundle=await build({entryPoints:[fileURLToPath(new URL('../server/src/history-database.ts',import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);const {HistoryDatabase}=mod.exports;
 function fixture(fn){const root=mkdtempSync(path.join(tmpdir(),'tm-durable-'));try{return fn(path.join(root,'efficiency.sqlite'),root);}finally{rmSync(root,{recursive:true,force:true});}}
 const timestamp=new Date().toISOString();
 const sample={timestamp,input:100,cached:50,cacheWrite:0,output:10,reasoning:2,model:'gpt-6.1-sol',effort:'high',cachedRecorded:true,cacheWriteRecorded:true,outputRecorded:true,reasoningRecorded:true};

@@ -1,3 +1,4 @@
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {build} from 'esbuild';
@@ -6,7 +7,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {DatabaseSync} from 'node:sqlite';
 import os from 'node:os';
 import path from 'node:path';
-async function load(file){const b=await build({entryPoints:[new URL(file,import.meta.url).pathname],bundle:true,platform:'node',format:'cjs',write:false});const m={exports:{}};new Function('require','module','exports',b.outputFiles[0].text)(createRequire(import.meta.url),m,m.exports);return m.exports;}
+async function load(file){const b=await build({entryPoints:[fileURLToPath(new URL(file,import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false});const m={exports:{}};new Function('require','module','exports',b.outputFiles[0].text)(createRequire(import.meta.url),m,m.exports);return m.exports;}
 const {TurnCounter,estimateTurnPayback}=await load('../server/src/turns.ts');
 const {TelemetryParser}=await load('../server/src/parser.ts');
 const {EfficiencyStore}=await load('../server/src/efficiency.ts');

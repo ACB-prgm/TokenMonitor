@@ -15,3 +15,5 @@ The first four-platform run exposed Unix-only file-URL pathname conversion in ne
 After path correction, both Windows runs reported a failure deleting the hook fixture directory during cleanup. Cleanup now closes any remaining database handle, preserving earlier assertion errors, and retries transient Windows file locks with a bounded backoff, matching the existing package-test cleanup strategy.
 
 With cleanup corrected, the underlying hook assertion showed that cold SQLite schema initialization on Windows can consume the existing 500 ms best-effort import budget. The integration fixture now allows bounded later lifecycle deliveries to resume that import, then verifies exactly one collected chat/call and idempotence without any panel or background service. Each delivery retains its existing timeout assertion; production hook budgets are unchanged.
+
+Native Intel macOS validation exposed the same background-import revision race in the packaged MCP smoke check. That check now waits up to five seconds for discovery/history to settle before asserting an unchanged refresh, while retaining runtime, metrics, inventory and shutdown assertions.

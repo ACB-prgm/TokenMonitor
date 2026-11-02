@@ -2,6 +2,7 @@ import React,{useState} from 'react';
 import type {Efficiency,Summary} from '../../server/src/efficiency.js';
 import {money,percent} from './analytics.js';
 const usd=(n:number|null)=>n==null?'—':money(n);
+const perCallUsd=(n:number|null)=>n==null||!Number.isFinite(n)?'—':`${n<0?'−':''}$${Math.abs(n).toFixed(4)}`;
 const preciseUsd=(n:number)=>n!==0&&Math.abs(n)<.000001?money(n):n.toLocaleString('en-US',{style:'currency',currency:'USD',minimumFractionDigits:2,maximumFractionDigits:6});
 import {costAssessment,paybackAssessment,type Assessment} from './performance.js';
 import {performanceThresholds} from './performance-config.js';
@@ -23,7 +24,7 @@ function directComparison(current:Summary|undefined,reference:Summary|undefined,
 }
 function KpiSummary({thread,all,previous,ready}:{thread?:Summary;all?:Summary;previous?:Summary;ready:boolean}) {
  const rows=[{label:'Thread',s:thread,reference:all},{label:'Comp',s:all,reference:previous}];
- return <summary aria-label="Expand historical efficiency KPIs"><span className="kpi-heading"><span className="kpi-chevron disclosure-caret" aria-hidden="true"/>Efficiency KPIs</span><span className="kpi-grid"><span aria-hidden="true"/><span className="kpi-label">Context / call</span><span className="kpi-label">Cost / call</span><span className="kpi-label">Compaction payback</span>{rows.map(({label,s,reference},i)=><React.Fragment key={label}><span className="kpi-row-label">{label}</span>{(['context','cost'] as const).map(metric=>{const c=directComparison(s,reference,metric,ready);return <KpiValue key={metric} value={usd(s?.[metric==='cost'?'costPerCall':'contextPerCall']??null)} primary={!i} comparison={reference?c:undefined} assessment={reference?costAssessment(c):{tone:'neutral',label:'Unavailable'}}/>;})}<span className="kpi-payback"><KpiValue value={s?.paybackRate==null?'—':`${s.profitable}/${s.evaluable} (${percent(s.paybackRate)})`} primary={!i} assessment={s?paybackAssessment(s):{tone:'neutral',label:'Unavailable'}}/></span></React.Fragment>)}</span></summary>;
+ return <summary aria-label="Expand historical efficiency KPIs"><span className="kpi-heading"><span className="kpi-chevron disclosure-caret" aria-hidden="true"/>Efficiency KPIs</span><span className="kpi-grid"><span aria-hidden="true"/><span className="kpi-label">Context / call</span><span className="kpi-label">Cost / call</span><span className="kpi-label">Compaction payback</span>{rows.map(({label,s,reference},i)=><React.Fragment key={label}><span className="kpi-row-label">{label}</span>{(['context','cost'] as const).map(metric=>{const c=directComparison(s,reference,metric,ready);return <KpiValue key={metric} value={perCallUsd(s?.[metric==='cost'?'costPerCall':'contextPerCall']??null)} primary={!i} comparison={reference?c:undefined} assessment={reference?costAssessment(c):{tone:'neutral',label:'Unavailable'}}/>;})}<span className="kpi-payback"><KpiValue value={s?.paybackRate==null?'—':`${s.profitable}/${s.evaluable} (${percent(s.paybackRate)})`} primary={!i} assessment={s?paybackAssessment(s):{tone:'neutral',label:'Unavailable'}}/></span></React.Fragment>)}</span></summary>;
 }
 function Calculation({thread,all,metric,comparisonLabel}:{thread?:Summary;all?:Summary;metric:'cost'|'context'|'payback';comparisonLabel:string}) {
  const formula=(s?:Summary)=>{
@@ -31,7 +32,7 @@ function Calculation({thread,all,metric,comparisonLabel}:{thread?:Summary;all?:S
   if(metric==='payback')return `${s.profitable} / ${s.evaluable} × 100 = ${s.paybackRate==null?'—':percent(s.paybackRate)}`;
   const numerator=metric==='cost'?s.cost+s.overhead:s.inputCost;
   const count=metric==='cost'?s.priced:s.inputPriced;
-  return `${preciseUsd(numerator)} / ${count} = ${usd(metric==='cost'?s.costPerCall:s.contextPerCall)}`;
+  return `${preciseUsd(numerator)} / ${count} = ${perCallUsd(metric==='cost'?s.costPerCall:s.contextPerCall)}`;
  };
  const exact=(s?:Summary)=>s?metric==='payback'?`Final net savings: ${s.netSavings} USD`:`Exact numerator: ${metric==='cost'?s.cost+s.overhead:s.inputCost} USD; average: ${metric==='cost'?s.costPerCall:s.contextPerCall} USD`:'Unavailable';
  return <p className="kpi-calculation"><span title={exact(thread)}>Thread: {formula(thread)}</span><span title={exact(all)}>{comparisonLabel}: {formula(all)}</span></p>;

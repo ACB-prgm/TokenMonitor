@@ -13,7 +13,7 @@ export class HistoryDatabase {
  statement(sql:string){let s=this.statements.get(sql);if(!s){s=this.db.prepare(sql);this.statements.set(sql,s);}return s;}
  private bump(){this.db.exec("UPDATE meta SET value=CAST(value AS INTEGER)+1 WHERE key='history_revision'");}
  constructor(readonly file:string,options:{migrate?:boolean}={}){
-  const fresh=!existsSync(file);this.db=new DatabaseSync(file);if(Number(this.db.prepare('PRAGMA user_version').get()!.user_version)>3){this.db.close();throw Error('Historical database requires a newer TokenMonitor version');}chmodSync(file,0o600);
+  const fresh=!existsSync(file);this.db=new DatabaseSync(file);const [major,minor,patch]=String(this.db.prepare('SELECT sqlite_version() AS version').get()!.version).split('.').map(Number);if(major<3||major===3&&(minor<51||minor===51&&patch<3)&&!(minor===50&&patch>=7)&&!(minor===44&&patch>=6)){this.db.close();throw Error('Durable history requires SQLite 3.51.3 or a fixed backport; use the bundled runtime');}if(Number(this.db.prepare('PRAGMA user_version').get()!.user_version)>3){this.db.close();throw Error('Historical database requires a newer TokenMonitor version');}chmodSync(file,0o600);
   this.db.exec(`PRAGMA busy_timeout=100; ${fresh?'PRAGMA auto_vacuum=INCREMENTAL;':''} PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA wal_autocheckpoint=1000; PRAGMA journal_size_limit=4194304;
    CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT);
    CREATE TABLE IF NOT EXISTS threads(id TEXT PRIMARY KEY,signature TEXT,basis TEXT,data TEXT);
@@ -29,6 +29,7 @@ export class HistoryDatabase {
    CREATE TABLE IF NOT EXISTS history_turns(source TEXT NOT NULL,model TEXT NOT NULL,turns INTEGER NOT NULL,calls INTEGER NOT NULL,PRIMARY KEY(source,model));
    CREATE TABLE IF NOT EXISTS history_charges(source TEXT NOT NULL,position INTEGER NOT NULL,dimension INTEGER NOT NULL,timestamp TEXT NOT NULL,${bucketNumbers.map(k=>`${k} REAL NOT NULL`).join(',')},PRIMARY KEY(source,position));
    INSERT OR IGNORE INTO meta VALUES ('history_revision','0');`);
+  const pageSize=Number(this.statement('PRAGMA page_size').get()!.page_size);this.db.exec(`PRAGMA wal_autocheckpoint=${Math.max(1,Math.floor(4194304/pageSize))}`);
   if(options.migrate!==false)this.migrate();
   this.upgrade();
  }
@@ -41,6 +42,7 @@ export class HistoryDatabase {
    const data=JSON.parse(row.data) as ThreadHistory;
    this.transaction(()=>{if(!this.statement('SELECT 1 FROM history_sources WHERE id=?').get(row.id))this.save(row.id,row.signature,row.basis,data);this.statement('DELETE FROM threads WHERE id=?').run(row.id);});
   }
+  const baseline=this.statement("SELECT value FROM meta WHERE key='baseline'").get()?.value;if(typeof baseline==='string'){try{const samples=JSON.parse(baseline);if(Array.isArray(samples)&&samples.every(s=>s&&typeof s.timestamp==='string'&&typeof s.input==='number')){const summary={samples:samples.length,start:samples[0]?.timestamp??null,end:samples.at(-1)?.timestamp??null,input:0,cached:0,cacheWrite:0,output:0,reasoning:0};for(const sample of samples)for(const key of ['input','cached','cacheWrite','output','reasoning'] as const)if(Number.isFinite(sample[key])&&sample[key]>=0)summary[key]+=sample[key];this.transaction(()=>{this.statement("INSERT OR REPLACE INTO meta VALUES('legacy_baseline_summary',?)").run(JSON.stringify(summary));this.statement("DELETE FROM meta WHERE key='baseline'").run();});}}catch{/* Preserve unrecognized metadata rather than treating it as numeric detail. */}}
  }
  private save(id:string,signature:string,basis:string,d:ThreadHistory,detail:NumericCall[]=[...d.first,...d.last]){
   for(const table of ['history_buckets','history_samples','history_paybacks','history_turns','history_charges'])this.statement(`DELETE FROM ${table} WHERE source=?`).run(id);

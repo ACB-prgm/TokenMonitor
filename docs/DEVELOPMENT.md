@@ -94,3 +94,9 @@ Keep the backup until validation succeeds. Startup hooks may run before the
 live panel opens; the isolated automated test proves the no-hook scenario.
 A completed automated run does not substitute for checking the installed panel
 following the required app restart.
+
+## Durable-history validation
+
+Run `npm --prefix plugins/token-monitor-embedded run history:bench` to create and clean up a synthetic million-call SQLite fixture. The benchmark reports warm/cached-cold query latency, incremental append costs, memory growth, retained data/journal bytes, and repeated retention-cycle sizes. Its assertions enforce the 50 ms / 250 ms p95 historical query targets and preserve summary counts across expiry. It never uses the real Codex history. See [historical storage](HISTORICAL-EFFICIENCY.md) and [the recorded benchmark](HISTORY-BENCHMARK.json).
+
+`npm run dev:test` also runs the actual packaged hook and MCP server across process restarts, source loss, saved-chat selection, on-demand diagnostics, and restoration without duplicate calls. These checks use isolated temporary Codex homes. A new installed DEV version still needs a desktop restart before its panel/server can replace an already open version.

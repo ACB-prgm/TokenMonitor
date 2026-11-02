@@ -57,7 +57,7 @@ See [Contributing](CONTRIBUTING.md) for tests and the staged release process. Th
 
 ## Historical efficiency
 
-An expandable KPI banner compares selected-thread lifetime cost/call, context/call and modeled compaction payback with all local chats. It imports readable historical telemetry, uses an earliest-observed baseline and offers period, weekly and model breakdowns. See [calculations, local storage and limitations](docs/HISTORICAL-EFFICIENCY.md).
+An expandable KPI banner compares selected-thread lifetime cost/call, context/call and modeled compaction payback with imported local chats over 7 days, 30 days, or all history. Durable SQLite history retains 90 days of numeric detail and permanent daily summaries, including saved chats whose source files disappear. Existing lifecycle hooks collect without an open panel. See [calculations, local storage and limitations](docs/HISTORICAL-EFFICIENCY.md).
 
 ## Compaction Value
 

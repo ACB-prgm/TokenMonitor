@@ -38,7 +38,7 @@ test('historical reference includes all other-chat calls, including efforts abse
   assert.equal(s.reference.buckets.reduce((n,b)=>n+b.calls,0),270);
   assert.equal(s.reference.buckets.some(b=>b.timestamp.startsWith('2026-10-31')),false);
   assert.equal(s.reference.buckets.reduce((n,b)=>n+b.cost,0),before.baseline.cost);
-  store.close();const verify=new DatabaseSync(path.join(home,folder,'efficiency.sqlite'));assert.equal(verify.prepare("SELECT value FROM meta WHERE key='baseline'").get().value,frozen);verify.close();
+  store.close();const verify=new DatabaseSync(path.join(home,folder,'efficiency.sqlite'));assert.equal(verify.prepare("SELECT value FROM meta WHERE key='baseline'").get(),undefined);assert.equal(JSON.parse(verify.prepare("SELECT value FROM meta WHERE key='legacy_baseline_summary'").get().value).samples,100);verify.close();
   // Replacement refreshes the reference instead of retaining frozen identities.
   const shorter=transcript(home,'later',20,'high','2026-10-20');store=new EfficiencyStore(home);await store.scan(home,[files[0],files[1],shorter],true);const replaced=store.snapshot('selected');assert.equal(replaced.baselineCalls,140);assert.equal(replaced.comparisons.thread.cost.baselineCalls,20);assert.equal(replaced.comparisons.thread.cost.provisional,false);store.close();
  }finally{rmSync(home,{recursive:true,force:true});}

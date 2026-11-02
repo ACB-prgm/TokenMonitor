@@ -10,7 +10,7 @@ Install the package matching your OS and processor. macOS packages use a shell b
 
 Telemetry is read from `CODEX_HOME`, defaulting to `.codex` in your user home. Codex databases are opened read-only. Raw transcript text and absolute transcript paths are not returned to the panel. Plugin state remains under `CODEX_HOME/token-monitor-embedded`; `PLUGIN_DATA` takes precedence for the runtime cache when the host provides it.
 
-If a task disappears, its last cached snapshot remains available until the idle collector entry expires. File replacement and truncation are detected on polling. Missing or incompatible database metadata is handled without modifying Codex data. Unknown pricing remains visibly unavailable.
+If a transcript disappears, imported numeric summaries remain available across restarts. Recent numeric detail is retained for 90 UTC calendar days, and permanent summaries support saved-chat selection. File replacement and truncation are detected on polling. Missing or incompatible database metadata is handled without modifying Codex data. Unknown pricing remains visibly unavailable.
 
 This release retains the existing Codex-compatible manifest layout because the tested host discovers its six command hooks through that layout. Trust and enable hooks through Codex's normal controls.
 

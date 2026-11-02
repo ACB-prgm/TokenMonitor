@@ -186,7 +186,7 @@ test('thread allowance estimate leads account remaining in each group',()=>{
  const html=render({...latestFixture,efficiency:data});const collapsed=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
  assert.equal((collapsed.match(/class="provisional-mark"/g)??[]).length,6);
  assert.equal((collapsed.match(/class="kpi-badge tone-neutral"/g)??[]).length,4);
- assert.doesNotMatch(collapsed.replace(/<span class="sr-only">[^<]*<\/span>/g,''),/>Provisional</);assert.match(html,/\* Provisional:<\/strong>/);assert.match(html,/20 current and 20 reference/);assert.match(html,/5 completed, evaluable events/);assert.match(html,/10 current \/ 10 reference calls/);assert.match(html,/Thread compares directly with the Comp row/);assert.match(html,/preceding equal-length period/);assert.doesNotMatch(html,/Fixed reference|Cost \/ context change/);
+ assert.doesNotMatch(collapsed,/>Provisional</);assert.match(html,/\* Provisional:<\/strong>/);assert.match(html,/20 current and 20 reference/);assert.match(html,/5 completed, evaluable events/);assert.match(html,/10 current \/ 10 reference calls/);assert.match(html,/Thread compares directly with the Comp row/);assert.match(html,/preceding equal-length period/);assert.doesNotMatch(html,/Fixed reference|Cost \/ context change/);
  });
 
 test('expanded KPI guide has only three definitions, formulas and numeric substitutions',()=>{
@@ -210,7 +210,7 @@ test('KPI deltas equal the visible Thread and Comp values without cohort weighti
  assert.ok(summary.indexOf('Context / call')<summary.indexOf('Cost / call'));
  assert.match(summary,/↑ 50.0/);assert.match(summary,/100.0/);
  assert.match(summary,/1\/2 \(50%\)/);assert.doesNotMatch(summary,/\bpending\b/i);assert.match(html,/Pending compactions: Thread 1 · Comp \(Last 7 days\) 1/);
- assert.doesNotMatch(summary,/tone-bad|tone-amber/);
+ assert.equal((summary.match(/kpi-badge tone-bad/g)??[]).length,4);
  const missing=render({panelId:'p',status:'Waiting'});assert.doesNotMatch(missing,/N\/A|NaN/);
 });
 

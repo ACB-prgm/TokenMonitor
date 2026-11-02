@@ -1,4 +1,3 @@
-import {validThresholds,defaultThresholds} from './performance.js';
 import React,{useEffect,useId,useRef,useState} from 'react';
 import type {Monitor} from './view.js';
 import {displayName,isDev} from '../../shared/identity.js';
@@ -40,10 +39,4 @@ export function Settings({expanded,scale,onLayout,updates,onUpdate,error,childre
    <div className="about"><h2>About {displayName}</h2><p className="build-version">{installedVersion}</p><p>Local token monitoring. Costs are API-equivalent estimates, separate from subscription allowances.</p>{!isDev&&<UpdateMenu value={updates} onAction={onUpdate} error={error}/>}</div>
   </div>
  </details>;
-}
-
-export function ThresholdEditor({value,onChange}:{value:import('./performance.js').Thresholds;onChange:(t:import('./performance.js').Thresholds)=>void}) {
- const [error,setError]=useState(''),[revision,setRevision]=useState(0);
- const labels={efficient:'Efficient: below baseline (%)',elevated:'Elevated: above baseline (%)',significant:'Significant: above baseline (%)',paybackLow:'Low payback boundary (%)',paybackGood:'Good payback boundary (%)',minimumEvents:'Minimum compaction events'};
- return <form key={revision} className="threshold-editor" onSubmit={e=>{e.preventDefault();const data=new FormData(e.currentTarget);const next=Object.fromEntries(Object.keys(labels).map(k=>[k,Number(data.get(k))]));if(!validThresholds(next)){setError('Use ordered cost and payback boundaries, 0–100% payback, and a positive whole-number event count.');return;}onChange(next);setError('');}}><h2>Performance thresholds</h2>{(Object.keys(labels) as (keyof typeof labels)[]).map(k=><label key={k}>{labels[k]}<input name={k} aria-label={labels[k]} type="number" step={k==='minimumEvents'?1:'any'} required defaultValue={value[k]}/></label>)}{error&&<p role="alert" className="warning">{error}</p>}<div className="settings-actions"><button type="submit">Save thresholds</button><button type="button" onClick={()=>{onChange({...defaultThresholds});setError('');setRevision(n=>n+1);}}>Reset defaults</button></div></form>;
 }

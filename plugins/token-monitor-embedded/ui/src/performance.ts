@@ -2,17 +2,8 @@ import type {Comparison} from '../../server/src/comparisons.js';
 import type {Summary} from '../../server/src/efficiency.js';
 import type {Monitor} from './view.js';
 import {money} from './analytics.js';
-import {isDev} from '../../shared/identity.js';
-export type Thresholds={efficient:number;elevated:number;significant:number;paybackLow:number;paybackGood:number;minimumEvents:number};
-export const defaultThresholds:Thresholds={efficient:10,elevated:10,significant:30,paybackLow:50,paybackGood:80,minimumEvents:5};
-const key=isDev?'token-monitor-dev-performance-v1':'token-monitor-performance-v1';
-export function validThresholds(v:unknown):v is Thresholds {
- if(!v||typeof v!=='object')return false;
- const t=v as Thresholds;
- return Object.keys(defaultThresholds).every(k=>typeof t[k as keyof Thresholds]==='number'&&Number.isFinite(t[k as keyof Thresholds]))&&t.efficient>0&&t.efficient<=100&&t.elevated>=0&&t.significant>t.elevated&&t.significant<=1000&&t.paybackLow>=0&&t.paybackGood>t.paybackLow&&t.paybackGood<=100&&Number.isInteger(t.minimumEvents)&&t.minimumEvents>=1&&t.minimumEvents<=1000;
-}
-export function loadThresholds(storage?:Pick<Storage,'getItem'>):Thresholds {try{const s=storage??globalThis.localStorage;const v=JSON.parse(s.getItem(key)??'null');if(v?.version===1&&validThresholds(v.thresholds))return {...v.thresholds};}catch{}return {...defaultThresholds};}
-export function saveThresholds(t:Thresholds,storage?:Pick<Storage,'setItem'>){if(!validThresholds(t))return false;try{(storage??globalThis.localStorage).setItem(key,JSON.stringify({version:1,thresholds:t}));}catch{/* In-memory preferences remain active. */}return true;}
+import {performanceThresholds as defaultThresholds} from './performance-config.js';
+export {performanceThresholds as defaultThresholds} from './performance-config.js';
 export type Assessment={tone:'neutral'|'good'|'amber'|'bad';label:string};
 export function costAssessment(c:Comparison|undefined,t=defaultThresholds):Assessment {
  if(!c||c.delta==null)return {tone:'neutral',label:'Unavailable'};
@@ -51,5 +42,5 @@ export function efficiencyInsights(s:Monitor,t=defaultThresholds):Insight[] {
  if(c?.cache&&!c.cache.provisional&&c.cache.current!=null&&c.cache.reference!=null&&c.cache.reference-c.cache.current>=20)found.push({id:'cache',title:'Lower comparable cache reuse',finding:`Cache-read share is ${(c.cache.reference-c.cache.current).toFixed(1)} percentage points below baseline.`,impact:'A smaller share of recorded input benefits from cache-read pricing.',recommendation:'Inspect fresh-input composition and recent call details for changes in reusable context.',tone:'amber'});
  if(found.length)return found.slice(0,2);
  const healthy=c&&[c.cost,c.context,c.cache].every(v=>!v.provisional&&v.delta!=null)&&s.contextPercent!=null;
- return [{id:healthy?'healthy':'gathering',title:healthy?'No action needed':'Still gathering comparable history',finding:healthy?'No supported resource-efficiency issue was detected.':'Comparable samples or pricing coverage are not yet sufficient for an efficiency assessment.',impact:healthy?'Current recorded spending and cache reuse are within the configured thresholds.':'Mixed models, unknown reasoning settings, and small samples can make comparisons misleading.',recommendation:healthy?'Continue monitoring; no immediate optimization is recommended.':'Continue normal use and inspect KPI details for comparison coverage.',tone:healthy?'good':'neutral'}];
+ return [{id:healthy?'healthy':'gathering',title:healthy?'No action needed':'Still gathering comparable history',finding:healthy?'No supported resource-efficiency issue was detected.':'Comparable samples or pricing coverage are not yet sufficient for an efficiency assessment.',impact:healthy?'Current recorded spending and cache reuse are within the app thresholds.':'Mixed models, unknown reasoning settings, and small samples can make comparisons misleading.',recommendation:healthy?'Continue monitoring; no immediate optimization is recommended.':'Continue normal use and inspect KPI details for comparison coverage.',tone:healthy?'good':'neutral'}];
 }

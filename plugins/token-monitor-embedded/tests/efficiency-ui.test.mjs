@@ -40,3 +40,23 @@ test('identical available history is explained only for populated matching perio
  ui.select('all');assert.doesNotMatch(ui.render(),/This period includes/);
  assert.doesNotMatch(banner(undefined).render(),/This period includes|NaN|undefined/);
 });
+
+test('KPIs color spending changes and payback while incomplete comparisons stay neutral',()=>{
+ const reference=summary(40,1,1,8,10);
+ for(const [ratio,tone] of [[.8,'good'],[1.05,'neutral'],[1.2,'amber'],[1.4,'bad']]){
+  const thread=summary(40,ratio,ratio,8,10);
+  const html=banner({thread,periods:{7:{summary:reference}}}).render();
+  const row=html.match(/<span class="kpi-row-label">Thread<\/span>([\s\S]*?)<span class="kpi-row-label">Comp/)[1];
+  assert.equal((row.match(new RegExp(`kpi-value primary tone-${tone}`, 'g'))??[]).length,tone==='good'?3:2);
+  assert.equal((row.match(new RegExp(`kpi-badge tone-${tone}`, 'g'))??[]).length,2);
+  assert.match(row,/kpi-value primary tone-good" title="Positive savings"/);
+  assert.doesNotMatch(row,/sr-only/);
+ }
+ const html=banner({thread:summary(10,2,2,1,2),periods:{7:{summary:reference}}}).render();
+ assert.match(html,/kpi-value primary tone-neutral" title="Provisional"/);
+ assert.doesNotMatch(html,/kpi-badge tone-bad/);
+ for(const [profitable,tone,label] of [[4,'bad','Not recovering costs'],[6,'amber','Mixed recovery'],[8,'good','Positive savings']]){
+  const html=banner({thread:summary(40,1,1,profitable,10),periods:{7:{summary:reference}}}).render();
+  assert.match(html,new RegExp(`kpi-value primary tone-${tone}" title="${label}"`));
+ }
+});

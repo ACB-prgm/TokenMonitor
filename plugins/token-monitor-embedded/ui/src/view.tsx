@@ -1,9 +1,8 @@
 import type {TurnStats,TurnPayback} from '../../server/src/turns.js';
 import {compareCohorts} from '../../server/src/comparisons.js';
 import type {Bucket} from '../../server/src/efficiency.js';
-import {loadThresholds,saveThresholds} from './performance.js';
 import {EfficiencyInsights} from './insights.js';
-import {ThreadPicker,Settings,ThresholdEditor} from './controls.js';
+import {ThreadPicker,Settings} from './controls.js';
 import {HistoryStorage,type HistoryDiagnostics} from './history-storage.js';
 import {EfficiencyBanner} from './efficiency.js';
 import type {Efficiency} from '../../server/src/efficiency.js';
@@ -219,14 +218,13 @@ function History({s}: {s: Monitor}) {
 }
 export function MonitorView({s, expanded, scale, error='', onAction, onLayout, storage='host widget state', updates, onUpdate, updateError,onFilter,onStorage}:
  {onStorage?:()=>Promise<HistoryDiagnostics>;updates?:UpdateStatus;onUpdate?:(action:UpdateAction)=>void;updateError?:string;s:Monitor; expanded:boolean; scale:number; error?:string; onAction?:(action?:'select'|'rescan',taskId?:string)=>void;onFilter?:(query:string,includeArchived:boolean)=>void; onLayout?:(expanded:boolean,scale:number)=>void; storage?:string}) {
-  const [thresholds,setThresholds]=useState(loadThresholds);
   const a=s.attribution, attributed=a?.contributors.reduce((sum,c)=>sum+c.tokens,0)??0;
   return <main className={`monitor ${expanded?'expanded':'compact'}`} style={{fontSize:`${scale*85}%`}}>
-    <header className="compact-header"><ThreadPicker s={s} onSelect={onAction?id=>onAction('select',id):undefined} onFilter={onFilter}/><div className="header-controls"><button className="rescan-button" disabled={!onAction||s.discovery?.state==='scanning'} onClick={()=>onAction?.('rescan')} aria-label="Rescan threads" title="Rescan threads: discover restored and newly available local transcripts"><span className="rescan-text">Rescan threads</span><span className="rescan-icon" aria-hidden="true">⟳</span></button><button disabled={!onAction} onClick={()=>onAction?.()} aria-label="Refresh metrics" title="Refresh current telemetry">↻</button><Settings expanded={expanded} scale={scale} onLayout={onLayout} updates={updates} onUpdate={onUpdate} error={updateError}><HistoryStorage load={onStorage}/><ThresholdEditor value={thresholds} onChange={t=>{setThresholds(t);saveThresholds(t);}}/></Settings></div></header>
-    <EfficiencyInsights s={s} thresholds={thresholds}/>
+    <header className="compact-header"><ThreadPicker s={s} onSelect={onAction?id=>onAction('select',id):undefined} onFilter={onFilter}/><div className="header-controls"><button className="rescan-button" disabled={!onAction||s.discovery?.state==='scanning'} onClick={()=>onAction?.('rescan')} aria-label="Rescan threads" title="Rescan threads: discover restored and newly available local transcripts"><span className="rescan-text">Rescan threads</span><span className="rescan-icon" aria-hidden="true">⟳</span></button><button disabled={!onAction} onClick={()=>onAction?.()} aria-label="Refresh metrics" title="Refresh current telemetry">↻</button><Settings expanded={expanded} scale={scale} onLayout={onLayout} updates={updates} onUpdate={onUpdate} error={updateError}><HistoryStorage load={onStorage}/></Settings></div></header>
+    <EfficiencyInsights s={s}/>
     {s.discovery?.targeting&&<p className="hint" role="status">Looking for the current local thread…</p>}
     {(error||s.disconnected||s.available===false||!s.task||s.isCompacting)&&<p className="status" role="status">{error||s.status}</p>}
-    <ThreadSummary s={s}/>{s.historyError&&<p role="status" className="warning">{s.historyError}</p>}<EfficiencyBanner data={s.efficiency} thresholds={thresholds}/><LatestCall s={s} expanded={expanded}/><History key={s.selectedId??s.task?.id??s.panelId} s={s}/>
+    <ThreadSummary s={s}/>{s.historyError&&<p role="status" className="warning">{s.historyError}</p>}<EfficiencyBanner data={s.efficiency}/><LatestCall s={s} expanded={expanded}/><History key={s.selectedId??s.task?.id??s.panelId} s={s}/>
     <details className="attribution" open={expanded}><summary title={attributionHelp}>Skills &amp; tools · {a?.skillCount??0} skills · {a?.callCount??0} calls · ≈{number(a?attributed:undefined)} ({s.input&&a?percent(attributed/s.input*100):'—'} of context)</summary><p>{attributionHelp}</p><ul>{a?.contributors.map(c=><li key={c.name}><span title={c.name}>{c.name}</span><span>{c.calls} calls · ≈{number(c.tokens)} · {s.input?percent(c.tokens/s.input*100):'—'}</span></li>)}</ul><p>{a?.afterCompaction?'Since compaction; summary attribution unavailable.':'Estimated contribution; actual retained context may differ.'}</p></details>
     <details><summary title="Selected local task metadata">Task details</summary><dl className="details-grid"><dt>Session</dt><dd>{s.task?.id??'—'}</dd><dt>Workspace</dt><dd>{s.task?.workspace??'—'}</dd><dt>Last call</dt><dd>{time(s.lastCall)}</dd><dt>Last event</dt><dd>{time(s.lastEvent)}</dd><dt>Status</dt><dd>{s.status}</dd></dl></details>
     <footer><span>{s.isCompacting?'Compacting…':s.awaitingPostCompactionCall?'Compacted · waiting for next call':`Call ${s.callCount??0}`}</span><time title={time(s.lastCall)}>{s.lastCall?new Date(s.lastCall).toLocaleTimeString():'No call yet'}</time></footer>

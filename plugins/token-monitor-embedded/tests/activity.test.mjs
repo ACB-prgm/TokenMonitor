@@ -41,3 +41,11 @@ test('activity bounds excerpts, tools and file paths and handles malformed argum
  tokens(p);const a=p.samples[0].activity;
  assert.equal(a.response.length,600);assert.doesNotMatch(a.response,/\u0000/);assert.equal(a.tools.length,6);assert.equal(a.files.length,8);assert.equal(a.tools[1].detail.length,240);assert.equal(a.files[0].length,240);
 });
+
+test('call activity records deduplicated skill reads without carrying them to later calls',()=>{
+ const p=new TelemetryParser();
+ for(let i=0;i<2;i++)record(p,{type:'function_call',name:'exec_command',call_id:String(i),arguments:JSON.stringify({cmd:'cat /skills/pdf/SKILL.md /skills/documents/SKILL.md'})});
+ tokens(p);assert.deepEqual(p.samples[0].activity.skills,['pdf','documents']);
+ record(p,{type:'function_call',name:'exec_command',arguments:JSON.stringify({cmd:'npm test'})});
+ tokens(p,2);assert.equal(p.samples[1].activity.skills,undefined);
+});

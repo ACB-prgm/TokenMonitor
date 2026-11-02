@@ -30,18 +30,18 @@ test('panel and inline summary are callable by the model; refresh tools remain a
   const { client } = await connectedClient();
   try {
     const { tools } = await client.listTools();
-    assert.deepEqual(tools.map(tool => tool.name), ['open_monitor', 'get_monitor_state', 'manage_updates', 'list_tasks', 'show_turn_summary']);
+    assert.deepEqual(tools.map(tool => tool.name), ['open_monitor', 'get_monitor_state', 'get_history_storage', 'manage_updates', 'list_tasks', 'show_turn_summary']);
     for (const tool of tools) {
       assert.deepEqual(tool._meta.ui.visibility, ['open_monitor', 'show_turn_summary'].includes(tool.name) ? ['model', 'app'] : ['app']);
       assert.equal(tool.annotations.readOnlyHint, tool.name !== 'manage_updates');
-      assert.equal(tool.annotations.openWorldHint, tool.name !== 'list_tasks');
+      assert.equal(tool.annotations.openWorldHint, !['list_tasks','get_history_storage'].includes(tool.name));
     }
     assert.deepEqual(tools[0]._meta['openai/ui'].entrypoints, [{ type: 'thread' }]);
     assert.equal(tools.filter(tool => tool._meta.ui.resourceUri).length, 2);
     assert.equal(tools[0]._meta['openai/ui'].preferredModelDisplayMode, 'fullscreen');
     const resource = await client.readResource({ uri: tools[0]._meta.ui.resourceUri });
     assert.equal(resource.contents[0].mimeType, 'text/html;profile=mcp-app');
-    assert.match(resource.contents[0].text, /TokenMonitor Embedded/);
+    assert.match(resource.contents[0].text, /Token Monitor/);
     assert.deepEqual(resource.contents[0]._meta.ui.csp, { connectDomains: [], resourceDomains: [] });
     assert.deepEqual(resource.contents[0]._meta['openai/ui'], {
       availableDisplayModes: ['inline', 'fullscreen'], preferredDisplayMode: 'fullscreen',

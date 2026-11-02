@@ -41,3 +41,20 @@ test('default timers call browser globals with their native receiver',async()=>{
  const browser=await build({entryPoints:[entry],bundle:true,format:'iife',globalName:'Preview',write:false});
  runInNewContext(`let scheduled=0;function setTimeout(fn,ms){if(this!==globalThis)throw new Error('Illegal invocation');scheduled++;return 1;}function clearTimeout(id){if(this!==globalThis)throw new Error('Illegal invocation');}${browser.outputFiles[0].text};const c=new Preview.InspectionController(()=>{});c.enter('a');c.leave();c.enter('b');c.leave();c.dispose();if(scheduled!==2)throw new Error('Timers not scheduled');`);
 });
+
+test('pinning after pointer exit preserves dismissal and restores the pinned call',()=>{
+ const {c,tick}=setup();
+ c.pin('a');c.enter('b');c.leave();tick(100);c.pin('c');
+ tick(340);assert.equal(c.state.hovered,null);assert.equal(c.active,'c');
+ c.pin('c');assert.equal(c.active,null);
+ c.enter('b');c.leave();tick(340);assert.equal(c.active,null);
+});
+
+test('pointer interaction releases keyboard focus so leaving dismisses the preview',()=>{
+ const {c,tick}=setup();
+ c.focus('a');c.enter('a');
+ // Pointer down releases keyboard inspection before the click pins the call.
+ c.blur();c.pin('a');c.leave();tick(340);
+ assert.equal(c.state.hovered,null);assert.equal(c.state.focused,null);assert.equal(c.active,'a');
+ c.pin('a');c.enter('b');c.leave();tick(340);assert.equal(c.active,null);
+});

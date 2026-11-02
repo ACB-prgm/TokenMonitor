@@ -12,7 +12,7 @@ import {rates,price,cacheTemperature,health,AttributionEstimator,estimateTokens}
 const temp=mkdtempSync(path.join(tmpdir(),'tm-collector-'));after(()=>rmSync(temp,{recursive:true,force:true}));
 const normalized=x=>JSON.parse(JSON.stringify(x).replaceAll('.000Z','Z'));
 const fixtures=JSON.parse(readFileSync(new URL('fixtures/collector-parity.json',import.meta.url)));
-for(const f of fixtures)test('reference parity: '+f.id,()=>{const p=new TelemetryParser();for(const r of f.records)p.consume(r);const actual=p.snapshot(f.expected.task,{}, {},true,Date.UTC(2026,9,20));assert.deepEqual(normalized(actual),normalized(f.expected));});
+for(const f of fixtures)test('reference parity: '+f.id,()=>{const p=new TelemetryParser();for(const r of f.records)p.consume(r);const actual=p.snapshot(f.expected.task,{}, {},true,Date.UTC(2026,9,20));assert.deepEqual(normalized(actual),normalized({...f.expected,sessionEnded:false,turnStats:{models:[],epochCompleted:0}}));});
 function fixture(id='task'){
  const home=mkdtempSync(path.join(temp,'home-')),file=path.join(home,id+'.jsonl');
  writeFileSync(file,JSON.stringify({type:'session_meta',payload:{id,source:'cli'}})+'\n');
@@ -59,7 +59,7 @@ test('pricing categories, threshold, tier and unavailable accounting match basel
  assert.ok(Math.abs(price(s).total-.191)<1e-12);assert.ok(Math.abs(price(s).cacheSavings-.109)<1e-12);assert.equal(rates(s.model,'priority',272001).input,8);assert.equal(rates('gpt-5.5','fast',300000),undefined);assert.equal(price({...s,cacheWriteRecorded:false}).total,undefined);assert.equal(price({...s,model:'unknown'}).total,undefined);assert.equal(price({...s,reasoningRecorded:false}).categories[5],.1);
 });
 test('cache boundary parity',()=>{
- const last='2026-10-19T00:00:00Z',t=Date.parse(last);assert.equal(cacheTemperature(last,t+1800000-1),'WARM');assert.equal(cacheTemperature(last,t+1800000),'UNCERTAIN');assert.equal(cacheTemperature(last,t+7200000),'UNCERTAIN');assert.equal(cacheTemperature(last,t+7200001),'PRES. COLD');assert.equal(health(65,[40,50,65,75]),2);
+ const last='2026-10-19T00:00:00Z',t=Date.parse(last);assert.equal(cacheTemperature(undefined,t),undefined);assert.equal(cacheTemperature('invalid',t),undefined);assert.equal(cacheTemperature(last,t-1),undefined);assert.equal(cacheTemperature(last,t+1800000-1),'WARM');assert.equal(cacheTemperature(last,t+1800000),'UNCERTAIN');assert.equal(cacheTemperature(last,t+7200000),'UNCERTAIN');assert.equal(cacheTemperature(last,t+7200001),'PRES. COLD');assert.equal(health(65,[40,50,65,75]),2);
 });
 test('attribution deduplicates text and rebuilds surviving compaction history',()=>{
  const e=new AttributionEstimator();const call={type:'function_call',call_id:'a',name:'exec',arguments:'cat pdf/SKILL.md'};e.consume('response_item',call);e.consume('response_item',call);e.consume('response_item',{type:'function_call_output',call_id:'a',output:'abcd'.repeat(100)});assert.equal(e.snapshot().skillCount,1);assert.equal(e.snapshot().callCount,1);assert.equal(e.snapshot(10).contributors[0].tokens,10);assert.equal(estimateTokens('abcde'),2);

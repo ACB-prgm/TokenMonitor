@@ -10,5 +10,5 @@
     "noEmit": true,
     "types": ["node", "react", "react-dom"]
   },
-  "include": ["server/src/**/*.ts", "ui/src/**/*.tsx"]
+  "include": ["server/src/**/*.ts", "ui/src/**/*.tsx", "ui/src/**/*.d.ts"]
 }

@@ -17,9 +17,9 @@ Costs are estimates using the bundled rate table, not invoices. Subscription all
 
 ## Platforms and installation
 
-Packages target macOS Apple silicon (`macos-arm64`), macOS Intel (`macos-x64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop rendering and trusted lifecycle delivery require separate verification.
+Published 1.9.0 packages target macOS Apple silicon (`macos-arm64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Intel macOS and Linux packages are not published for this release. Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop rendering and trusted lifecycle delivery require separate verification.
 
-Version 1.8.1 fixes task-switch and call-preview state, preserves unknown cache readings, hardens telemetry parsing and update cleanup, and refreshes vulnerable dependencies. The model-priced compaction forecast and live account allowances from 1.8.0 remain available. **Update and install** is in the version menu. See the [release notes](docs/RELEASE-1.8.1.md) and [validation scope](docs/VALIDATION-1.8.1.md).
+Version 1.9.0 introduces a compact dashboard, searchable local threads, historical efficiency comparisons, conservative compaction guidance, and durable local numeric history. **Update and install** is available in Settings → About. See the [release notes](docs/RELEASE-1.9.0.md) and [validation scope](docs/VALIDATION-1.9.0.md).
 
 Download a complete `token-monitor-VERSION-TARGET.zip` and its `.sha256` companion from [Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Verify the checksum before extraction, then run the included macOS `install.sh` or Windows `install.ps1`. Restart Codex and review hook trust. The installer requires the existing Codex CLI, but uses the bundled Node runtime.
 
@@ -47,13 +47,17 @@ Restart Codex, review DEV hook trust, then ask to open Token Monitor DEV. Run th
 same command after edits to rebuild and refresh the local installation. See
 [the DEV workflow](docs/DEVELOPMENT.md) for setup, build-only, and removal commands.
 
-Use Node 24 LTS and Python 3.12+ for build-time archive extraction only. Run `npm ci` in `plugins/token-monitor-embedded`, followed by `node scripts/build-release.mjs --target macos-arm64` from the repository root. Supported `--target` values are the four platform names above and `all`. Archives and SHA-256 files are written to `dist/`.
+Use Node 24 LTS and Python 3.12+ for build-time archive extraction only. Run `npm ci` in `plugins/token-monitor-embedded`, followed by `node scripts/build-release.mjs --target macos-arm64` from the repository root. Supported local-build `--target` values are the three platform names above, `macos-x64`, and `all`. Archives and SHA-256 files are written to `dist/`.
 
 See [Contributing](CONTRIBUTING.md) for tests and the staged release process. The shared TypeScript collector runs inside the MCP server. Platform adapters cover path validation, data locations, safe writes and runtime launch. Linux packaging is deferred.
 
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE). Noncommercial use only under the license terms. Bundled dependencies retain their own licenses and notices.
+
+## Historical efficiency
+
+An expandable KPI banner compares selected-thread lifetime cost/call, context/call and modeled compaction payback with imported local chats over 7 days, 30 days, or all history. Durable SQLite history retains 90 days of numeric detail and permanent daily summaries, including saved chats whose source files disappear. Existing lifecycle hooks collect without an open panel. See [calculations, local storage and limitations](docs/HISTORICAL-EFFICIENCY.md).
 
 ## Compaction Value
 

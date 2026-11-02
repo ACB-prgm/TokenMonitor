@@ -5,7 +5,7 @@ import {createRequire} from 'node:module';
 import {fileURLToPath} from 'node:url';
 
 const root=new URL('../',import.meta.url);
-const bundle=await build({entryPoints:[fileURLToPath(new URL('ui/src/main.tsx',root))],bundle:true,platform:'node',format:'cjs',write:false,external:['react','react-dom/client','@modelcontextprotocol/ext-apps']});
+const bundle=await build({entryPoints:[fileURLToPath(new URL('ui/src/main.tsx',root))],bundle:true,loader:{'.png':'dataurl'},platform:'node',format:'cjs',write:false,external:['react','react-dom/client','@modelcontextprotocol/ext-apps']});
 
 // Run the real panel controller with deterministic hooks and a deferred bridge.
 function panel(summary=false) {
@@ -96,4 +96,15 @@ test('install action pins the requested version, reports progress through unchan
  install.resolve({_meta:{updates:{installation:{phase:'downloading',version:'1.7.0'}}}});await new Promise(r=>setImmediate(r));
  p.poll();await p.settle({...state,unchanged:true},{installation:{phase:'installed',version:'1.7.0'}});assert.equal(p.render().updates.installation.phase,'installed');
  p.render().onUpdate({action:'install',version:'1.7.0'});p.calls.at(-1).resolve({isError:true,_meta:{error:'Choose the package for this computer.'}});await new Promise(r=>setImmediate(r));assert.match(p.render().updateError,/package for this computer/);
+});
+
+test('filters and explicit rescans survive an in-flight request',async()=>{
+ const p=panel();const state={panelId:'p',revision:'r1',status:'Monitoring'};p.deliver(state);
+ p.render().onFilter('older',true);p.render().onAction('rescan');
+ await p.settle({...state,unchanged:true});
+ assert.equal(p.calls[1].request.arguments.action,'rescan');
+ assert.equal(p.calls[1].request.arguments.query,'older');
+ assert.equal(p.calls[1].request.arguments.includeArchived,true);
+ await p.settle({...state,revision:'r2'});
+ assert.equal(p.calls[2].request.arguments.query,'older');
 });

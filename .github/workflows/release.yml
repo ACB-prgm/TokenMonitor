@@ -42,8 +42,6 @@ jobs:
         include:
           - os: macos-15
             target: macos-arm64
-          - os: macos-15-intel
-            target: macos-x64
           - os: windows-2025
             target: windows-x64
           - os: windows-11-arm
@@ -98,7 +96,7 @@ jobs:
           root = pathlib.Path('.')
           version = (root / 'VERSION').read_text().strip()
           commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
-          for target in ['macos-arm64', 'macos-x64', 'windows-x64', 'windows-arm64']:
+          for target in ['macos-arm64', 'windows-x64', 'windows-arm64']:
               for prefix in ['token-monitor', 'token-monitor-embedded']:
                   archive = root / 'dist' / f'{prefix}-{version}-{target}.zip'
                   assert hashlib.sha256(archive.read_bytes()).hexdigest() == archive.with_suffix('.zip.sha256').read_text().split()[0]

@@ -2,13 +2,14 @@
 import type {CallActivity} from './activity.js';
 export type RecordValue = Record<string, any>;
 export type Rates = {input: number; cached: number; write?: number; output: number};
-export type Sample = {activity?: CallActivity; timestamp: string; input: number; cached: number; cacheWrite: number; output: number; reasoning: number; total?: number; ordinal?: number; outputRecorded: boolean; reasoningRecorded: boolean; model?: string; serviceTier?: string; regionalProcessing?: boolean; cachedRecorded: boolean; cacheWriteRecorded: boolean; price?: ReturnType<typeof price>};
+export type Sample = {effort?: string; activity?: CallActivity; timestamp: string; input: number; cached: number; cacheWrite: number; output: number; reasoning: number; total?: number; ordinal?: number; outputRecorded: boolean; reasoningRecorded: boolean; model?: string; serviceTier?: string; regionalProcessing?: boolean; cachedRecorded: boolean; cacheWriteRecorded: boolean; price?: ReturnType<typeof price>};
 const standard: Record<string, number[]> = {
   'gpt-6.1-sol':[2,.1,2.5,10], 'gpt-6-astra':[10,1,12.5,50], 'gpt-6-sol':[2,.2,2.5,10], 'gpt-6-luna':[.1,.01,.125,.5],
   'gpt-5.6-sol':[4,.4,5,20], 'gpt-5.6-terra':[2,.2,2.5,12], 'gpt-5.6-luna':[.2,.02,.25,1.2],
   'gpt-5.5':[5,.5,NaN,30], 'gpt-5.4':[2.5,.25,NaN,15], 'gpt-5.4-mini':[.75,.075,NaN,4.5], 'gpt-5.4-nano':[.2,.02,NaN,1.25],
   'gpt-5.3-codex':[1.75,.175,NaN,14], 'gpt-5.2':[1.75,.175,NaN,14], 'gpt-5.1':[1.25,.125,NaN,10], 'gpt-5':[1.25,.125,NaN,10],
 };
+export const pricingTableSignature=JSON.stringify(standard);
 export const pricingMetadata = {source:'https://developers.openai.com/api/docs/pricing', verifiedAt:'2026-10-19', configurationEffectiveDate:'2026-10-19'};
 export const integer = (n: unknown): n is number => Number.isSafeInteger(n);
 export const nonnegative = (n: unknown): n is number => integer(n) && n >= 0;
@@ -97,22 +98,26 @@ export class AttributionEstimator {
 }
 export const COMPACTION_DEFAULTS = {
   FORECAST_CALLS:20, POST_COMPACTION_TOKENS:40000, CONTEXT_GROWTH_WINDOW:20,
-  MIN_GROWTH_PER_CALL:2000, OUTPUT_WINDOW:20, MIN_TYPICAL_OUTPUT:1000,
+  DEFAULT_GROWTH_PER_CALL:2000, PERSONAL_GROWTH_WINDOW:500, MIN_PERSONAL_GROWTH_SAMPLES:20,
+  OUTPUT_WINDOW:20, MIN_TYPICAL_OUTPUT:1000,
   DEFAULT_TYPICAL_OUTPUT:3000, COMPACTION_OUTPUT_TOKENS:3600, MIN_VALID_SAMPLES:3,
 } as const;
 const D=COMPACTION_DEFAULTS;
 const finiteNonnegative=(n:unknown):n is number=>typeof n==='number'&&Number.isFinite(n)&&n>=0;
 export type RollingEstimate = {observed?:number; effective:number; sampleCount:number; minimumApplied:boolean; fallback:boolean};
+export type PersonalGrowth = {observed:number;sampleCount:number};
+export type GrowthInterval = {timestamp:string;model?:string;value:number;identity:string};
+export type GrowthEstimate = RollingEstimate & {source:'default'|'user'|'thread';userSampleCount?:number};
 export type ForecastObservation = Pick<Sample,'timestamp'|'input'|'output'|'outputRecorded'|'model'> & {segment?:number};
 // Parser supplies unique retained calls. Also deduplicate explicit identities for pure-helper callers.
 function uniqueObservations(samples:readonly ForecastObservation[]) {
   const seen=new Set<string>();
   return samples.filter(s=>{const key=JSON.stringify([s.timestamp,s.input,s.output,s.model,s.segment]);if(seen.has(key))return false;seen.add(key);return true;});
 }
-export function rollingContextGrowth(samples:readonly ForecastObservation[]):RollingEstimate {
+export function rollingContextGrowth(samples:readonly ForecastObservation[],personal?:PersonalGrowth):GrowthEstimate {
   const intervals:number[]=[];let previous:ForecastObservation|undefined;
   for(const s of uniqueObservations(samples)) {
-    if(!finiteNonnegative(s.input)||!date(s.timestamp)){previous=undefined;continue;}
+    if(!finiteNonnegative(s.input)||!date(s.timestamp)){intervals.length=0;previous=undefined;continue;}
     if(previous) {
       const delta=s.input-previous.input;
       if(s.segment!==previous.segment||s.model!==previous.model||delta<0||s.timestamp<previous.timestamp)intervals.length=0;
@@ -121,8 +126,9 @@ export function rollingContextGrowth(samples:readonly ForecastObservation[]):Rol
     previous=s;
   }
   const recent=intervals.slice(-D.CONTEXT_GROWTH_WINDOW),observed=recent.length?recent.reduce((sum,n)=>sum+n/recent.length,0):undefined;
-  const fallback=recent.length<D.MIN_VALID_SAMPLES;
-  return {observed,effective:fallback?D.MIN_GROWTH_PER_CALL:Math.max(D.MIN_GROWTH_PER_CALL,observed!),sampleCount:recent.length,minimumApplied:!fallback&&observed!<D.MIN_GROWTH_PER_CALL,fallback};
+  const source=recent.length>=D.CONTEXT_GROWTH_WINDOW?'thread':personal&&finiteNonnegative(personal.observed)&&Number.isInteger(personal.sampleCount)&&personal.sampleCount>=D.MIN_PERSONAL_GROWTH_SAMPLES?'user':'default';
+  return {observed,effective:source==='thread'?observed!:source==='user'?personal!.observed:D.DEFAULT_GROWTH_PER_CALL,
+    sampleCount:recent.length,minimumApplied:false,fallback:source==='default',source,...(source==='user'?{userSampleCount:personal!.sampleCount}:{})};
 }
 export function rollingTypicalOutput(samples:readonly ForecastObservation[],model?:string):RollingEstimate & {activeModelOnly:boolean} {
   const valid=uniqueObservations(samples).filter(s=>s.outputRecorded===true&&finiteNonnegative(s.output)&&!!date(s.timestamp));
@@ -138,7 +144,7 @@ export type CompactionForecast = {
   compactionOutput:number;breakEvenCalls:number|null;netSavingsUsd:number|null;compactionOverheadUsd:number|null;avoidableCostUsd:number|null;
   projectedBaselineCostUsd:number|null;projectedCompactedCostBeforeOverheadUsd:number|null;grossSavingsUsd:number|null;
   model?:string;serviceTier?:string;regionalProcessing:boolean;limitation?:string;
-  assumptions:{warmPrefixReuse:boolean;pricingAvailable:boolean;assumedTier:boolean;contextLimitKnown:boolean;growth?:RollingEstimate;output?:ReturnType<typeof rollingTypicalOutput>};
+  assumptions:{warmPrefixReuse:boolean;pricingAvailable:boolean;assumedTier:boolean;contextLimitKnown:boolean;growth?:GrowthEstimate;output?:ReturnType<typeof rollingTypicalOutput>};
 };
 export function compactionCategory(score:number) {
   return score===0?'No projected economic benefit':score<=20?'Low':score<=40?'Moderate':score<=60?'High':score<=80?'Very high':'Exceptional';
@@ -186,7 +192,7 @@ export function estimateCompactionValue(input:CompactionForecastInput):Compactio
     projectedCompactedCostBeforeOverheadUsd:compacted,grossSavingsUsd:gross,netSavingsUsd:net,avoidableCostUsd:avoidable};
 }
 export function health(value: number|undefined,stops:number[]) {if(value==null||!Number.isFinite(value)||value<=stops[0])return 0;for(let i=1;i<stops.length;i++)if(value<stops[i])return i-1+(value-stops[i-1])/(stops[i]-stops[i-1]);return 3;}
-export function cacheTemperature(lastCall?:string,now=Date.now()) {if(!lastCall)return;const age=now-Date.parse(lastCall);return age<1800000?'WARM':age<=7200000?'UNCERTAIN':'PRES. COLD';}
+export function cacheTemperature(lastCall?:string,now=Date.now()) {if(!lastCall)return;const age=now-Date.parse(lastCall);if(!Number.isFinite(age)||age<0)return;return age<1800000?'WARM':age<=7200000?'UNCERTAIN':'PRES. COLD';}
 export function cleanTitle(value:unknown):string|undefined {if(typeof value!=='string')return;const title=value.trim().replace(/\s+/g,' ');if(!title||['# Files mentioned by the user:','<environment_context>','<permissions instructions>'].some(s=>title.startsWith(s)))return;let result='',count=0;for(const {segment}of segmenter.segment(title)){result+=segment;if(++count===90)break;}return result;}
 export function date(value:unknown):string|undefined {return typeof value==='string'&&Number.isFinite(Date.parse(value))?new Date(value).toISOString():undefined;}
 // Fixed-size fingerprints bound replay memory. Cumulative and timestamp identities

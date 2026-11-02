@@ -1,0 +1,52 @@
+{
+  "runtime": {
+    "node": "v24.21.0",
+    "sqlite": "3.53.4",
+    "platform": "darwin",
+    "architecture": "arm64"
+  },
+  "fixture": {
+    "calls": 1000000,
+    "chats": 10000,
+    "recentDetailedCalls": 100000
+  },
+  "generationMs": 16213.129875000002,
+  "latencyMs": {
+    "warmP95": 0.0029590000012831297,
+    "cachedColdP95": 70.63370900000155,
+    "incrementalAppend": 1.0088749999995343
+  },
+  "incrementalBodyBytesRead": 223,
+  "validationReads": "Additional bounded session-header and checkpoint validation reads are included in append timing",
+  "initialStorage": {
+    "retentionDays": 90,
+    "databaseBytes": 112144384,
+    "journalBytes": 0,
+    "reusableBytes": 0
+  },
+  "afterRetention": {
+    "retentionDays": 90,
+    "databaseBytes": 39206912,
+    "journalBytes": 2369032,
+    "reusableBytes": 2699264
+  },
+  "pruneBatches": 301,
+  "repeatedRetentionCycleBytes": [
+    38420480,
+    37896192,
+    37371904,
+    36843520,
+    36319232,
+    36302848,
+    36306944,
+    36302848,
+    36311040,
+    36311040
+  ],
+  "rssGrowthBytes": 61145088,
+  "files": [
+    "efficiency.sqlite",
+    "efficiency.sqlite-shm",
+    "efficiency.sqlite-wal"
+  ]
+}

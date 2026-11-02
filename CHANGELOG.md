@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 1.9.0
+
+- Redesign the dashboard with consolidated thread usage, compact expandable efficiency KPIs, accessible controls, fixed health thresholds, and responsive call details.
+- Add searchable historical thread discovery, archive filtering, loaded-skill attribution, and clearer tool-call inspection.
+- Compare context, cost and compaction payback against model/effort-matched local history with explicit coverage and provisional results.
+- Estimate conservative turn-based compaction payback, suppress guidance when evidence is ambiguous or stale, and show age-based cache warmth.
+- Retain local numeric history in SQLite with incremental collection, 90-day detail retention, permanent daily summaries, migration, compatible repricing, recovery and on-demand storage diagnostics.
+
+- Forecast context growth from recent same-model personal history until the current segment has 20 intervals, then use its latest-20 mean. Remove the observed-growth floor, retain the 2K fallback, and disclose the estimate source and counts.
+
 ## 1.8.1
 
 - Retry transient Windows updater status-file locks without losing explicit failure reporting.

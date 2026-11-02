@@ -1,10 +1,13 @@
 import {closeSync,fstatSync,openSync,readSync} from 'node:fs';
 export class JSONLTail {
+  private signature?:string;private previousSize?:number;
   private offset=0;private identity?:string;private checkpoint=Buffer.alloc(0);private pending=Buffer.alloc(0);private discard=false;
   read(file:string,reset:()=>void,line:(record:Buffer)=>void) {
     const fd=openSync(file,'r');try{
       const stat=fstatSync(fd);if(!stat.isFile())throw new Error('Transcript is not a file');const identity=`${stat.dev}:${stat.ino}:${stat.birthtimeMs}`;
-      let rewritten=false;if(this.offset>0&&stat.size>=this.offset&&this.checkpoint.length){const check=Buffer.alloc(this.checkpoint.length);const count=readSync(fd,check,0,check.length,this.offset-check.length);rewritten=count!==check.length||!check.equals(this.checkpoint);}
+      const signature=JSON.stringify([identity,stat.size,stat.mtimeMs,stat.ctimeMs]);if(signature===this.signature)return;
+      let rewritten=this.signature!=null&&this.previousSize===stat.size;
+      this.signature=signature;this.previousSize=stat.size;if(this.offset>0&&stat.size>=this.offset&&this.checkpoint.length){const check=Buffer.alloc(this.checkpoint.length);const count=readSync(fd,check,0,check.length,this.offset-check.length);rewritten||=count!==check.length||!check.equals(this.checkpoint);}
       if(this.identity!==identity||stat.size<this.offset||rewritten){this.offset=0;this.checkpoint=Buffer.alloc(0);this.pending=Buffer.alloc(0);this.discard=false;reset();}
       this.identity=identity;const buffer=Buffer.alloc(65536);
       // Read only the size observed at entry: a constantly growing transcript

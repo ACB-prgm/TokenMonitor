@@ -8,7 +8,7 @@ export const categories = [
 export const number = (n?: number | null) => n == null || !Number.isFinite(n) ? '—' : Math.abs(n) >= 1000000 ? `${(n / 1000000).toFixed(1)}M` : Math.abs(n) >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 export const exact = (n?: number | null) => n == null ? 'Unknown' : n.toLocaleString();
 export const percent = (n?: number | null) => n == null || !Number.isFinite(n) ? '—' : n > 0 && n < .1 ? '<0.1%' : n < 100 && n > 99.9 ? '>99.9%' : `${Number(n.toFixed(1))}%`;
-export const money = (n?: number | null) => n == null || !Number.isFinite(n) ? '—' : n > 0 && n < .0001 ? '<$0.0001' : `${n < 0 ? '−' : ''}$${Math.abs(n).toFixed(Math.abs(n) < .01 && n !== 0 ? 4 : 2)}`;
+export const money = (n?: number | null) => n == null || !Number.isFinite(n) ? '—' : n !== 0 && Math.abs(n) < .000001 ? `${n<0?'−':''}<$0.000001` : `${n < 0 ? '−' : ''}$${Math.abs(n).toFixed(n!==0&&Math.abs(n)<.01?6:Math.abs(n)<.1&&n!==0?4:2)}`;
 // User-supplied calibration: percentage points of allowance per API-equivalent USD.
 export const allowanceMultipliers = {fiveHour:12.9,weekly:2.1} as const;
 export function threadAllowanceEstimate(usage?: Usage): {fiveHour:number; weekly:number} | undefined {

@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 1.8.1
+# TokenMonitor Embedded 1.9.0
 
 A local Codex token monitor with a React panel and an in-process TypeScript collector. Platform packages bundle Node; no system Node, Python, compiler, telemetry daemon, or API key is required.
 
@@ -10,7 +10,7 @@ Install the package matching your OS and processor. macOS packages use a shell b
 
 Telemetry is read from `CODEX_HOME`, defaulting to `.codex` in your user home. Codex databases are opened read-only. Raw transcript text and absolute transcript paths are not returned to the panel. Plugin state remains under `CODEX_HOME/token-monitor-embedded`; `PLUGIN_DATA` takes precedence for the runtime cache when the host provides it.
 
-If a task disappears, its last cached snapshot remains available until the idle collector entry expires. File replacement and truncation are detected on polling. Missing or incompatible database metadata is handled without modifying Codex data. Unknown pricing remains visibly unavailable.
+If a transcript disappears, imported numeric summaries remain available across restarts. Recent numeric detail is retained for 90 UTC calendar days, and permanent summaries support saved-chat selection. File replacement and truncation are detected on polling. Missing or incompatible database metadata is handled without modifying Codex data. Unknown pricing remains visibly unavailable.
 
 This release retains the existing Codex-compatible manifest layout because the tested host discovers its six command hooks through that layout. Trust and enable hooks through Codex's normal controls.
 
@@ -24,7 +24,7 @@ For a first installation, download the complete marketplace ZIP and its checksum
 
 ## Compaction Value
 
-The latest-call bar shows CV as a score out of 100. Expand it for classification, context reduction, growth, typical billed output, 20-call horizon, break-even, overhead, net savings, model and assumptions. CV measures net savings against avoidable context-processing costs using the active model/tier/regional rates and each projected call’s long-context pricing. It assumes 40K retained context, 3,600 compaction output tokens and one replacement cache write.
+The latest-call bar shows CV as a score out of 100. Expand it for classification, context reduction, growth, typical billed output, 20-call horizon, break-even, overhead, net savings, model and assumptions. CV measures net savings against avoidable context-processing costs using the active model/tier/regional rates and each projected call’s long-context pricing. Growth uses your recent same-model average until the current context segment has 20 valid intervals (21 calls), then its latest-20 average. Observed growth is unclamped; 2,000 tokens/call is only a fallback when personal history is insufficient. The expanded panel identifies the source and interval counts. It assumes 40K retained context, 3,600 compaction output tokens and one replacement cache write.
 
 Growth is the rolling mean of up to 20 valid intervals after the latest compaction/context reset, floored at 2K tokens per call (default 2K with fewer than three samples). Typical output is the rolling median of up to 20 recorded calls including reasoning, preferably from the active model, floored at 1K (default 3K with fewer than three samples). Zero observations count. Break-even is the first forecast call that recovers overhead; **>20 calls** means the horizon does not recover it.
 
@@ -35,3 +35,18 @@ The fixed 20-call horizon provides a consistent comparison; the fixed 40K retain
 Account allowances use the installed, signed-in Codex CLI through a shared stdio app-server connection. Live account reads refresh every 30 seconds while monitoring, with five-second deadlines and bounded retries. The connection closes after 60 seconds without state requests. This may make account network requests, but creates no model turns or logins. If unavailable, the newest timestamped quota events across the local catalogue supply each window independently. Catalogue scans are limited to the last 1 MiB of changed, validated transcripts and may be incomplete. Sources and observation times are disclosed; expired resets show “Awaiting refresh.” Chat selection still controls thread-specific metrics.
 
 Recent-call previews switch immediately and stay mounted between columns. Leaving starts a 200 ms hide delay followed by a 140 ms fade/collapse; re-entry cancels dismissal. Focus, pinning, Clear selection, Escape and reduced-motion preferences are supported.
+
+## Finding existing threads
+
+On first use, Token Monitor supplements Codex's SQLite thread index with a
+background discovery of local session JSONL headers. Historical usage is loaded
+when a thread is selected. Search covers the full discovered catalogue; the
+picker displays 100 recent matches. **Include archived** reveals archived local
+threads. Threads without readable local transcripts are omitted; availability
+counts and discovery status appear in Help & diagnostics.
+
+Discovery metadata is cached in the plugin's private state directory. Later
+launches reuse it. Hooks and unknown current chats use targeted lookup only;
+there are no periodic scans or filesystem watchers. Choose **Rescan threads**
+to find restored logs or refresh the full catalogue. Discovery never changes
+Codex transcripts or databases and does not recover logs missing from this device.

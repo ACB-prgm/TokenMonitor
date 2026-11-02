@@ -23,6 +23,8 @@ test('changing comparison period updates Comp values, deltas and every expanded 
   const collapsed=html.match(/<summary[\s\S]*?<\/summary>/)[0];
   assert.match(collapsed,new RegExp(delta.replace('.','\\.')));
   assert.ok(collapsed.includes(`${s.profitable}/${s.evaluable}`));
+  assert.ok(collapsed.includes(`>$${s.costPerCall.toFixed(4)}<`));
+  assert.ok(collapsed.includes(`>$${s.contextPerCall.toFixed(4)}<`));
   assert.equal((html.match(new RegExp(`Comp \\(${label}\\):`,'g'))??[]).length,4);
   assert.ok(html.includes(`Comp (${label}): $${s.inputCost.toFixed(2)} / ${s.calls}`));
   assert.ok(html.includes(`Comp (${label}): $${s.cost.toFixed(2)} / ${s.calls}`));

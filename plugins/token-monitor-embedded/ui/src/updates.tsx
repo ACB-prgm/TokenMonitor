@@ -11,7 +11,7 @@ export function UpdateMenu({value,onAction,error=''}:{value?:UpdateStatus;onActi
   v?.status==='current'?`v${version} · ${v.stale?'Last checked':'Up to date'}`:v?.status==='ahead'?`v${version} · Ahead of release`:
   v?.status==='available'?`v${version} · Update dismissed`:`v${version} · ${v?.error?'Unable to check':'Local'}`;
  return <details className={`updates ${v?.status==='available'&&!v.dismissed?'has-update':''}`}>
-  <summary className="version version-toggle" title="Open version and update options"><span>{label}</span><span className="disclosure-caret" aria-hidden="true"/></summary>
+  <summary className="version version-toggle" title="Open version and update options"><span className="disclosure-caret" aria-hidden="true"/><span>{label}</span></summary>
   <div className="update-menu" aria-label="Version and update options">
    <strong>Installed v{version}</strong>
    <p role="status">{v?.checking?'Checking GitHub in the background…':v?.error??(v?.status==='available'?`v${v.latestVersion} available`:v?.status==='current'?'Up to date':v?.status==='ahead'?'Installed version is newer than the latest stable release.':'Update status unknown.')}</p>

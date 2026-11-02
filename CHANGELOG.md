@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.9.1
+
+- Display Context / call and Cost / call with four decimal places in both KPI rows and expanded calculation results.
+- Restore KPI percentage badge colors: amber above 10%, red above 30%, and green at least 10% lower. Provisional comparisons remain neutral.
+
 ## 1.9.0
 
 - Redesign the dashboard with consolidated thread usage, compact expandable efficiency KPIs, accessible controls, fixed health thresholds, and responsive call details.

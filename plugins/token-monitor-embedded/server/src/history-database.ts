@@ -13,7 +13,7 @@ export class HistoryDatabase {
  statement(sql:string){let s=this.statements.get(sql);if(!s){s=this.db.prepare(sql);this.statements.set(sql,s);}return s;}
  private bump(){this.db.exec("UPDATE meta SET value=CAST(value AS INTEGER)+1 WHERE key='history_revision'");}
  constructor(readonly file:string,options:{migrate?:boolean}={}){
-  const fresh=!existsSync(file);this.db=new DatabaseSync(file);if(Number(this.db.prepare('PRAGMA user_version').get()!.user_version)>2){this.db.close();throw Error('Historical database requires a newer TokenMonitor version');}chmodSync(file,0o600);
+  const fresh=!existsSync(file);this.db=new DatabaseSync(file);if(Number(this.db.prepare('PRAGMA user_version').get()!.user_version)>3){this.db.close();throw Error('Historical database requires a newer TokenMonitor version');}chmodSync(file,0o600);
   this.db.exec(`PRAGMA busy_timeout=100; ${fresh?'PRAGMA auto_vacuum=INCREMENTAL;':''} PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA wal_autocheckpoint=1000; PRAGMA journal_size_limit=4194304;
    CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT);
    CREATE TABLE IF NOT EXISTS threads(id TEXT PRIMARY KEY,signature TEXT,basis TEXT,data TEXT);
@@ -86,13 +86,14 @@ export class HistoryDatabase {
 
  private hasRollups(){return !!this.statement("SELECT 1 FROM sqlite_master WHERE name='history_daily'").get();}
  private upgrade(){
+  if(this.statement("SELECT 1 FROM meta WHERE key='history_schema_v3'").get())return;
   this.db.exec(`
    CREATE TABLE IF NOT EXISTS history_day_basis(source TEXT NOT NULL,day TEXT NOT NULL,basis TEXT NOT NULL,PRIMARY KEY(source,day)) WITHOUT ROWID;
    CREATE TABLE IF NOT EXISTS history_daily(source TEXT NOT NULL,day TEXT NOT NULL,dimension INTEGER NOT NULL,${bucketNumbers.map(k=>`${k} REAL NOT NULL`).join(',')},PRIMARY KEY(source,day,dimension)) WITHOUT ROWID;
    CREATE INDEX IF NOT EXISTS history_daily_date ON history_daily(day,dimension);
    CREATE TABLE IF NOT EXISTS history_totals(source TEXT NOT NULL,dimension INTEGER NOT NULL,${bucketNumbers.map(k=>`${k} REAL NOT NULL`).join(',')},PRIMARY KEY(source,dimension)) WITHOUT ROWID;
    CREATE TABLE IF NOT EXISTS history_cursors(source TEXT PRIMARY KEY,target TEXT NOT NULL,identity TEXT NOT NULL,offset INTEGER NOT NULL,anchor TEXT NOT NULL,head TEXT NOT NULL,state TEXT NOT NULL,discard INTEGER NOT NULL,complete INTEGER NOT NULL);
-   CREATE TABLE IF NOT EXISTS history_replay(source TEXT NOT NULL,kind TEXT NOT NULL,digest BLOB NOT NULL,timestamp TEXT NOT NULL,PRIMARY KEY(source,kind,digest)) WITHOUT ROWID;
+   CREATE TABLE IF NOT EXISTS history_replay(source TEXT NOT NULL,kind TEXT NOT NULL,digest BLOB NOT NULL,timestamp TEXT NOT NULL,sequence INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(source,kind,digest)) WITHOUT ROWID;
    CREATE INDEX IF NOT EXISTS history_replay_date ON history_replay(timestamp);
    CREATE TABLE IF NOT EXISTS history_turn_events(source TEXT NOT NULL,position INTEGER NOT NULL,timestamp TEXT NOT NULL,model TEXT NOT NULL,calls INTEGER NOT NULL,PRIMARY KEY(source,position));
    CREATE INDEX IF NOT EXISTS history_turn_events_date ON history_turn_events(timestamp);
@@ -106,6 +107,8 @@ export class HistoryDatabase {
    CREATE INDEX IF NOT EXISTS history_outcomes_date ON history_outcomes(day);
   `);
   for(const row of this.statement('SELECT DISTINCT basis FROM history_sources WHERE basis NOT IN (SELECT id FROM history_basis)').all() as {basis:string}[]){const key=this.internBasis(row.basis);this.statement('UPDATE history_sources SET basis=? WHERE basis=?').run(key,row.basis);}
+  if(!(this.statement('PRAGMA table_info(history_replay)').all() as any[]).some(c=>c.name==='sequence'))this.db.exec('ALTER TABLE history_replay ADD COLUMN sequence INTEGER NOT NULL DEFAULT 0');
+  this.db.exec('DROP INDEX IF EXISTS history_replay_order');
   const columns=bucketNumbers.join(','),sum=bucketNumbers.map(k=>`SUM(${k})`).join(',');
   const update=bucketNumbers.map(k=>`${k}=${k}+excluded.${k}`).join(',');
   for(const [event,ref,sign] of [['INSERT','NEW',1],['DELETE','OLD',-1]] as const){
@@ -122,6 +125,7 @@ export class HistoryDatabase {
    this.db.exec("INSERT OR REPLACE INTO meta VALUES('history_schema_v2','1'); PRAGMA user_version=2;");
   });
   if(!this.statement("SELECT 1 FROM meta WHERE key='history_provenance_v1'").get())this.transaction(()=>{this.db.exec("INSERT OR IGNORE INTO history_day_basis SELECT d.source,d.day,s.basis FROM history_daily d JOIN history_sources s ON d.source=s.id; DELETE FROM history_buckets; INSERT OR IGNORE INTO history_catalogue(source,available) SELECT id,0 FROM history_sources WHERE id NOT LIKE '~%'; INSERT INTO meta VALUES('history_provenance_v1','1');");});
+  this.db.exec("INSERT OR REPLACE INTO meta VALUES('history_schema_v3','1'); PRAGMA user_version=3;");
  }
  private rebuildOutcomes(id:string){
   this.statement('DELETE FROM history_outcomes WHERE source=?').run(id);
@@ -175,7 +179,8 @@ export class HistoryDatabase {
  recent(source?:string):NumericCall[]{const rows=this.statement(`SELECT t.*,d.model,d.effort,d.serviceTier,d.regionalProcessing FROM history_samples t JOIN history_dimensions d ON t.dimension=d.id WHERE ${source?'source=?':"source NOT LIKE '~%'"} ORDER BY timestamp DESC,position DESC LIMIT 100`).all(...(source?[source]:[])) as any[];return rows.reverse().map(r=>{const b:any={timestamp:r.timestamp};for(const k of sampleNumbers)if(r[k]!=null)b[k]=r[k];for(const k of flags)b[k]=!!r[k];for(const k of ['model','effort','serviceTier'])if(r[k]!=null)b[k]=r[k];if(r.regionalProcessing!=null)b.regionalProcessing=!!r.regionalProcessing;return b;});}
  turns(exclude?:string){return this.statement(`SELECT model,SUM(turns) AS turns,SUM(calls) AS calls FROM history_turns WHERE source NOT LIKE '~%' ${exclude?'AND source<>?':''} GROUP BY model`).all(...(exclude?[exclude]:[])) .map(r=>({...r})) as {model:string;turns:number;calls:number}[];}
  changed(){this.bump();}
- pruneReplay(source:string,now=Date.now()){const cutoff=new Date(now-89*864e5).toISOString().slice(0,10);this.statement('DELETE FROM history_replay WHERE (source,kind,digest) IN (SELECT source,kind,digest FROM history_replay WHERE source=? AND timestamp<? LIMIT 1000)').run(source,cutoff);return Number(this.statement('SELECT changes() AS n').get()!.n);}
+ trimOldReplay(source:string,now:number){const cutoff=new Date(now-89*864e5).toISOString().slice(0,10);for(const kind of ['record','call','cumulative','turn-start','turn-message','turn-end']){const row=this.statement('SELECT sequence FROM history_replay WHERE source=? AND kind=? AND timestamp<? ORDER BY sequence DESC LIMIT 1 OFFSET 32767').get(source,kind,cutoff);if(row)this.statement('DELETE FROM history_replay WHERE source=? AND kind=? AND timestamp<? AND sequence<?').run(source,kind,cutoff,row.sequence);}}
+ pruneReplay(source:string,now=Date.now()){const cutoff=new Date(now-89*864e5).toISOString().slice(0,10);this.statement('DELETE FROM history_replay WHERE (source,kind,digest) IN (SELECT source,kind,digest FROM history_replay INDEXED BY history_replay_date WHERE source=? AND timestamp<? LIMIT 1000)').run(source,cutoff);return Number(this.statement('SELECT changes() AS n').get()!.n);}
  hasExpired(now=Date.now()){const cutoff=new Date(now-89*864e5).toISOString().slice(0,10);return ['history_samples','history_turn_events','history_boundaries','history_charges','history_replay'].some(t=>!!this.statement(`SELECT 1 FROM ${t} WHERE timestamp<? LIMIT 1`).get(cutoff))||!!this.statement('SELECT 1 FROM history_paybacks WHERE completed<? LIMIT 1').get(cutoff);}
  boundary(source:string,position:number,timestamp:string,kind:string,now:number,tokens?:number,model?:string,turnId?:string,user?:boolean){if(timestamp.slice(0,10)<new Date(now-89*864e5).toISOString().slice(0,10))return;this.statement('INSERT OR IGNORE INTO history_boundaries VALUES(?,?,?,?,?,?,?,?)').run(source,position,timestamp,kind,turnId??null,tokens??null,model??null,user==null?null:Number(user));}
  savedTasks(query='',includeArchived=false){const q='%'+query.trim().toLowerCase()+'%',where=`${includeArchived?'1':'c.archived=0'} AND (lower(COALESCE(c.title,'')) LIKE ? ESCAPE '\\' OR lower(c.source) LIKE ? ESCAPE '\\' OR lower(COALESCE(c.workspace,'')) LIKE ? ESCAPE '\\')`;

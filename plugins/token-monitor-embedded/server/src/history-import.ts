@@ -16,7 +16,7 @@ export function importHistory(db:HistoryDatabase,home:string,f:HistoryFile,basis
  if(!acceptedTranscript(f.file,f.id,home)){db.statement('UPDATE history_catalogue SET available=0 WHERE source=? AND available<>0').run(f.id);return {bytes:0,complete:true,changed:false,unavailable:true};}
  const fd=openSync(f.file,'r');let result:ImportResult={bytes:0,complete:false,changed:false};
  try{
-  const st=fstatSync(fd),identity=JSON.stringify([st.dev,st.ino,st.birthtimeMs]),signature=JSON.stringify([st.dev,st.ino,st.size,st.mtimeMs,f.end]);
+  const st=fstatSync(fd),identity=JSON.stringify([st.dev,st.ino,st.birthtimeMs]),signature=JSON.stringify([st.dev,st.ino,st.size,st.mtimeMs,f.end,st.ctimeMs]);
   const old=db.signature(f.id),cursor=db.statement('SELECT * FROM history_cursors WHERE source=?').get(f.id) as Cursor|undefined;
   // Stat-only fast path: no transcript body reads, transactions, or writes.
   if(old?.signature===signature&&old.basis===basis&&cursor?.complete)return {...result,complete:true};
@@ -24,7 +24,7 @@ export function importHistory(db:HistoryDatabase,home:string,f:HistoryFile,basis
   const read=(at:number,n:number)=>{const b=Buffer.alloc(n);return b.subarray(0,readSync(fd,b,0,n,at));};
   const head=hash(read(0,Math.min(128,st.size)));
   let reset=!cursor||cursor.identity!==identity||cursor.offset>st.size||cursor.head!==head;
-  if(cursor?.complete&&old?.signature){try{const sig=JSON.parse(old.signature);if(st.size===cursor.offset&&sig[3]!==st.mtimeMs)reset=true;}catch{reset=true;}}
+  if(cursor?.complete&&old?.signature){try{const sig=JSON.parse(old.signature);if(st.size===cursor.offset&&(sig[3]!==st.mtimeMs||sig[5]!==st.ctimeMs))reset=true;}catch{reset=true;}}
   if(cursor&&!reset&&cursor.offset)reset=hash(read(Math.max(0,cursor.offset-128),Math.min(cursor.offset,128)))!==cursor.anchor;
   // A pricing/parser version change rebuilds from the source; missing sources keep frozen estimates.
   if(old&&old.basis!==basis&&(!cursor||db.signature(cursor.target)?.basis!==basis))reset=true;
@@ -43,7 +43,7 @@ export function importHistory(db:HistoryDatabase,home:string,f:HistoryFile,basis
     else if(e.kind==='turn'){builder.turn(e.turn);db.addTurn(target,offset,e.timestamp??new Date(currentTime).toISOString(),e.turn.model,e.turn.calls,now);}
     else {builder.call(e.sample,e.contextLimit);db.addSample(target,offset,e.sample,now);db.boundary(target,offset,e.sample.timestamp,'context-limit',now,e.contextLimit);}
    },{numericOnly:true,replay:(kind,key)=>{
-    const digest=hash(key);db.statement('INSERT OR IGNORE INTO history_replay VALUES(?,?,?,?)').run(target,kind,Buffer.from(digest,'hex'),new Date(currentTime).toISOString());return Number(db.statement('SELECT changes() AS n').get()!.n)>0;
+    const digest=hash(key);db.statement('INSERT OR IGNORE INTO history_replay(source,kind,digest,timestamp,sequence) VALUES(?,?,?,?,?)').run(target,kind,Buffer.from(digest,'hex'),new Date(currentTime).toISOString().slice(0,10),offset);return Number(db.statement('SELECT changes() AS n').get()!.n)>0;
    }});
    let previousEpoch:ReturnType<HistoryBuilder['checkpoint']>['epoch'];
    if(!reset){const state=JSON.parse(cursor!.state) as State;if(state.version!==1)throw Error('Unsupported history checkpoint');parser.restoreNumeric(state.parser);previousEpoch=structuredClone(state.builder.epoch);builder.restore(state.builder);}
@@ -76,6 +76,7 @@ export function importHistory(db:HistoryDatabase,home:string,f:HistoryFile,basis
    if(complete){db.publish(f.id,target);target=f.id;}
    db.statement('INSERT OR REPLACE INTO history_cursors VALUES(?,?,?,?,?,?,?,?,?)').run(f.id,target,identity,offset,hash(read(Math.max(0,offset-128),Math.min(offset,128))),head,JSON.stringify(state),Number(discard),Number(complete));
    db.statement('INSERT INTO history_catalogue(source,title,workspace,archived,available) VALUES(?,?,?,?,1) ON CONFLICT(source) DO UPDATE SET title=COALESCE(excluded.title,title),workspace=COALESCE(excluded.workspace,workspace),archived=excluded.archived,available=1').run(f.id,f.title??null,f.workspace??null,Number(!!f.archived));
+   if(Date.parse(data.activity??'')<now-89*864e5)db.trimOldReplay(target,now);
    if(offset!==start||reset){db.changed();result.changed=true;}
    result.complete=complete;
   });

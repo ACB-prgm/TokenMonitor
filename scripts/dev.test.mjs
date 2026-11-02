@@ -98,3 +98,28 @@ test('fresh DEV MCP discovers historical JSONL without database or hooks',async(
   await assert.rejects(readFile(path.join(home,'token-monitor-dev','latest-hook.json')));
  }finally{await client?.close();await rm(temp,{recursive:true,force:true});}
 });
+
+test('DEV hooks preserve numeric history through MCP restarts and source restoration',async()=>{
+ const temp=await mkdtemp(path.join(tmpdir(),'tokenmonitor-dev-durable-'));let client;
+ try{
+  const built=await buildDev({marketplaceRoot:path.join(temp,'marketplace')}),home=path.join(temp,'codex'),directory=path.join(home,'sessions');await mkdir(directory,{recursive:true});
+  const {writeFile}=await import('node:fs/promises'),file=path.join(directory,'durable.jsonl'),stamp=Date.now();
+  const call=i=>({type:'event_msg',timestamp:new Date(stamp+i*1000).toISOString(),payload:{type:'token_count',info:{last_token_usage:{input_tokens:10000,cached_input_tokens:5000,cache_write_input_tokens:0,output_tokens:100,reasoning_output_tokens:20}}}});
+  const records=[{type:'session_meta',payload:{id:'durable',source:'cli'}},{type:'turn_context',payload:{model:'gpt-6.1-sol',effort:'high'}},call(0)];
+  await writeFile(file,records.map(JSON.stringify).join('\n')+'\n');
+  execFileSync(process.execPath,[path.join(built.pluginRoot,'server/dist/hook.mjs')],{env:{...process.env,CODEX_HOME:home},input:JSON.stringify({hook_event_name:'Stop',session_id:'durable',transcript_path:file,title:'Durable fixture'})});
+  const connect=async()=>{const c=new Client({name:'durability-test',version:'1'});await c.connect(new StdioClientTransport({command:process.execPath,args:[path.join(built.pluginRoot,'server/dist/index.mjs')],cwd:built.pluginRoot,env:{...process.env,CODEX_HOME:home,CODEX_CLI_PATH:path.join(temp,'absent')},stderr:'pipe'}));return c;};
+  client=await connect();let state=(await client.callTool({name:'open_monitor',arguments:{},_meta:{threadId:'durable'}}))._meta.monitor;
+  assert.equal(state.efficiency.thread.calls,1);await client.close();client=undefined;
+  await rm(file);client=await connect();state=(await client.callTool({name:'open_monitor',arguments:{}}))._meta.monitor;
+  assert.ok(state.tasks.some(t=>t.id==='durable'&&t.sourceAvailable===false));
+  state=(await client.callTool({name:'get_monitor_state',arguments:{panelId:state.panelId,action:'select',taskId:'durable'}}))._meta.monitor;
+  assert.equal(state.available,false);assert.equal(state.task.title,'Durable fixture');assert.equal(state.efficiency.thread.calls,1);assert.equal(state.samples.length,1);
+  const storage=(await client.callTool({name:'get_history_storage',arguments:{panelId:state.panelId}}))._meta.storage;
+  assert.equal(storage.retentionDays,90);assert.ok(storage.databaseBytes>0);assert.doesNotMatch(JSON.stringify(storage),/\.jsonl|transcript|Durable fixture/);
+  await writeFile(file,[...records,call(1)].map(JSON.stringify).join('\n')+'\n');
+  state=(await client.callTool({name:'get_monitor_state',arguments:{panelId:state.panelId,action:'rescan'}}))._meta.monitor;
+  for(let i=0;i<100&&state.efficiency?.thread.calls!==2;i++){await new Promise(r=>setTimeout(r,10));state=(await client.callTool({name:'get_monitor_state',arguments:{panelId:state.panelId}}))._meta.monitor;}
+  assert.equal(state.efficiency.thread.calls,2);assert.equal(state.available,true);assert.equal(state.efficiency.history.sourceAvailable,true);
+ }finally{await client?.close();await rm(temp,{recursive:true,force:true});}
+});

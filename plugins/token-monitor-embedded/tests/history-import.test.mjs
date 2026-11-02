@@ -75,3 +75,12 @@ test('available numeric detail can be repriced after the original source disappe
 test('inactivity closure is durable even when no new transcript records arrive',()=>fixture(({home,f,db})=>{
  writeFileSync(f.file,lines([header,context,call(1),{type:'compacted',timestamp:stamp(2),payload:{}},call(3,40000)]));drain(db,home,f);assert.equal(summarize(db.buckets(),db.outcomes()).pending,1);db.maintenance(now+8*864e5);assert.equal(summarize(db.buckets(),db.outcomes()).evaluable,1);assert.equal(JSON.parse(db.statement('SELECT state FROM history_cursors').get().state).builder.epoch.reason,'inactivity');
 }));
+test('complete recent numeric sequences reprice compaction charges without a transcript',async()=>{
+ const home=mkdtempSync(path.join(tmpdir(),'tm-reprice-epoch-'));mkdirSync(path.join(home,'sessions'));const f={id:'a',file:path.join(home,'sessions','a.jsonl')};const store=new mod.exports.EfficiencyStore(home);
+ try{
+  const rs=[header,context,call(1),{type:'compacted',timestamp:stamp(2),payload:{}},...Array.from({length:20},(_,i)=>call(i+3,40000))];writeFileSync(f.file,lines(rs));f.end=stamp(50);await store.scan(home,[f],true,now);
+  const expected=store.snapshot('a',now).thread,db=store.storage,old=db.internBasis(JSON.stringify({...JSON.parse(historyBasis),table:'earlier rates'}));
+  db.db.prepare('UPDATE history_sources SET basis=? WHERE id=?').run(old,'a');db.db.prepare('UPDATE history_day_basis SET basis=? WHERE source=?').run(old,'a');db.db.exec('UPDATE history_daily SET cost=cost*2,overhead=overhead*2');db.changed();rmSync(f.file);
+  await store.scan(home,[],true,now+6000);closeTo(store.snapshot('a',now+6000).thread,expected);assert.equal(store.snapshot('a',now+6000).history.frozenThreads,0);
+ }finally{store.close();rmSync(home,{recursive:true,force:true});}
+});

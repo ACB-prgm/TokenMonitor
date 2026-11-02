@@ -5,13 +5,13 @@ import {readFileSync,readdirSync,lstatSync,existsSync} from 'node:fs';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {acceptedTranscript,atomicJSON,codexHome,stateRoot,validID,withStateLock} from './platform.js';
-import {cleanTitle,type RecordValue} from './metrics.js';
+import {cleanTitle,price,type RecordValue} from './metrics.js';
 import {TelemetryParser} from './parser.js';
 import {ThreadDiscovery} from './discovery.js';
 import {JSONLTail} from './tail.js';
 import {HistoryClient} from './history-client.js';
 import {HistoryDatabase} from './history-database.js';
-import {importHistory} from './history-import.js';
+import {importHistory,type HistoryFile} from './history-import.js';
 import {historyBasis,type Efficiency} from './efficiency.js';
 import {performance} from 'node:perf_hooks';
 import {PersonalGrowthHistory} from './growth-history.js';
@@ -26,6 +26,7 @@ export class TelemetryStore {
   readonly discovery:ThreadDiscovery;
   indexStatus="unavailable";
   private catalogueRows?:RecordValue[];
+  private catalogueCache?:{key:string;rowsById:Map<any,RecordValue>;items:Map<string,{id:string;title:string;workspace?:string;archived?:boolean;updated:number}>};
   private saved=new Map<string,{id:string;title:string;workspace?:string}>();
   private indexed=new Map<string,RecordValue>();
   constructor(readonly home=codexHome()){this.growthHistory=new PersonalGrowthHistory(home);this.discovery=new ThreadDiscovery(home);}
@@ -72,18 +73,27 @@ export class TelemetryStore {
       if(!this.resolve(id))void this.discovery.target(id).catch(()=>{});
       else if(hook?.session.session_id===id)await this.discovery.target(id,hook.session.transcript_path);
     }
-    const rows=options.rescan||!this.catalogueRows?(this.catalogueRows=this.metadata(undefined,true,true)):this.catalogueRows,rowsById=new Map(rows.map(r=>[r.id,r])),items=new Map<string,{id:string;title:string;workspace?:string;archived?:boolean;updated:number}>();
-    for(const e of this.discovery.entries.values())if(existsSync(e.file))items.set(e.id,{...this.task({session_id:e.id,transcript_path:e.file,cwd:e.cwd,title:e.title}),archived:e.archived,updated:e.updated});
-    for(const row of rows)if(existsSync(row.rollout_path))items.set(row.id,{...this.task({session_id:row.id,transcript_path:row.rollout_path,cwd:row.cwd,title:row.title}),archived:!!row.archived,updated:Number(row.updated_at??0)*1000});
+    const cacheKey=JSON.stringify([this.discovery.entries.size,this.discovery.status.state,this.discovery.status.lastCompleted]);
+    const rebuild=!!options.rescan||!this.catalogueCache||this.catalogueCache.key!==cacheKey;
+    if(rebuild){
+     const rows=options.rescan||!this.catalogueRows?(this.catalogueRows=this.metadata(undefined,true,true)):this.catalogueRows,rowsById=new Map(rows.map(r=>[r.id,r])),items=new Map<string,{id:string;title:string;workspace?:string;archived?:boolean;updated:number}>();
+     for(const e of this.discovery.entries.values())if(existsSync(e.file))items.set(e.id,{...this.task({session_id:e.id,transcript_path:e.file,cwd:e.cwd,title:e.title}),archived:e.archived,updated:e.updated});
+     for(const row of rows)if(existsSync(row.rollout_path))items.set(row.id,{...this.task({session_id:row.id,transcript_path:row.rollout_path,cwd:row.cwd,title:row.title}),archived:!!row.archived,updated:Number(row.updated_at??0)*1000});
+     for(const [id,row]of this.indexed){const e=items.get(id);if(e){e.archived=!!row.archived;e.title=cleanTitle(row.title)??e.title;}}
+     this.catalogueCache={key:cacheKey,rowsById,items};
+    }
+    const {rowsById,items}=this.catalogueCache!;
     if(hook){const e=items.get(hook.session.session_id);items.set(hook.session.session_id,{...this.task(hook.session,e?.title),archived:e?.archived??false,updated:Date.parse(hook.session.updated_at??'')||e?.updated||0});}
-    for(const [id,row]of this.indexed){const e=items.get(id);if(e){e.archived=!!row.archived;e.title=cleanTitle(row.title)??e.title;}}
-    void this.efficiency?.scan(this.home,[...items.keys()].flatMap(id=>{const row=rowsById.get(id),entry=this.discovery.entries.get(id),session=hook?.session.session_id===id?hook.session:undefined;const file=session?.transcript_path??row?.rollout_path??entry?.file;const item=items.get(id)!;return typeof file==='string'?[{id,file,end:session?.ended?session.updated_at:undefined,title:item.title,workspace:item.workspace,archived:item.archived}]:[]}),['complete','partial'].includes(this.discovery.status.state)).catch(()=>{});
+    if(options.hostId&&!items.has(options.hostId)){const session=this.resolve(options.hostId);if(session)items.set(options.hostId,{...this.task(session),updated:Date.now()});}
+    const ids=rebuild?[...items.keys()]:[...new Set([options.selectedId,options.hostId,hook?.session.session_id].filter((id):id is string=>!!id))];
+    const files:HistoryFile[]=ids.flatMap(id=>{const row=rowsById.get(id),entry=this.discovery.entries.get(id),session=hook?.session.session_id===id?hook.session:undefined;const file=session?.transcript_path??row?.rollout_path??entry?.file??this.resolve(id)?.transcript_path;const item=items.get(id);return typeof file==='string'?[{id,file,end:session?.ended?session.updated_at:undefined,title:item?.title,workspace:item?.workspace,archived:item?.archived}]:[]});
+    void this.efficiency?.scan(this.home,files,['complete','partial'].includes(this.discovery.status.state),rebuild).catch(()=>{});
     try{for(const task of await this.efficiency?.savedTasks(options.query,options.includeArchived)??[]){const path=rowsById.get(task.id)?.rollout_path??this.discovery.entries.get(task.id)?.file;if(path&&!existsSync(path))task.sourceAvailable=false;this.saved.set(task.id,task);items.set(task.id,{...items.get(task.id),...task,updated:items.get(task.id)?.updated??0});}while(this.saved.size>200)this.saved.delete(this.saved.keys().next().value!);}catch{/* Live catalogue remains available. */}
     const query=(options.query??'').trim().toLowerCase();
     const matches=[...items.values()].filter(t=>(options.includeArchived||!t.archived)&&(!query||[t.title,t.workspace,t.id].some(v=>v?.toLowerCase().includes(query)))).sort((a,b)=>b.updated-a.updated||a.id.localeCompare(b.id));
     const tasks=matches.slice(0,100);
     for(const id of [options.selectedId,options.hostId]){const e=id?items.get(id):undefined;if(e&&!tasks.some(t=>t.id===id))tasks.push(e);}
-    return {tasks:tasks.map(({updated,...task})=>task),matchCount:matches.length,shownCount:Math.min(matches.length,100),discovery:{...this.discovery.status,targeting:this.discovery.targeting,index:this.indexStatus,readable:items.size},hostMatched:!!options.hostId&&!!this.resolve(options.hostId),...(hook?{latestHook:{id:hook.session.session_id,sequence:hook.sequence,event:hook.session.hook_event_name??''}}:{})};
+    return {tasks:tasks.map(({updated,...task})=>task),matchCount:matches.length,shownCount:Math.min(matches.length,100),discovery:{...this.discovery.status,targeting:this.discovery.targeting,index:this.indexStatus,readable:[...items.values()].filter(t=>(t as any).sourceAvailable!==false).length},hostMatched:!!options.hostId&&!!this.resolve(options.hostId),...(hook?{latestHook:{id:hook.session.session_id,sequence:hook.sequence,event:hook.session.hook_event_name??''}}:{})};
   }
   taskMetadata(id:string){const s=this.resolve(id);return s?this.task(s,s.title??this.metadata(id)[0]?.title):this.saved.get(id);}
   async record(payload:unknown):Promise<boolean> {
@@ -130,7 +140,7 @@ export class Collector {
     this.account.touch();
     const local=this.catalogue.read(()=>this.store.allowanceFiles(params.taskId as string));
     const snapshot=this.store.snapshot(params.taskId);let efficiency:Efficiency|undefined,historyError:string|undefined;try{efficiency=await this.store.efficiency?.snapshot(params.taskId);if(efficiency)this.lastHistory={id:params.taskId,value:efficiency};}catch{historyError='Historical storage is temporarily unavailable. Showing committed data where available; collection will retry automatically.';if(this.lastHistory?.id===params.taskId)efficiency=this.lastHistory.value;}
-    const fallback=!snapshot&&efficiency?{task:this.store.taskMetadata(params.taskId),callCount:efficiency.thread.calls,status:'Saved history · source transcript unavailable',available:false}:undefined;
+    const fallback=!snapshot&&efficiency?{task:this.store.taskMetadata(params.taskId),callCount:efficiency.thread.calls,samples:efficiency.threadSamples?.map(s=>({...s,price:price(s)})),lastCall:efficiency.threadSamples?.at(-1)?.timestamp,status:'Saved history · source transcript unavailable',available:false}:undefined;
     const state={...fallback,...snapshot,efficiency,historyError,compactionTurnPayback:estimateTurnPayback({forecast:snapshot?.compactionValue,stats:snapshot?.turnStats,history:efficiency?.turns?.other,ready:!!efficiency?.reference?.ready&&!efficiency.progress.running,available:snapshot?.available===true,lastCall:snapshot?.lastCall,now:Date.now(),isCompacting:snapshot?.isCompacting,awaitingPostCompactionCall:snapshot?.awaitingPostCompactionCall,ended:snapshot?.sessionEnded,latestPayback:efficiency?.paybacks.at(-1),latestCompaction:snapshot?.compactions.at(-1)?.timestamp,hasCompactions:!!(efficiency?.paybacks.length||snapshot?.compactions.length)})};
     const allowances=chooseAllowances(this.account.snapshot(),local);
     state.fiveHour=allowances.fiveHour;state.weekly=allowances.weekly;

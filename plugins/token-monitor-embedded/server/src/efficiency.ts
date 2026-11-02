@@ -1,6 +1,7 @@
 import type {TurnAggregate} from './turns.js';
 import {compareCohorts,type Comparisons} from './comparisons.js';
 import {HistoryDatabase} from './history-database.js';
+import {statSync} from 'node:fs';
 import {importHistory,type HistoryFile} from './history-import.js';
 import path from 'node:path';
 import {TelemetryParser} from './parser.js';
@@ -32,25 +33,54 @@ export class HistoryBuilder {
  finish(now:number,end?:string){const e=this.epoch;if(e&&!e.completed){if(end&&end>=(this.data.activity??'')){e.completed=end;e.reason='session-end';}else if(this.data.activity&&now-Date.parse(this.data.activity)>=7*864e5){e.completed=new Date(Date.parse(this.data.activity)+7*864e5).toISOString();e.reason='inactivity';}}return this.data;}
 }
 export function weekly(buckets:Bucket[]){const weeks=new Map<string,Bucket[]>();for(const b of buckets){const d=new Date(b.timestamp.slice(0,10));d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);const key=d.toISOString().slice(0,10);weeks.set(key,[...(weeks.get(key)??[]),b]);}return [...weeks].sort().map(([week,b])=>({week,summary:summarize(b)}));}
-export type Efficiency={history?:{retentionDays:number;frozenThreads:number};turns?:{other:TurnAggregate[]};reference?:{buckets:Bucket[];ready:boolean};comparisons?:{thread:Comparisons;periods:Record<string,Comparisons>};activation:string;baseline:Summary;baselineCalls:number;baselineProvisional:boolean;baselineStart?:string;baselineEnd?:string;thread:Summary;threadWeeks:ReturnType<typeof weekly>;threadModels:{model:string;summary:Summary;baseline:Summary}[];baselineModels:{model:string;summary:Summary}[];paybacks:Payback[];periods:Record<string,{summary:Summary;previousSummary?:Summary;models:{model:string;summary:Summary}[];weeks:{week:string;summary:Summary}[]}>;rolling:Summary;threadRolling:Summary;progress:{processed:number;total:number;running:boolean;failed:number};pricingBasis:string};
+export type Efficiency={history?:{retentionDays:number;frozenThreads:number;detailCalls?:number;sourceAvailable?:boolean};threadSamples?:NumericCall[];turns?:{other:TurnAggregate[]};reference?:{buckets:Bucket[];ready:boolean};comparisons?:{thread:Comparisons;periods:Record<string,Comparisons>};activation:string;baseline:Summary;baselineCalls:number;baselineProvisional:boolean;baselineStart?:string;baselineEnd?:string;thread:Summary;threadWeeks:ReturnType<typeof weekly>;threadModels:{model:string;summary:Summary;baseline:Summary}[];baselineModels:{model:string;summary:Summary}[];paybacks:Payback[];periods:Record<string,{summary:Summary;previousSummary?:Summary;models:{model:string;summary:Summary}[];weeks:{week:string;summary:Summary}[]}>;rolling:Summary;threadRolling:Summary;progress:{processed:number;total:number;running:boolean;failed:number};pricingBasis:string};
 export class EfficiencyStore {
  private snapshots=new Map<string,{value:Efficiency;bytes:number;expires:number}>();private snapshotBytes=0;
- private basisKey:string;readonly storage:HistoryDatabase;private scanKey='';private lastScan=-Infinity;private lastMaintenance=-Infinity;private busy=false;private closed=false;private processed=0;private failed=0;private total=0;private importComplete=false;
+ private basisKey:string;readonly storage:HistoryDatabase;private scannedRevision?:string;private scanKey='';private lastScan=-Infinity;private lastMaintenance=-Infinity;private busy=false;private closed=false;private processed=0;private failed=0;private total=0;private importComplete=false;
  constructor(home:string,options:{backgroundMigration?:boolean}={}){const root=stateRoot(home);privateDirectory(root);this.storage=new HistoryDatabase(path.join(root,'efficiency.sqlite'),{migrate:!options.backgroundMigration});this.basisKey=this.storage.internBasis(historyBasis);this.storage.statement('INSERT OR IGNORE INTO meta VALUES (?,?)').run('activation',new Date().toISOString());}
  savedTasks(query='',includeArchived=false){return this.storage.savedTasks(query,includeArchived);}
  storageDiagnostics(){return {...this.storage.diagnostics(),backlog:Number(this.storage.statement('SELECT COUNT(*) AS n FROM history_cursors WHERE complete=0').get()!.n),frozenThreads:this.frozenThreads()};}
  private frozenThreads(){return Number(this.storage.statement("SELECT COUNT(*) AS n FROM history_sources WHERE basis<>? AND id NOT LIKE '~%'").get(this.basisKey)!.n);}
- async scan(home:string,files:HistoryFile[],complete:boolean,now=Date.now()){
-  const scanKey=JSON.stringify([complete,files.map(f=>[f.id,f.file,f.end])]);if(this.busy||this.closed||now-this.lastScan<5000&&scanKey===this.scanKey)return;this.scanKey=scanKey;this.lastScan=now;this.busy=true;this.total=files.length;this.processed=0;this.failed=0;
-  try{while(!this.closed&&this.storage.statement('SELECT 1 FROM threads LIMIT 1').get()){this.storage.migrate(1);await new Promise<void>(r=>setImmediate(r));}this.storage.syncAvailability(files);for(const f of files){if(this.closed)break;try{let result;do{result=importHistory(this.storage,home,f,historyBasis,{now,maxMs:40,maxBytes:4*1024*1024});await new Promise<void>(r=>setImmediate(r));}while(!this.closed&&!result.complete&&!result.waiting&&(result.bytes||result.changed));if(result.complete)while(!this.closed&&this.storage.pruneReplay(f.id,now))await new Promise<void>(r=>setImmediate(r));this.processed++;}catch{this.failed++;}}
+ async scan(home:string,files:HistoryFile[],complete:boolean,now=Date.now(),reconcile=true){
+  const scanKey=JSON.stringify([complete,reconcile,files.map(f=>[f.id,f.file,f.end])]);if(this.busy||this.closed||now-this.lastScan<5000&&scanKey===this.scanKey)return;this.scanKey=scanKey;this.lastScan=now;
+  if(!this.failed&&this.scannedRevision===this.storage.revision()&&this.importComplete===complete&&files.every(f=>{try{const st=statSync(f.file),old=this.storage.signature(f.id);return acceptedTranscript(f.file,f.id,home)&&old?.basis===historyBasis&&old.signature===JSON.stringify([st.dev,st.ino,st.size,st.mtimeMs,f.end,st.ctimeMs]);}catch{return !!this.storage.signature(f.id)&&this.storage.statement('SELECT available FROM history_catalogue WHERE source=?').get(f.id)?.available===0;}})&&now<this.storage.nextClosure()&&now-this.lastMaintenance<3600000)return;
+  this.busy=true;this.total=files.length;this.processed=0;this.failed=0;
+  try{while(!this.closed&&this.storage.statement('SELECT 1 FROM threads LIMIT 1').get()){this.storage.migrate(1);await new Promise<void>(r=>setImmediate(r));}if(reconcile)this.storage.syncAvailability(files);for(const f of files){if(this.closed)break;try{let result;do{result=importHistory(this.storage,home,f,historyBasis,{now,maxMs:40,maxBytes:4*1024*1024});await new Promise<void>(r=>setImmediate(r));}while(!this.closed&&!result.complete&&!result.waiting&&(result.bytes||result.changed));if(result.complete)while(!this.closed&&this.storage.pruneReplay(f.id,now))await new Promise<void>(r=>setImmediate(r));this.processed++;}catch{this.failed++;}}
    await this.repriceRecent(now);
    if(!this.closed&&(now-this.lastMaintenance>=3600000||now>=this.storage.nextClosure())){do{this.storage.maintenance(now);await new Promise<void>(r=>setImmediate(r));}while(!this.closed&&this.storage.hasExpired(now));this.lastMaintenance=now;}
-  }finally{this.importComplete=complete&&!this.failed;this.busy=false;if(this.closed)this.storage.close();}
+  }catch(error){this.failed++;throw error;}finally{this.importComplete=complete&&!this.failed;if(!this.closed)this.scannedRevision=this.storage.revision();this.busy=false;if(this.closed)this.storage.close();}
+ }
+ private async repriceSource(id:string,now:number){
+  const db=this.storage,count=Number(db.statement('SELECT COUNT(*) AS n FROM history_samples WHERE source=?').get(id)!.n),calls=db.buckets(id).reduce((n,b)=>n+b.calls,0);
+  if(!count||count!==calls)return false;
+  const boundaries=Number(db.statement("SELECT COUNT(*) AS n FROM history_boundaries WHERE source=? AND kind='context-limit'").get(id)!.n);
+  const compactions=Number(db.statement("SELECT COUNT(*) AS n FROM history_boundaries WHERE source=? AND kind='compaction'").get(id)!.n),outcomes=db.outcomes(id).reduce((n,p)=>n+(p.events??1),0);
+  if(boundaries!==count||compactions!==outcomes)return false;
+  const revision=db.revision(),builder=new HistoryBuilder();let position=-1;
+  for(;;){const rows=db.statement(`SELECT * FROM (
+    SELECT position,0 AS sort,'call' AS kind,timestamp,dimension,input,cached,cacheWrite,output,reasoning,total,ordinal,cachedRecorded,cacheWriteRecorded,outputRecorded,reasoningRecorded,NULL AS tokens FROM history_samples WHERE source=?
+    UNION ALL SELECT position,1 AS sort,kind,timestamp,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,tokens FROM history_boundaries WHERE source=? AND kind IN ('compaction','retained')
+   ) WHERE position>? ORDER BY position,sort LIMIT 1000`).all(id,id,position) as any[];
+   if(!rows.length)break;
+   for(const r of rows){position=r.position;if(r.kind==='compaction')builder.compact(r.timestamp);else if(r.kind==='retained')builder.retainedContext(r.tokens);else {const d=db.statement('SELECT model,effort,serviceTier,regionalProcessing FROM history_dimensions WHERE id=?').get(r.dimension) as any;const context=db.statement("SELECT tokens FROM history_boundaries WHERE source=? AND position=? AND kind='context-limit'").get(id,r.position);builder.call({...r,...d,model:d.model??undefined,effort:d.effort??undefined,serviceTier:d.serviceTier??undefined,regionalProcessing:d.regionalProcessing==null?undefined:!!d.regionalProcessing,cachedRecorded:!!r.cachedRecorded,cacheWriteRecorded:!!r.cacheWriteRecorded,outputRecorded:!!r.outputRecorded,reasoningRecorded:!!r.reasoningRecorded},context?.tokens==null?undefined:Number(context.tokens));}}
+   await new Promise<void>(r=>setImmediate(r));if(this.closed)return false;
+  }
+  const activity=db.statement('SELECT activity FROM history_sources WHERE id=?').get(id)?.activity;if(activity)builder.activity(String(activity));const cursor=db.statement('SELECT state FROM history_cursors WHERE source=?').get(id) as any,state=cursor?JSON.parse(cursor.state):undefined;
+  const end=state?.builder?.epoch?.reason==='session-end'?state.builder.epoch.completed:undefined,data=builder.finish(now,end);
+  if(db.revision()!==revision)return false;
+  let applied=false;db.transaction(()=>{if(db.revision()!==revision)return;
+   db.statement('DELETE FROM history_daily WHERE source=?').run(id);for(const b of data.buckets)db.addBucket(id,b);
+   db.statement('DELETE FROM history_outcomes WHERE source=?').run(id);db.statement('DELETE FROM history_paybacks WHERE source=?').run(id);for(const p of data.paybacks)db.updatePayback(id,p);
+   db.statement('DELETE FROM history_charges WHERE source=?').run(id);data.charges.forEach((b,i)=>{const keys=['cacheInput','cacheRead','input','cached','cacheWrite','output','calls','priced','inputPriced','inputCost','cost','overhead'] as const;db.statement(`INSERT INTO history_charges VALUES(${Array(16).fill('?').join(',')})`).run(id,i,db.dimension(b),b.timestamp,...keys.map(k=>b[k]));});
+   db.statement('UPDATE history_day_basis SET basis=? WHERE source=?').run(this.basisKey,id);db.statement('UPDATE history_sources SET basis=? WHERE id=?').run(this.basisKey,id);
+   if(state){state.builder=builder.checkpoint();db.statement('UPDATE history_cursors SET state=? WHERE source=?').run(JSON.stringify(state),id);}db.changed();applied=true;
+  });return applied;
  }
  private async repriceRecent(now:number){
   const db=this.storage,cutoff=new Date(now-89*864e5).toISOString().slice(0,10);let after='';
   while(!this.closed){const row=db.statement("SELECT s.id,b.definition FROM history_sources s LEFT JOIN history_basis b ON s.basis=b.id WHERE s.id>? AND s.id NOT LIKE '~%' AND s.basis<>? ORDER BY s.id LIMIT 1").get(after,this.basisKey) as any;if(!row)break;after=row.id;
    try{if(JSON.parse(row.definition).version!==JSON.parse(historyBasis).version)continue;}catch{continue;}
+   if(await this.repriceSource(row.id,now))continue;
    const days=db.statement('SELECT day,SUM(calls) AS calls,SUM(overhead) AS overhead FROM history_daily WHERE source=? AND day>=? AND day IN (SELECT day FROM history_day_basis WHERE source=? AND basis<>?) GROUP BY day').all(row.id,cutoff,row.id,this.basisKey) as any[];
    for(const day of days){if(this.closed)return;if(day.overhead||!day.calls)continue;
     // Compaction outcomes require their complete counterfactual sequence; retain that original basis.
@@ -89,7 +119,7 @@ export class EfficiencyStore {
    const rows=db.statement(`SELECT c.*,d.model,d.effort FROM history_charges c JOIN history_dimensions d ON d.id=c.dimension WHERE timestamp>=? AND timestamp<=? ${where} LIMIT 1000`).all(calls[0].timestamp,calls.at(-1)!.timestamp,...(source?[source]:[])) as unknown as Bucket[];
    return [...calls.map(callBucket),...rows];};
   const paybacks=id?(db.statement('SELECT timestamp,completed,reason,calls,breakEven,net,valid FROM history_paybacks WHERE source=? ORDER BY timestamp DESC LIMIT 100').all(id) as any[]).reverse().map(p=>({...p,completed:p.completed??undefined,reason:p.reason??undefined,valid:!!p.valid})):[];
-  const result:Efficiency={history:{retentionDays:90,frozenThreads},activation:String(db.statement('SELECT value FROM meta WHERE key=?').get('activation')!.value),
+  const result:Efficiency={history:{retentionDays:90,frozenThreads,detailCalls:id?Number(db.statement('SELECT COUNT(*) AS n FROM history_samples WHERE source=?').get(id)!.n):0,sourceAvailable:id?db.statement('SELECT available FROM history_catalogue WHERE source=?').get(id)?.available!==0:undefined},threadSamples:threadLast,activation:String(db.statement('SELECT value FROM meta WHERE key=?').get('activation')!.value),
    turns:{other:db.turns(id)},reference:{buckets:reference,ready},comparisons:{thread:{...compareCohorts(threadBuckets,reference,ready),referenceLabel:'All available calls from other chats; excludes the selected chat.'},periods:comparisonPeriods},
    baseline:summarize(reference,referencePays),baselineCalls:reference.reduce((n,b)=>n+b.calls,0),baselineProvisional:!ready,
    thread:summarize(threadBuckets,threadPays),threadWeeks:[],threadModels:models(threadBuckets).map(m=>({...m,baseline:summarize(reference.filter(b=>(b.model??'Unknown model')===m.model))})),baselineModels:models(reference),paybacks,periods,

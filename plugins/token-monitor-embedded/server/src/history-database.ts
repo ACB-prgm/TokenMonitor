@@ -189,6 +189,13 @@ export class HistoryDatabase {
   const literal='%'+query.trim().toLowerCase().replace(/[\\%_]/g,'\\$&')+'%';const rows=this.statement(`SELECT c.source AS id,c.title,c.workspace,c.archived,c.available FROM history_catalogue c WHERE ${where} ORDER BY c.source LIMIT 100`).all(literal,literal,literal) as any[];
   return rows.map(r=>({id:r.id,title:r.title??`Saved chat · ${r.id.slice(-8)}`,workspace:r.workspace??undefined,archived:!!r.archived,saved:true,sourceAvailable:!!r.available}));
  }
- syncAvailability(files:{id:string}[]){const ids=new Set(files.map(f=>f.id));for(const row of this.statement('SELECT source,available FROM history_catalogue').all() as any[]){const available=Number(ids.has(row.source));if(row.available!==available)this.statement('UPDATE history_catalogue SET available=? WHERE source=?').run(available,row.source);}}
+ syncCatalogue(f:{id:string;title?:string;workspace?:string;archived?:boolean},available?:boolean){
+  const row=this.statement('SELECT title,workspace,archived,available FROM history_catalogue WHERE source=?').get(f.id);
+  if(!row)return;
+  const values=[f.title??row.title,f.workspace??row.workspace,f.archived===undefined?row.archived:Number(f.archived),available===undefined?row.available:Number(available)];
+  if(values.every((v,i)=>v===row[['title','workspace','archived','available'][i]]))return;
+  this.transaction(()=>{this.statement('UPDATE history_catalogue SET title=COALESCE(?,title),workspace=COALESCE(?,workspace),archived=COALESCE(?,archived),available=COALESCE(?,available) WHERE source=?').run(f.title??null,f.workspace??null,f.archived===undefined?null:Number(f.archived),available===undefined?null:Number(available),f.id);this.changed();});
+ }
+ syncAvailability(files:{id:string}[]){const ids=new Set(files.map(f=>f.id)),changed=this.statement('SELECT source,available FROM history_catalogue').all().filter(row=>row.available!==Number(ids.has(String(row.source))));if(changed.length)this.transaction(()=>{for(const row of changed)this.statement('UPDATE history_catalogue SET available=? WHERE source=?').run(Number(ids.has(String(row.source))),row.source);this.changed();});}
  close(){this.db.close();}
 }

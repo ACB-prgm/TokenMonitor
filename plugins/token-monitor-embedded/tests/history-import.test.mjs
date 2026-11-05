@@ -14,6 +14,34 @@ const header={type:'session_meta',timestamp:stamp(0),payload:{id:'a',source:'cli
 const context={type:'turn_context',timestamp:stamp(0),payload:{model:'gpt-6.1-sol',effort:'high'}};
 function fixture(fn){const home=mkdtempSync(path.join(tmpdir(),'tm-import-'));mkdirSync(path.join(home,'sessions'));const f={id:'a',file:path.join(home,'sessions','a.jsonl')};mkdirSync(path.join(home,'store'));const file=path.join(home,'store','efficiency.sqlite');const db=new HistoryDatabase(file);try{return fn({home,f,db,file});}finally{db.close();rmSync(home,{recursive:true,force:true});}}
 const drain=(db,home,f,extra={})=>{let r,n=0;do{r=importHistory(db,home,f,historyBasis,{maxBytes:512,maxMs:500,...extra});assert.ok(++n<10000);}while(!r.complete&&!r.waiting);return r;};
+test('unchanged and incomplete transcripts refresh catalogue metadata without replaying usage',()=>fixture(({home,f,db})=>{
+ writeFileSync(f.file,lines([header,context,call(1)]));drain(db,home,f);
+ for(const partial of [false,true]){
+  if(partial){appendFileSync(f.file,'{"unfinished":');drain(db,home,f);}
+  const revision=db.revision();
+  const result=importHistory(db,home,{...f,title:partial?'Waiting':'Renamed',workspace:'New workspace',archived:true},historyBasis);
+  assert.equal(result.bytes,0);assert.notEqual(db.revision(),revision);
+  assert.equal(db.savedTasks().length,0);
+  assert.equal(db.savedTasks('',true)[0].title,partial?'Waiting':'Renamed');
+  importHistory(db,home,f,historyBasis);
+  assert.equal(db.savedTasks('',true)[0].archived,true);
+  assert.equal(summarize(db.buckets()).calls,1);
+ }
+}));
+test('scan fast paths observe metadata changes and removed catalogue members',async()=>{
+ const home=mkdtempSync(path.join(tmpdir(),'tm-catalogue-refresh-'));mkdirSync(path.join(home,'sessions'));
+ const f={id:'a',file:path.join(home,'sessions','a.jsonl'),title:'Original'};
+ const store=new mod.exports.EfficiencyStore(home);
+ try{
+  writeFileSync(f.file,lines([header,context,call(1)]));await store.scan(home,[f],true,now);
+  await store.scan(home,[{...f,title:'Renamed',archived:true}],true,now+1);
+  assert.equal(store.savedTasks().length,0);assert.equal(store.savedTasks('',true)[0].title,'Renamed');
+  assert.equal(store.snapshot('a',now).history.sourceAvailable,true);
+  await store.scan(home,[],true,now+2);
+  assert.equal(store.snapshot('a',now).history.sourceAvailable,false);
+  assert.equal(store.savedTasks('',true)[0].sourceAvailable,false);
+ }finally{store.close();rmSync(home,{recursive:true,force:true});}
+});
 function oracle(rs,end){const b=new HistoryBuilder(),p=new TelemetryParser(e=>{if(e.kind==='activity')b.activity(e.timestamp);else if(e.kind==='compaction')b.compact(e.timestamp);else if(e.kind==='retained')b.retainedContext(e.tokens);else if(e.kind==='turn')b.turn(e.turn);else b.call(e.sample,e.contextLimit);});rs.forEach(r=>p.consume(r));return b.finish(now,end);}
 function closeTo(a,b){for(const k of ['calls','priced','inputPriced','cost','inputCost','overhead','evaluable','profitable','netSavings','pending','excluded'])assert.ok(Math.abs(a[k]-b[k])<1e-9,`${k}: ${a[k]} vs ${b[k]}`);}
 test('bounded batches and append resumes match full parsing across turns and compactions',()=>fixture(({home,f,db})=>{

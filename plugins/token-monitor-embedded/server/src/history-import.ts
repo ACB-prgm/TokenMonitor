@@ -13,10 +13,11 @@ const hash=(b:Buffer|string)=>createHash('sha256').update(b).digest('hex');
 /** One bounded transaction. Its byte cursor and numeric contributions always commit together. */
 export function importHistory(db:HistoryDatabase,home:string,f:HistoryFile,basis:string,options:{now?:number;maxBytes?:number;maxMs?:number}={}):ImportResult{
  const now=options.now??Date.now(),deadline=performance.now()+(options.maxMs??500),maxBytes=options.maxBytes??4*1024*1024;
- if(!acceptedTranscript(f.file,f.id,home)){db.statement('UPDATE history_catalogue SET available=0 WHERE source=? AND available<>0').run(f.id);return {bytes:0,complete:true,changed:false,unavailable:true};}
+ if(!acceptedTranscript(f.file,f.id,home)){db.syncCatalogue(f,false);return {bytes:0,complete:true,changed:false,unavailable:true};}
  const fd=openSync(f.file,'r');let result:ImportResult={bytes:0,complete:false,changed:false};
  try{
   const st=fstatSync(fd),identity=JSON.stringify([st.dev,st.ino,st.birthtimeMs]),signature=JSON.stringify([st.dev,st.ino,st.size,st.mtimeMs,f.end,st.ctimeMs]);
+  db.syncCatalogue(f,true);
   const old=db.signature(f.id),cursor=db.statement('SELECT * FROM history_cursors WHERE source=?').get(f.id) as Cursor|undefined;
   // Stat-only fast path: no transcript body reads, transactions, or writes.
   if(old?.signature===signature&&old.basis===basis&&cursor?.complete)return {...result,complete:true};
@@ -75,7 +76,7 @@ export function importHistory(db:HistoryDatabase,home:string,f:HistoryFile,basis
    db.statement('UPDATE history_sources SET signature=?,activity=? WHERE id=?').run(complete?signature:'',data.activity??null,target);
    if(complete){db.publish(f.id,target);target=f.id;}
    db.statement('INSERT OR REPLACE INTO history_cursors VALUES(?,?,?,?,?,?,?,?,?)').run(f.id,target,identity,offset,hash(read(Math.max(0,offset-128),Math.min(offset,128))),head,JSON.stringify(state),Number(discard),Number(complete));
-   db.statement('INSERT INTO history_catalogue(source,title,workspace,archived,available) VALUES(?,?,?,?,1) ON CONFLICT(source) DO UPDATE SET title=COALESCE(excluded.title,title),workspace=COALESCE(excluded.workspace,workspace),archived=excluded.archived,available=1').run(f.id,f.title??null,f.workspace??null,Number(!!f.archived));
+   db.statement('INSERT INTO history_catalogue(source,title,workspace,archived,available) VALUES(?,?,?,?,1) ON CONFLICT(source) DO UPDATE SET title=COALESCE(excluded.title,title),workspace=COALESCE(excluded.workspace,workspace),archived=COALESCE(?,archived),available=1').run(f.id,f.title??null,f.workspace??null,Number(!!f.archived),f.archived===undefined?null:Number(f.archived));
    if(Date.parse(data.activity??'')<now-89*864e5)db.trimOldReplay(target,now);
    if(offset!==start||reset){db.changed();result.changed=true;}
    result.complete=complete;

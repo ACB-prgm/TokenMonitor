@@ -121,3 +121,7 @@ details[open]>summary::before,details[open]>summary .disclosure-caret,
 .kpi-heading,.efficiency-insights>summary,.thread-trigger,.version-toggle{justify-content:flex-start;gap:.55em}
 
 .history .section-title{flex-wrap:wrap}.history .segmented{flex-wrap:wrap}
+
+.context-ring.is-compacting svg{animation:context-spin 1s linear infinite}
+@keyframes context-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.context-ring.is-compacting svg{animation:none}}

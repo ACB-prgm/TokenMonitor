@@ -49,10 +49,17 @@ function Stack({values, cost = false, label}: {values?: number[]; cost?: boolean
 }
 function ContextGauge({s}:{s:Monitor}) {
   const known=s.contextPercent!=null&&Number.isFinite(s.contextPercent), used=known?Math.min(100,Math.max(0,s.contextPercent!)):0;
-  const help=`Context consumed: ${known?s.contextPercent+'%':'Unknown'} · ${exact(s.input)} / ${exact(s.contextLimit)} tokens${s.awaitingPostCompactionCall?' · Estimated after compaction; awaiting next call':''}`;
+  const compacting=!!s.isCompacting;
+  const help=`${compacting?'Compacting context window · Last recorded context consumed':'Context consumed'}: ${known?s.contextPercent+'%':'Unknown'} · ${exact(s.input)} / ${exact(s.contextLimit)} tokens${s.awaitingPostCompactionCall?' · Estimated after compaction; awaiting next call':''}`;
   return <div className="context-gauge" title={help} tabIndex={0} aria-label={help}>
-    <div className="context-ring" style={{color:resourceColor(known?s.contextPercent:undefined)}}><svg viewBox="0 0 84 84" role="progressbar" aria-label="Context window consumed" aria-valuemin={0} aria-valuemax={100} aria-valuenow={known?used:undefined} aria-valuetext={known?`${s.awaitingPostCompactionCall?'Approximately ':''}${percent(s.contextPercent)} consumed`:'Context utilization unavailable'}><circle className="ring-track" cx="42" cy="42" r="36"/><circle className="ring-fill" cx="42" cy="42" r="36" pathLength="100" strokeDasharray={`${used} 100`} transform="rotate(-90 42 42)"/></svg><strong>{s.awaitingPostCompactionCall&&known?'≈':''}{known?percent(s.contextPercent):'—'}</strong></div>
-    <div className="context-caption"><span>Context window</span><small>{number(s.input).replace('.0k','k')} / {number(s.contextLimit).replace('.0k','k')}</small></div>
+    <div className={`context-ring${compacting?' is-compacting':''}`} style={{color:resourceColor(known?s.contextPercent:undefined)}}>
+      <svg viewBox="0 0 84 84" role="progressbar" aria-label={compacting?'Compacting context window':'Context window consumed'} aria-valuemin={0} aria-valuemax={100} aria-valuenow={!compacting&&known?used:undefined} aria-valuetext={compacting?'Compaction in progress':known?`${s.awaitingPostCompactionCall?'Approximately ':''}${percent(s.contextPercent)} consumed`:'Context utilization unavailable'}>
+        <circle className="ring-track" cx="42" cy="42" r="36"/>
+        <circle className="ring-fill" cx="42" cy="42" r="36" pathLength="100" strokeDasharray={`${compacting?28:used} 100`} transform="rotate(-90 42 42)"/>
+      </svg>
+      <strong aria-hidden="true">{compacting?'COM':`${s.awaitingPostCompactionCall&&known?'≈':''}${known?percent(s.contextPercent):'—'}`}</strong>
+    </div>
+    <div className="context-caption"><span role="status">{compacting?'Compacting…':'Context window'}</span><small>{number(s.input).replace('.0k','k')} / {number(s.contextLimit).replace('.0k','k')}</small></div>
   </div>;
 }
 function CacheWarmth({s}:{s:Monitor}) {
@@ -227,7 +234,7 @@ export function MonitorView({s, expanded, scale, error='', onAction, onLayout, s
     <header className="compact-header"><ThreadPicker s={s} onSelect={onAction?id=>onAction('select',id):undefined} onFilter={onFilter}/><div className="header-controls"><button className="rescan-button" disabled={!onAction||s.discovery?.state==='scanning'} onClick={()=>onAction?.('rescan')} aria-label="Rescan threads" title="Rescan threads: discover restored and newly available local transcripts"><span className="rescan-text">Rescan threads</span><span className="rescan-icon" aria-hidden="true">⟳</span></button><button disabled={!onAction} onClick={()=>onAction?.()} aria-label="Refresh metrics" title="Refresh current telemetry">↻</button><Settings expanded={expanded} scale={scale} onLayout={onLayout} updates={updates} onUpdate={onUpdate} error={updateError}><HistoryStorage load={onStorage}/></Settings></div></header>
     <EfficiencyInsights s={s}/>
     {s.discovery?.targeting&&<p className="hint" role="status">Looking for the current local thread…</p>}
-    {(error||s.disconnected||s.available===false||!s.task||s.isCompacting)&&<p className="status" role="status">{error||s.status}</p>}
+    {(error||s.disconnected||s.available===false||!s.task)&&<p className="status" role="status">{error||s.status}</p>}
     <ThreadSummary s={s}/>{s.historyError&&<p role="status" className="warning">{s.historyError}</p>}<EfficiencyBanner data={s.efficiency}/><LatestCall s={s} expanded={expanded}/><History key={s.selectedId??s.task?.id??s.panelId} s={s}/>
     <details className="attribution" open={expanded}><summary title={attributionHelp}>Skills &amp; tools · {a?.skillCount??0} skills · {a?.callCount??0} calls · ≈{number(a?attributed:undefined)} ({s.input&&a?percent(attributed/s.input*100):'—'} of context)</summary><p>{attributionHelp}</p><ul>{a?.contributors.map(c=><li key={c.name}><span title={c.name}>{c.name}</span><span>{c.calls} calls · ≈{number(c.tokens)} · {s.input?percent(c.tokens/s.input*100):'—'}</span></li>)}</ul><p>{a?.afterCompaction?'Since compaction; summary attribution unavailable.':'Estimated contribution; actual retained context may differ.'}</p></details>
     <details><summary title="Selected local task metadata">Task details</summary><dl className="details-grid"><dt>Session</dt><dd>{s.task?.id??'—'}</dd><dt>Workspace</dt><dd>{s.task?.workspace??'—'}</dd><dt>Last call</dt><dd>{time(s.lastCall)}</dd><dt>Last event</dt><dd>{time(s.lastEvent)}</dd><dt>Status</dt><dd>{s.status}</dd></dl></details>

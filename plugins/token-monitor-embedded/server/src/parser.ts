@@ -1,3 +1,4 @@
+import {HistoryBuilder,summarize} from './history-builder.js';
 import {TurnCounter,type TurnAggregate} from './turns.js';
 import {normalizeAllowances} from './allowances.js';
 import {ActivityCollector} from './activity.js';
@@ -27,7 +28,7 @@ function fingerprint(value:any) {
 export type NumericEvent = {kind:"turn";turn:TurnAggregate;timestamp?:string}|{kind:"call";sample:Sample;contextLimit?:number}|{kind:"compaction";timestamp:string}|{kind:"activity";timestamp:string}|{kind:"retained";tokens:number};
 export class TelemetryParser {
   readonly turns:TurnCounter;
-  constructor(private numericEvent?:(event:NumericEvent)=>void,private options:{numericOnly?:boolean;replay?:(group:string,key:string)=>boolean}={}){this.turns=new TurnCounter((turn,timestamp)=>this.numericEvent?.({kind:"turn",turn,timestamp}),options.replay);}
+  constructor(private numericEvent?:(event:NumericEvent)=>void,private options:{numericOnly?:boolean;replay?:(group:string,key:string)=>boolean}={}){this.kpiHistory=options.numericOnly?undefined:new HistoryBuilder();this.turns=new TurnCounter((turn,timestamp)=>this.numericEvent?.({kind:"turn",turn,timestamp}),options.replay);}
   numericCheckpoint(){return {model:this.model,effort:this.effort,serviceTier:this.serviceTier,regionalProcessing:this.regionalProcessing,contextLimit:this.contextLimit,awaitingPostCompactionCall:this.awaitingPostCompactionCall,compactedContext:this.compactedContext,compactions:this.compactions.slice(-1),lastCallModel:this.lastCallModel,callCount:this.callCount,turns:this.turns.checkpoint()};}
   restoreNumeric(s:ReturnType<TelemetryParser['numericCheckpoint']>){this.model=s.model;this.effort=s.effort;this.serviceTier=s.serviceTier;this.regionalProcessing=s.regionalProcessing;this.contextLimit=s.contextLimit;this.awaitingPostCompactionCall=s.awaitingPostCompactionCall;this.compactedContext=s.compactedContext;this.compactions=s.compactions;this.lastCallModel=s.lastCallModel;this.callCount=s.callCount;this.turns.restore(s.turns);}
   private accept(group:string,key:string,set:BoundedSet){return this.options.replay?this.options.replay(group,key):set.add(key);}
@@ -35,6 +36,7 @@ export class TelemetryParser {
   samples:Sample[]=[]; contextLimit?:number; fiveHour?:{used:number;reset?:string}; weekly?:{used:number;reset?:string};
   model?:string; effort?:string; title?:string; lastCallModel?:string; lastCallEffort?:string; lastEvent?:string; callCount=0;
   private activity=new ActivityCollector();
+  private kpiHistory?:HistoryBuilder;
   private contextSegment=0; private forecastSamples:(Sample & {segment:number})[]=[];
   readonly growthIntervals:GrowthInterval[]=[];
   private reportedOutput?:number; private reportedReasoning?:number; private summedOutput=0; private summedReasoning=0; private outputComplete=true;private reasoningComplete=true;
@@ -49,7 +51,7 @@ export class TelemetryParser {
     if(!this.options.numericOnly)this.activity.consume(type,p);
     // Only accept monotonically new compaction boundaries, just as call accounting does.
     if(type!=='compacted'||time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp))this.turns.consume(type,p,time);
-    if(type==='compacted'&&time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp)){this.numericEvent?.({kind:"compaction",timestamp:time});this.contextSegment++;this.forecastSamples=[];this.awaitingPostCompactionCall=true;this.compactedContext=undefined;this.pendingAttribution=undefined;this.contextAttribution=emptyAttribution();}
+    if(type==='compacted'&&time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp)){this.numericEvent?.({kind:"compaction",timestamp:time});this.kpiHistory?.compact(time);this.contextSegment++;this.forecastSamples=[];this.awaitingPostCompactionCall=true;this.compactedContext=undefined;this.pendingAttribution=undefined;this.contextAttribution=emptyAttribution();}
     const response=['reasoning','function_call','custom_tool_call'].includes(p.type)||(p.type==='message'&&p.role==='assistant');
     if(!this.options.numericOnly&&type==='response_item'&&!this.pendingAttribution&&response)this.pendingAttribution=this.attribution.snapshot();
     if(!this.options.numericOnly)this.attribution.consume(type,p);if(time)this.lastEvent=time;
@@ -76,7 +78,7 @@ export class TelemetryParser {
     if(!u&&cumulative){if(integer(cumulative.input_tokens))this.usage.cumulativeMismatch=cumulative.input_tokens!==this.usage.input;if(integer(cumulative.output_tokens)&&cumulative.output_tokens!==this.usage.output)this.usage.cumulativeMismatch=true;}
     if(!u)return;
     if(!integer(u.input_tokens)||!time){this.contextSegment++;return;}const input=u.input_tokens;
-    if(this.awaitingPostCompactionCall&&input===0&&(u.cached_input_tokens??0)===0&&(u.output_tokens??0)===0&&integer(u.total_tokens)&&u.total_tokens>0&&this.compactions.at(-1)&&time>=this.compactions.at(-1)!.timestamp){this.numericEvent?.({kind:"retained",tokens:u.total_tokens});this.compactedContext=u.total_tokens;this.contextAttribution=this.attribution.snapshot(u.total_tokens);return;}
+    if(this.awaitingPostCompactionCall&&input===0&&(u.cached_input_tokens??0)===0&&(u.output_tokens??0)===0&&integer(u.total_tokens)&&u.total_tokens>0&&this.compactions.at(-1)&&time>=this.compactions.at(-1)!.timestamp){this.numericEvent?.({kind:"retained",tokens:u.total_tokens});this.kpiHistory?.retainedContext(u.total_tokens);this.compactedContext=u.total_tokens;this.contextAttribution=this.attribution.snapshot(u.total_tokens);return;}
     if(input<=0){this.contextSegment++;return;}const cached=integer(u.cached_input_tokens)?u.cached_input_tokens:0;if(cached<0||cached>input){this.contextSegment++;return;}
     const output=integer(u.output_tokens)?u.output_tokens:0,reasoning=integer(u.reasoning_output_tokens)?u.reasoning_output_tokens:0;
     const s:Sample={effort:this.effort,timestamp:time,input,cached,cacheWrite:integer(u.cache_write_input_tokens)?u.cache_write_input_tokens:0,output,reasoning,total:integer(u.total_tokens)?u.total_tokens:undefined,ordinal:integer(r.ordinal)?r.ordinal:undefined,
@@ -91,6 +93,10 @@ export class TelemetryParser {
     this.turns.call(s.model);
     this.numericEvent?.({kind:"call",sample:{...s,activity:undefined},contextLimit:this.contextLimit});
     if(this.options.numericOnly){this.lastCallModel=s.model;this.callCount++;return;}
+    this.kpiHistory!.call({...s},this.contextLimit);
+    const kpis=summarize(this.kpiHistory!.data.buckets);
+    if(kpis.contextPerCall!=null){s.contextPerCall=kpis.contextPerCall;s.contextPricedCalls=kpis.inputPriced;}
+    if(kpis.costPerCall!=null){s.costPerCall=kpis.costPerCall;s.costPricedCalls=kpis.priced;}
     this.usage.add(s);if(cumulative){if(integer(cumulative.input_tokens))this.usage.cumulativeMismatch=cumulative.input_tokens!==this.usage.input;if(integer(cumulative.output_tokens)&&cumulative.output_tokens!==this.usage.output)this.usage.cumulativeMismatch=true;}
     this.lastCallModel=s.model;this.lastCallEffort=this.effort;this.callCount++;
     if(!reportedThisRecord&&this.reportedOutput!=null){this.reportedOutput=nonnegative(u.output_tokens)&&Number.isSafeInteger(this.reportedOutput+output)?this.reportedOutput+output:undefined;this.reportedReasoning=this.reportedReasoning!=null&&s.reasoningRecorded&&Number.isSafeInteger(this.reportedReasoning+reasoning)?this.reportedReasoning+reasoning:undefined;}

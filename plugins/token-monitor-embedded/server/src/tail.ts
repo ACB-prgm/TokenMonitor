@@ -15,7 +15,9 @@ export class JSONLTail {
       while(this.offset<stat.size){const count=readSync(fd,buffer,0,Math.min(buffer.length,stat.size-this.offset),this.offset);if(!count)break;
         this.offset+=count;const block=buffer.subarray(0,count);this.checkpoint=Buffer.from(Buffer.concat([this.checkpoint,block]).subarray(-128));
         this.pending=Buffer.concat([this.pending,block]);let end:number;
-        while((end=this.pending.indexOf(10))>=0){if(!this.discard&&end<=4*1024*1024)line(this.pending.subarray(0,end));this.discard=false;this.pending=Buffer.from(this.pending.subarray(end+1));}
+        while((end=this.pending.indexOf(10))>=0){if(!this.discard&&end<=4*1024*1024)line(this.pending.subarray(0,end));this.discard=false;this.pending=this.pending.subarray(end+1);}
+        // Copy only the unfinished record, not the rest of the block after every line.
+        this.pending=Buffer.from(this.pending);
         if(this.pending.length>4*1024*1024){this.pending=Buffer.alloc(0);this.discard=true;}
       }
     }finally{closeSync(fd);}

@@ -24,3 +24,15 @@ export function migrateLayout(saved: Partial<Layout>): Layout {
   const scale = saved.layoutVersion === 2 ? saved.scale : saved.scale == null ? 1 : saved.scale / .85;
   return {expanded:saved.expanded===true,scale:scale != null && [0.85,1,1/.85,1.15/.85].some(n=>Math.abs(n-scale)<.001) ? scale : 1,layoutVersion:2};
 }
+
+// Cubic segments stay between adjacent values; missing values break the line.
+export function smoothLine(points:({x:number;y:number}|undefined)[]):string {
+  let previous:{x:number;y:number}|undefined;
+  return points.map(point=>{
+    if(!point){previous=undefined;return '';}
+    const from=previous;previous=point;
+    if(!from)return `M${point.x},${point.y}`;
+    const middle=(from.x+point.x)/2;
+    return `C${middle},${from.y} ${middle},${point.y} ${point.x},${point.y}`;
+  }).join(' ');
+}

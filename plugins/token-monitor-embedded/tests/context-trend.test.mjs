@@ -34,17 +34,32 @@ test('missing input prices are excluded; valid input counts even without output 
  const last=p.samples.at(-1);near(last.contextPerCall,(.091+inputCost(last))/2);assert.equal(last.contextPricedCalls,2);
 });
 const bundle=await build({entryPoints:[fileURLToPath(new URL('../ui/src/view.tsx',import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false,external:['react']});
-function render(s,mode='Context / call'){
+function render(s,mode='Cost'){
  const mock={...React,useState:init=>[typeof init==='function'?init():init==='Cost'?mode:init,()=>{}]};
  const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(name=>name==='react'?mock:require(name),mod,mod.exports);
  return renderToStaticMarkup(React.createElement(mod.exports.MonitorView,{s,expanded:true,scale:1}));
 }
-test('USD trend renders running-average points and accessible per-call values; existing modes remain available',()=>{
- const p=parser();p.consume(call(0));p.consume(call(1,200000));
+test('Cost bars overlay a smooth running KPI without dots, using the same USD scale',()=>{
+ const p=parser();p.consume(call(0));p.consume(call(1,200000));p.consume(call(2,150000));
  const s={...p.snapshot({id:'test',title:'Test'}),panelId:'test',status:'Monitoring'};
- const html=render(s);assert.match(html,/Running context USD \/ call/);assert.match(html,/Running context \/ call \$0\.191000 \(2 calls with priceable input\)/);
- assert.match(html,/including earlier calls outside this chart/);assert.match(html,/class="series input" d="M45,/);
- assert.match(html,/aria-pressed="true">Context \/ call/);
- for(const mode of ['Cost','Tokens','Context']){const h=render(s,mode);assert.doesNotMatch(h,/Running context USD \/ call/);assert.match(h,new RegExp(`aria-pressed="true">${mode}`));}
- const empty=render({...s,samples:[{...p.samples[0],contextPerCall:undefined,contextPricedCalls:undefined}]});assert.doesNotMatch(empty,/NaN|Infinity/);assert.match(empty,/>×</);
+ const html=render(s),chart=html.match(/<section class="history"[\s\S]*?<\/svg>/)[0];
+ assert.match(chart,/USD \/ call/);assert.match(chart,/Running context \/ call \$0\.191000 \(2 calls with priceable input\)/);
+ assert.match(chart,/class="series input context-cost-trend" pointer-events="none" aria-label="Running Context \/ call KPI in USD" d="M45,[^"]*C/);
+ assert.match(chart,/<rect[^>]*fill="var\(--ordinary\)"/);assert.doesNotMatch(chart,/<circle/);
+ assert.ok(chart.indexOf('context-cost-trend')>chart.lastIndexOf('class="history-call"'));
+ assert.match(html,/including earlier calls outside this chart/);
+ assert.doesNotMatch(html,/>Context \/ call<\/button>/);
+ for(const mode of ['Tokens','Context']){const h=render(s,mode);assert.doesNotMatch(h,/context-cost-trend/);assert.match(h,new RegExp(`aria-pressed="true">${mode}`));}
+ const missing=render({...s,samples:s.samples.map(c=>({...c,contextPerCall:undefined,contextPricedCalls:undefined}))});assert.doesNotMatch(missing,/NaN|Infinity/);
+ // A historical average may exceed every currently visible call's cost.
+ const high=render({...s,samples:s.samples.map(c=>({...c,contextPerCall:10}))});
+ assert.match(high,/>\$10\.00<\/text>/);
+});
+const lineBundle=await build({entryPoints:[fileURLToPath(new URL('../ui/src/analytics.ts',import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false});
+const lineModule={exports:{}};new Function('module','exports',lineBundle.outputFiles[0].text)(lineModule,lineModule.exports);
+test('smooth trend stays within adjacent values and breaks at unavailable calls',()=>{
+ const {smoothLine}=lineModule.exports;
+ assert.equal(smoothLine([]),'');
+ assert.equal(smoothLine([{x:0,y:20},{x:10,y:5},{x:20,y:30}]),'M0,20 C5,20 5,5 10,5 C15,5 15,30 20,30');
+ assert.equal(smoothLine([{x:0,y:20},undefined,{x:20,y:30}]),'M0,20  M20,30');
 });

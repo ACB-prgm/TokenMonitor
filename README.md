@@ -7,7 +7,7 @@ Portable, local Codex token telemetry in an embedded panel. A React interface an
 ## What it shows
 
 - Recorded input, cache reads and writes, output and reasoning totals.
-- Context capacity, recent calls, cache temperature, and compaction state. Recent calls includes a Context / call USD trend: cumulative thread input cost divided by calls with priceable input through each point, including calls before the visible window.
+- Context capacity, recent calls, cache temperature, and compaction state. The Recent calls Cost chart overlays a smooth Context / call USD trend: cumulative thread input cost divided by calls with priceable input through each point, including calls before the visible window.
 - Numeric Compaction Value (0–100), forecasting API-equivalent savings over 20 calls from active-model pricing and observed thread growth/output.
 - Account allowances and clearly labeled thread allowance estimates.
 - Tool and skill attribution estimates, and API-equivalent costs with explicit coverage limitations.

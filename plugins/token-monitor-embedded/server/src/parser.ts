@@ -2,7 +2,7 @@ import {TurnCounter,type TurnAggregate} from './turns.js';
 import {normalizeAllowances} from './allowances.js';
 import {ActivityCollector} from './activity.js';
 import {createHash} from 'node:crypto';
-import {AttributionEstimator,BoundedSet,ThreadUsage,COMPACTION_DEFAULTS,estimateCompactionValue,rollingContextGrowth,rollingTypicalOutput,bounded,cacheTemperature,cleanTitle,date,emptyAttribution,health,integer,nonnegative,price,type Attribution,type GrowthInterval,type PersonalGrowth,type RecordValue,type Sample} from './metrics.js';
+import {inputCost,AttributionEstimator,BoundedSet,ThreadUsage,COMPACTION_DEFAULTS,estimateCompactionValue,rollingContextGrowth,rollingTypicalOutput,bounded,cacheTemperature,cleanTitle,date,emptyAttribution,health,integer,nonnegative,price,type Attribution,type GrowthInterval,type PersonalGrowth,type RecordValue,type Sample} from './metrics.js';
 const object=(x:any):x is RecordValue=>x!=null&&typeof x==='object'&&!Array.isArray(x);
 // Walk iteratively so valid deeply nested JSON cannot exhaust the call stack.
 // Hash bounded batches rather than one allocation or crypto call per JSON token.
@@ -35,6 +35,7 @@ export class TelemetryParser {
   samples:Sample[]=[]; contextLimit?:number; fiveHour?:{used:number;reset?:string}; weekly?:{used:number;reset?:string};
   model?:string; effort?:string; title?:string; lastCallModel?:string; lastCallEffort?:string; lastEvent?:string; callCount=0;
   private activity=new ActivityCollector();
+  private contextInputCost=0; private contextPricedCalls=0;
   private contextSegment=0; private forecastSamples:(Sample & {segment:number})[]=[];
   readonly growthIntervals:GrowthInterval[]=[];
   private reportedOutput?:number; private reportedReasoning?:number; private summedOutput=0; private summedReasoning=0; private outputComplete=true;private reasoningComplete=true;
@@ -91,6 +92,9 @@ export class TelemetryParser {
     this.turns.call(s.model);
     this.numericEvent?.({kind:"call",sample:{...s,activity:undefined},contextLimit:this.contextLimit});
     if(this.options.numericOnly){this.lastCallModel=s.model;this.callCount++;return;}
+    const cost=inputCost(s);
+    if(cost!=null){this.contextInputCost+=cost;this.contextPricedCalls++;}
+    if(this.contextPricedCalls){s.contextPerCall=this.contextInputCost/this.contextPricedCalls;s.contextPricedCalls=this.contextPricedCalls;}
     this.usage.add(s);if(cumulative){if(integer(cumulative.input_tokens))this.usage.cumulativeMismatch=cumulative.input_tokens!==this.usage.input;if(integer(cumulative.output_tokens)&&cumulative.output_tokens!==this.usage.output)this.usage.cumulativeMismatch=true;}
     this.lastCallModel=s.model;this.lastCallEffort=this.effort;this.callCount++;
     if(!reportedThisRecord&&this.reportedOutput!=null){this.reportedOutput=nonnegative(u.output_tokens)&&Number.isSafeInteger(this.reportedOutput+output)?this.reportedOutput+output:undefined;this.reportedReasoning=this.reportedReasoning!=null&&s.reasoningRecorded&&Number.isSafeInteger(this.reportedReasoning+reasoning)?this.reportedReasoning+reasoning:undefined;}

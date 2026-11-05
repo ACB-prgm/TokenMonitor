@@ -2,7 +2,7 @@
 import type {CallActivity} from './activity.js';
 export type RecordValue = Record<string, any>;
 export type Rates = {input: number; cached: number; write?: number; output: number};
-export type Sample = {effort?: string; activity?: CallActivity; timestamp: string; input: number; cached: number; cacheWrite: number; output: number; reasoning: number; total?: number; ordinal?: number; outputRecorded: boolean; reasoningRecorded: boolean; model?: string; serviceTier?: string; regionalProcessing?: boolean; cachedRecorded: boolean; cacheWriteRecorded: boolean; price?: ReturnType<typeof price>};
+export type Sample = {contextPerCall?: number; contextPricedCalls?: number; effort?: string; activity?: CallActivity; timestamp: string; input: number; cached: number; cacheWrite: number; output: number; reasoning: number; total?: number; ordinal?: number; outputRecorded: boolean; reasoningRecorded: boolean; model?: string; serviceTier?: string; regionalProcessing?: boolean; cachedRecorded: boolean; cacheWriteRecorded: boolean; price?: ReturnType<typeof price>};
 const standard: Record<string, number[]> = {
   'gpt-6.1-sol':[2,.1,2.5,10], 'gpt-6-astra':[10,1,12.5,50], 'gpt-6-sol':[2,.2,2.5,10], 'gpt-6-luna':[.1,.01,.125,.5],
   'gpt-5.6-sol':[4,.4,5,20], 'gpt-5.6-terra':[2,.2,2.5,12], 'gpt-5.6-luna':[.2,.02,.25,1.2],
@@ -42,6 +42,7 @@ export function price(s: Omit<Sample,'price'>): {total?: number; categories?: nu
   const reasoning=s.reasoningRecorded !== false && s.reasoning>=0 && s.reasoning<=s.output ? s.reasoning*r.output/1e6 : undefined;
   return {total:ordinary+read+write+output,categories:[ordinary,read,write,reasoning??0,reasoning==null?0:output-reasoning,reasoning==null?output:0],cacheSavings:s.input*r.input/1e6-ordinary-read-write,assumedTier,rates:r};
 }
+export function inputCost(s:Omit<Sample,'activity'|'price'>){const r=rates(s.model,s.serviceTier,s.input,s.regionalProcessing);if(!r||!s.cachedRecorded||!s.cacheWriteRecorded||s.cached<0||s.cacheWrite<0||s.cached+s.cacheWrite>s.input||s.cacheWrite>0&&r.write==null)return;return ((s.input-s.cached-s.cacheWrite)*r.input+s.cached*r.cached+s.cacheWrite*(r.write??0))/1e6;}
 export class ThreadUsage {
   input=0; cached=0; cacheWrite=0; output=0; reasoning=0;
   inputComplete=true; outputComplete=true; reasoningComplete=true; cacheComplete=true;

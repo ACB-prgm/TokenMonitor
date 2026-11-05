@@ -119,3 +119,5 @@ details[open]>summary::before,details[open]>summary .disclosure-caret,
 .thread-trigger[aria-expanded="true"]>.disclosure-caret{transform:rotate(90deg)}
 
 .kpi-heading,.efficiency-insights>summary,.thread-trigger,.version-toggle{justify-content:flex-start;gap:.55em}
+
+.history .section-title{flex-wrap:wrap}.history .segmented{flex-wrap:wrap}

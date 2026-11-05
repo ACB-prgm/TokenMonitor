@@ -5,14 +5,14 @@ import {statSync} from 'node:fs';
 import {importHistory,type HistoryFile} from './history-import.js';
 import path from 'node:path';
 import {TelemetryParser} from './parser.js';
-import {price,rates,pricingMetadata,pricingTableSignature,COMPACTION_DEFAULTS as D,type Sample} from './metrics.js';
+import {inputCost,price,rates,pricingMetadata,pricingTableSignature,COMPACTION_DEFAULTS as D,type Sample} from './metrics.js';
 import {acceptedTranscript,privateDirectory,stateRoot} from './platform.js';
 export type NumericCall=Omit<Sample,'activity'|'price'>;
 export type Bucket={timestamp:string;model?:string;effort?:string;rateBand?:string;cacheInput:number;cacheRead:number;serviceTier?:string;regionalProcessing?:boolean;input:number;cached:number;cacheWrite:number;output:number;calls:number;priced:number;inputPriced:number;inputCost:number;cost:number;overhead:number};
 export type Payback={events?:number;timestamp:string;completed?:string;reason?:string;calls:number;breakEven:number|null;net:number;valid:boolean};
 export type ThreadHistory={first:NumericCall[];last:NumericCall[];buckets:Bucket[];paybacks:Payback[];activity?:string;charges:Bucket[];turns?:TurnAggregate[]};
 export const historyBasis=JSON.stringify({version:4,table:pricingTableSignature,...pricingMetadata});
-export function inputCost(s:NumericCall){const r=rates(s.model,s.serviceTier,s.input,s.regionalProcessing);if(!r||!s.cachedRecorded||!s.cacheWriteRecorded||s.cached<0||s.cacheWrite<0||s.cached+s.cacheWrite>s.input||s.cacheWrite>0&&r.write==null)return;return ((s.input-s.cached-s.cacheWrite)*r.input+s.cached*r.cached+s.cacheWrite*(r.write??0))/1e6;}
+export {inputCost} from './metrics.js';
 export function summarize(buckets:Bucket[],paybacks:Payback[]=[]){const total={calls:0,priced:0,inputPriced:0,cost:0,inputCost:0,overhead:0};for(const b of buckets)for(const k of Object.keys(total) as (keyof typeof total)[])total[k]+=b[k];const complete=paybacks.filter(p=>p.completed),valid=complete.filter(p=>p.valid);return {...total,costPerCall:total.priced?(total.cost+total.overhead)/total.priced:null,contextPerCall:total.inputPriced?total.inputCost/total.inputPriced:null,paybackRate:valid.length?valid.filter(p=>p.breakEven!=null).reduce((n,p)=>n+(p.events??1),0)/valid.reduce((n,p)=>n+(p.events??1),0)*100:null,netSavings:valid.reduce((s,p)=>s+p.net,0),evaluable:valid.reduce((n,p)=>n+(p.events??1),0),profitable:valid.filter(p=>p.breakEven!=null).reduce((n,p)=>n+(p.events??1),0),pending:paybacks.filter(p=>!p.completed).reduce((n,p)=>n+(p.events??1),0),excluded:complete.filter(p=>!p.valid).reduce((n,p)=>n+(p.events??1),0),inactivity:valid.filter(p=>p.reason==='inactivity').reduce((n,p)=>n+(p.events??1),0)};}
 export type Summary=ReturnType<typeof summarize>;
 export function callBucket(s:NumericCall):Bucket{const c=inputCost(s),p=price(s);return {timestamp:s.timestamp,model:s.model,effort:s.effort,rateBand:JSON.stringify(rates(s.model,s.serviceTier,s.input,s.regionalProcessing)),cacheInput:c!=null?s.input:0,cacheRead:c!=null?s.cached:0,serviceTier:s.serviceTier,regionalProcessing:s.regionalProcessing,input:s.input,cached:s.cached,cacheWrite:s.cacheWrite,output:s.output,calls:1,priced:p.total!=null?1:0,inputPriced:c!=null?1:0,cost:p.total??0,inputCost:c??0,overhead:0};}

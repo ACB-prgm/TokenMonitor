@@ -16,7 +16,7 @@ export class HistoryClient {
   }
   const id=++this.serial;return new Promise((resolve,reject)=>{this.pending.set(id,{resolve,reject});this.worker!.postMessage({id,method,args});});
  }
- scan(_home:string,files:HistoryFile[],complete:boolean,reconcile=true):Promise<void>{if(this.closed)return Promise.resolve();if(this.queued?.reconcile&&!reconcile){const merged=new Map(this.queued.files.map(f=>[f.id,f]));for(const f of files)merged.set(f.id,f);this.queued.files=[...merged.values()];}else this.queued={files,complete,reconcile};if(this.scanPromise)return this.scanPromise;this.scanPromise=(async()=>{try{while(this.queued&&!this.closed){const args=this.queued;this.queued=undefined;await this.request('scan',args);}}finally{this.scanPromise=undefined;}})();return this.scanPromise;}
+ scan(_home:string,files:HistoryFile[],complete:boolean,reconcile=true):Promise<void>{if(this.closed)return Promise.resolve();if(this.queued&&!reconcile){const merged=new Map(this.queued.files.map(f=>[f.id,f]));for(const f of files)merged.set(f.id,f);this.queued.files=[...merged.values()];}else this.queued={files,complete,reconcile};if(this.scanPromise)return this.scanPromise;this.scanPromise=(async()=>{try{while(this.queued&&!this.closed){const args=this.queued;this.queued=undefined;await this.request('scan',args);}}finally{this.scanPromise=undefined;}})();return this.scanPromise;}
 
  snapshot(id?:string):Promise<Efficiency>{return this.request('snapshot',{id});}
  diagnostics(){return this.request('diagnostics',{});}

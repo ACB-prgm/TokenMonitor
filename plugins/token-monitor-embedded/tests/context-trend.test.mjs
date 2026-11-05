@@ -27,7 +27,7 @@ test('missing input prices are excluded; valid input counts even without output 
  const p=parser();p.consume(call(0,100000,{cache_write_input_tokens:undefined}));
  assert.equal(p.samples[0].contextPerCall,undefined);
  p.consume(call(1,100000,{output_tokens:undefined}));near(p.samples[1].contextPerCall,.091);
- assert.equal(p.samples[1].price.total,undefined);
+ assert.equal(p.samples[1].price.total,undefined);assert.equal(p.samples[1].costPerCall,undefined);
  p.consume({type:'turn_context',payload:{model:'unknown'}});p.consume(call(2));
  near(p.samples[2].contextPerCall,.091);assert.equal(p.samples[2].contextPricedCalls,1);
  p.consume({type:'turn_context',payload:{model:'gpt-6.1-sol',service_tier:'priority'}});p.consume(call(3,300000));
@@ -39,21 +39,42 @@ function render(s,mode='Cost'){
  const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(name=>name==='react'?mock:require(name),mod,mod.exports);
  return renderToStaticMarkup(React.createElement(mod.exports.MonitorView,{s,expanded:true,scale:1}));
 }
-test('Cost bars overlay a smooth running KPI without dots, using the same USD scale',()=>{
+test('KPIs tab has two smooth USD trends without dots or cost bars',()=>{
  const p=parser();p.consume(call(0));p.consume(call(1,200000));p.consume(call(2,150000));
  const s={...p.snapshot({id:'test',title:'Test'}),panelId:'test',status:'Monitoring'};
- const html=render(s),chart=html.match(/<section class="history"[\s\S]*?<\/svg>/)[0];
+ const html=render(s,'KPIs'),chart=html.match(/<section class="history"[\s\S]*?<\/svg>/)[0];
  assert.match(chart,/USD \/ call/);assert.match(chart,/Running context \/ call \$0\.191000 \(2 calls with priceable input\)/);
- assert.match(chart,/class="series input context-cost-trend" pointer-events="none" aria-label="Running Context \/ call KPI in USD" d="M45,[^"]*C/);
- assert.match(chart,/<rect[^>]*fill="var\(--ordinary\)"/);assert.doesNotMatch(chart,/<circle/);
- assert.ok(chart.indexOf('context-cost-trend')>chart.lastIndexOf('class="history-call"'));
+ assert.match(chart,/Running cost \/ call \$0\.241000 \(2 priced calls\)/);
+ assert.equal((chart.match(/class="series (?:input|fresh) kpi-trend"/g)??[]).length,2);
+ assert.match(chart,/aria-label="Running Context \/ call KPI in USD" d="M45,[^"]*C/);
+ assert.match(chart,/aria-label="Running Cost \/ call KPI in USD" d="M45,[^"]*C/);
+ assert.doesNotMatch(chart,/<circle|fill="var\(--ordinary\)"/);
  assert.match(html,/including earlier calls outside this chart/);
- assert.doesNotMatch(html,/>Context \/ call<\/button>/);
- for(const mode of ['Tokens','Context']){const h=render(s,mode);assert.doesNotMatch(h,/context-cost-trend/);assert.match(h,new RegExp(`aria-pressed="true">${mode}`));}
- const missing=render({...s,samples:s.samples.map(c=>({...c,contextPerCall:undefined,contextPricedCalls:undefined}))});assert.doesNotMatch(missing,/NaN|Infinity/);
- // A historical average may exceed every currently visible call's cost.
- const high=render({...s,samples:s.samples.map(c=>({...c,contextPerCall:10}))});
+ assert.match(html,/aria-pressed="true">KPIs/);
+ for(const mode of ['Cost','Tokens','Context']){const h=render(s,mode);assert.doesNotMatch(h,/kpi-trend/);assert.match(h,new RegExp(`aria-pressed="true">${mode}`));}
+ assert.match(render(s),/<rect[^>]*fill="var\(--ordinary\)"/);
+ const missing=render({...s,samples:s.samples.map(c=>({...c,contextPerCall:undefined,costPerCall:undefined}))},'KPIs');assert.doesNotMatch(missing,/NaN|Infinity/);
+ const high=render({...s,samples:s.samples.map(c=>({...c,costPerCall:10}))},'KPIs');
  assert.match(high,/>\$10\.00<\/text>/);
+});
+test('cost trend matches the KPI accounting through compaction and retained context adjustments',async()=>{
+ const built=await build({entryPoints:[fileURLToPath(new URL('../server/src/history-builder.ts',import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false});
+ const mod={exports:{}};new Function('module','exports',built.outputFiles[0].text)(mod,mod.exports);
+ const {HistoryBuilder,summarize}=mod.exports;
+ const history=new HistoryBuilder();
+ const p=new TelemetryParser(e=>{if(e.kind==='call')history.call(e.sample,e.contextLimit);if(e.kind==='compaction')history.compact(e.timestamp);if(e.kind==='retained')history.retainedContext(e.tokens);});
+ p.consume({type:'turn_context',payload:{model:'gpt-6.1-sol'}});
+ for(let i=0;i<125;i++){
+  if(i===100){
+   p.consume({type:'compacted',timestamp:new Date(Date.UTC(2026,10,4,0,0,i)-2).toISOString(),payload:{}});
+   p.consume(call(i-.001,0,{cached_input_tokens:0,cache_write_input_tokens:0,output_tokens:0,total_tokens:30000}));
+  }
+  const r=call(i,100000+i*1000);p.consume(r);p.consume(r);
+  const expected=summarize(history.data.buckets),actual=p.samples.at(-1);
+  near(actual.costPerCall,expected.costPerCall);assert.equal(actual.costPricedCalls,expected.priced);
+ }
+ const replay=parser();for(let i=0;i<3;i++)replay.consume(call(i));
+ near(replay.samples.at(-1).costPerCall,.141);
 });
 const lineBundle=await build({entryPoints:[fileURLToPath(new URL('../ui/src/analytics.ts',import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false});
 const lineModule={exports:{}};new Function('module','exports',lineBundle.outputFiles[0].text)(lineModule,lineModule.exports);

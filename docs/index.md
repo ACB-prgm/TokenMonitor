@@ -1,6 +1,6 @@
 # Documentation index
 
-Current reference pages describe this checkout. Release records and evidence describe past checks. Compatibility redirects are not authoritative.
+Current reference pages describe this checkout. Release records and evidence describe past checks.
 
 | Task/topic | Document | When to use it |
 |---|---|---|

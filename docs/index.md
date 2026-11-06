@@ -15,3 +15,5 @@ Current reference pages describe this checkout. Release records and evidence des
 | Costs, comparisons, coverage | [efficiency-metrics](reference/efficiency-metrics.md) | Costs, comparisons, coverage questions |
 | SQLite, retention, discovery, recovery | [history-storage](reference/history-storage.md) | SQLite, retention, discovery, recovery questions |
 | Historical releases | [index](releases/index.md) | Historical releases questions |
+
+Current release: [1.10.0 notes](releases/1.10.0/notes.md) · [1.10.0 validation](releases/1.10.0/validation.md).

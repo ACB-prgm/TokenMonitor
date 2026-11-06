@@ -26,6 +26,12 @@ On the bundled macOS ARM64 Node 24.21.0 / SQLite 3.53.4 runtime, the recorded ru
 
 The automated suites cover accounting parity, partial lines, large records, duplicate/replayed events, transaction rollback, retention, orphaned legacy data, compatible repricing, compaction closure, hook-only collection, and fresh DEV MCP restart/source restoration. The bundled panel's on-demand storage settings were inspected at 600 px and 320 px widths. Installed desktop presentation still requires the host restart that loads a newly installed DEV build.
 
+## Discovery
+
+The catalogue combines Codex metadata with validated local JSONL headers. Initial discovery scans sessions and archived sessions; warm launches reuse the discovery cache. Hooks and unknown host IDs use targeted lookup. Rescan threads discovers subsequently restored files. Missing source files cannot be reconstructed; already imported numeric summaries remain available.
+
+[Discovery implementation](../../plugins/token-monitor-embedded/server/src/discovery.ts) and [DEV cold-start checks](../../scripts/dev.test.mjs) cover this boundary.
+
 ## Source and tests
 
 [Implementation](../../plugins/token-monitor-embedded/server/src/history-database.ts) · [Regression tests](../../plugins/token-monitor-embedded/tests/history-import.test.mjs) · [Documentation index](../index.md)

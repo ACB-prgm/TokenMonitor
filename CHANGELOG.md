@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Count valid active compactions as paid back immediately when they reach break-even, while continuing to track savings and validity until the epoch closes.
+
 ## 1.9.1
 
 - Display Context / call and Cost / call with four decimal places in both KPI rows and expanded calculation results.

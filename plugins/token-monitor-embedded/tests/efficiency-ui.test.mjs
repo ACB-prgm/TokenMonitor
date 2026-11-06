@@ -30,7 +30,7 @@ test('changing comparison period updates Comp values, deltas and every expanded 
   assert.ok(html.includes(`Comp (${label}): $${s.cost.toFixed(2)} / ${s.calls}`));
   assert.ok(html.includes(`Comp (${label}): ${s.profitable} / ${s.evaluable}`));
   assert.ok(html.includes(`Pending compactions: Thread 1 · Comp (${label}) 1`));
-  assert.ok(html.includes(`Final net savings: Thread $1.00 · Comp (${label}) $${s.netSavings.toFixed(2)}`));
+  assert.ok(html.includes(`Net savings to date: Thread $1.00 · Comp (${label}) $${s.netSavings.toFixed(2)}`));
   assert.ok(html.includes(`${s.calls} recorded calls`));
   assert.doesNotMatch(html,/All chats:|· All chats|This period includes all available history/);
   if(period==='all')assert.match(html,/Comp row has no arrow/);

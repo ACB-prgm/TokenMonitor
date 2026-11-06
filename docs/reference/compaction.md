@@ -1,4 +1,4 @@
-# Compaction Value V2
+# Compaction
 
 Compaction Value (CV) is an integer from 0 to 100: projected net savings as a percentage of avoidable context-processing costs. These are API-equivalent estimates, not subscription charges or invoices. A high score does not guarantee that compaction preserves useful details, and is not an instruction to compact.
 
@@ -38,3 +38,28 @@ If either input path exceeds the reported context window, simulation stops befor
 Warm, Uncertain and Presumed cold cache states remain separate diagnostics. Cache age and the ordinary fraction of newly added uncached tokens do not multiply CV. A complete cache miss can affect both paths; actual future misses may change realized savings.
 
 This forecast makes no model calls, triggers no compaction, modifies no conversations, adds no network requests, and persists no new transcript data. Existing UI refresh and thread-selection behavior is unchanged. Deterministic dollar fixtures, rolling-estimate tests, parser parity, MCP integration and compact/expanded rendering tests cover the calculation and display.
+
+## Historical payback
+
+
+The compacted path uses recorded subsequent call categories and output. The alternative retains the removed context as an additional warm prefix, priced under each subsequent call's model, tier, region and input-size band. Reported retained context is used when available; otherwise 40,000 tokens is assumed. Charges estimate a warm read of the original context, 3,600 summary output tokens, and a replacement write. Replacement writes recorded on the first subsequent normal call are credited against the estimate once. These modeled charges are disclosed separately from recorded normal-call costs.
+
+An epoch is profitable when cumulative estimated savings first reach its overhead. Valid active epochs count as paid back immediately at that point; active epochs that have not reached break-even remain pending and excluded until closure. The details expose first break-even call and net savings to date, which can differ from the earlier break-even result. Invalid counterfactuals, unavailable pricing/accounting, and context-capacity violations exclude an epoch from the denominator. A complete compaction with no subsequent calls is unprofitable when its overhead can be priced.
+
+The next compaction, an explicit SessionEnd, or seven days without recorded activity closes an epoch. A response ending does not close it. Inactivity closure is labeled and counted; resumed activity replays and recalculates the final epoch. Period payback uses the compaction date for active paid-back epochs and the completion date for closed epochs, while spending counts charge dates. Epochs continue accumulating savings and validating counterfactuals after break-even; later invalid evidence excludes the outcome. No evaluable outcomes means N/A.
+
+
+## Recommendations and cache warmth
+
+
+The existing inline Efficiency Insights disclosure can recommend compaction when conservative projected future payback turns are no greater than completed turns in this epoch (since the last compaction, or chat creation). Capacity and negative completed-compaction findings retain priority. The expanded recommendation distinguishes continuing work that needs this chat’s context from unrelated work better started in a new chat; it never infers context relevance automatically.
+
+Turn tracking uses explicit lifecycle IDs/completion evidence and user-message boundaries; model/tool calls do not independently create user turns. Aborted, incomplete, duplicate, ambiguous and mixed-model turns do not enter calls-per-turn aggregates. A completed turn spanning compaction may contribute to the lifetime same-model mean but is excluded from the new epoch count. Numeric aggregates are cached under analytics format v4, replayed through the existing history scan without retaining prompt/response text. Existing cost, token and compaction accounting remains unchanged.
+
+This chat needs at least five qualifying same-model turns, or other chats need twenty. If both qualify, use the smaller mean, multiply calls/turn by 0.75, then round projected break-even calls divided by that value upward. This conservative buffer is a heuristic, not a confidence interval. The banner requires observed growth/output, known context capacity and pricing, positive net savings of at least $0.000001, and break-even within the existing forecast horizon. It is suppressed during import, disconnected/unavailable/ended telemetry, calls older than two hours, compaction/post-compaction waiting, or an unrecovered/unsynchronized latest compaction. Insufficient evidence never generates an action recommendation. Source means, sample counts, conversion and assumptions are inspectable in details.
+
+The existing Cached % / Cache savings row now centers a focusable warmth label: green Warm (<30 minutes), amber Uncertain (30–120 minutes inclusive), red Presumed cold (>120 minutes), muted Unknown when unavailable. Invalid/future call times are unknown. Warmth estimates age-based availability and does not establish a cache hit/miss; Cached % still measures recorded cache reads. Hover/focus reveals the explanation and call age; Escape dismisses it without moving focus.
+
+## Source and tests
+
+[Implementation](../../plugins/token-monitor-embedded/server/src/metrics.ts) · [Regression tests](../../plugins/token-monitor-embedded/tests/compaction.test.mjs) · [Documentation index](../index.md)

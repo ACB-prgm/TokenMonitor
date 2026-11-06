@@ -1,24 +1,6 @@
-# Historical efficiency
+# History storage
 
-An expandable KPI strip above Efficiency Insights and Latest Call compares the selected thread's lifetime usage with all imported local primary chats, including saved summaries whose source files are no longer present. Comp defaults to seven UTC calendar days, including today; 30 days and all history are available. Archived chats participate regardless of picker filters. Import runs in the background, and the banner reports progress and failed reads.
 
-The compact strip has shared Thread and Comp rows. Displayed deltas compare their visible aggregate values directly; cohort comparisons are retained separately for supported insights, with explicit coverage and provisional states; see [Dashboard redesign](DASHBOARD-REDESIGN.md) for thresholds, settings, insights and validation.
-
-Cost per call divides priced normal-call cost plus separately estimated compaction charges by priced normal calls. Context cost per call independently prices fresh, cached and cache-write input, even when output is unavailable. Reasoning is already included in output and is never charged twice. Missing categories and unsupported rates are excluded, with qualifying counts and pricing coverage shown. Partial spending is a lower bound, not a complete bill.
-
-The historical reference includes all imported calls from other chats; it is not frozen at the first 100 calls. Analytics activation is recorded independently. New rates trigger source replay for historical aggregates and payback when the source remains readable. Saved estimates whose source is missing retain their original calculation basis and remain visible, with affected comparisons marked provisional. Pricing identity includes both metadata and the bundled rate table.
-
-Periods use UTC calendar days. Averages are weighted sums divided by qualifying counts. Latest-100 windows use retained normal calls, including unpriced calls in the window; separately attributed compaction charges within that window are included. Routine snapshots carry cohort totals and selected recent calls, without loading or transmitting lifetime call lists or weekly tables. Missing or zero references have no percentage change.
-
-## Compaction estimates
-
-The compacted path uses recorded subsequent call categories and output. The alternative retains the removed context as an additional warm prefix, priced under each subsequent call's model, tier, region and input-size band. Reported retained context is used when available; otherwise 40,000 tokens is assumed. Charges estimate a warm read of the original context, 3,600 summary output tokens, and a replacement write. Replacement writes recorded on the first subsequent normal call are credited against the estimate once. These modeled charges are disclosed separately from recorded normal-call costs.
-
-An epoch is profitable when cumulative estimated savings first reach its overhead. The details expose first break-even call and final net savings, which can differ from the earlier break-even result. Invalid counterfactuals, unavailable pricing/accounting, and context-capacity violations exclude an epoch from the denominator. A complete compaction with no subsequent calls is unprofitable when its overhead can be priced.
-
-The next compaction, an explicit SessionEnd, or seven days without recorded activity closes an epoch. A response ending does not close it. Inactivity closure is labeled and counted; resumed activity replays and recalculates the final epoch. Period payback counts completion dates, while spending counts charge dates. No evaluable outcomes means N/A.
-
-## Storage and recovery
 
 The private `efficiency.sqlite` in each plugin state directory is durable storage for imported numeric telemetry. DEV and release keep separate databases. Typed tables hold recent calls and numeric lifecycle boundaries, daily aggregates, materialized cohort totals, compaction outcomes, and small import checkpoints. Model/pricing dimensions and calculation definitions are interned. Chat labels and workspace names support saved-chat selection; prompts, excerpts, tool arguments, transcript content and reasoning text are not retained. Codex databases and transcripts remain read-only.
 
@@ -38,8 +20,18 @@ Use **Settings → History storage → Inspect storage** to read database/journa
 
 ## Validation
 
-Run `npm --prefix plugins/token-monitor-embedded run history:bench` for the reproducible scale fixture: one million calls across 10,000 chats, 100,000 recent detailed calls, realistic numeric checkpoints, append-only import and ten source replacement/retention cycles. The fixture is temporary and removed afterward. [Recorded measurements](HISTORY-BENCHMARK.json) include Node/SQLite versions, storage and journal bytes, RSS growth, and timings. Cached cold means a reopened store with the OS file cache warm; timings exclude MCP transport and UI rendering. RSS growth describes the benchmark process, not a guaranteed application memory limit.
+Run `npm --prefix plugins/token-monitor-embedded run history:bench` for the reproducible scale fixture: one million calls across 10,000 chats, 100,000 recent detailed calls, realistic numeric checkpoints, append-only import and ten source replacement/retention cycles. The fixture is temporary and removed afterward. [Recorded measurements](../evidence/history-benchmark.json) include Node/SQLite versions, storage and journal bytes, RSS growth, and timings. Cached cold means a reopened store with the OS file cache warm; timings exclude MCP transport and UI rendering. RSS growth describes the benchmark process, not a guaranteed application memory limit.
 
 On the bundled macOS ARM64 Node 24.21.0 / SQLite 3.53.4 runtime, the recorded run passed the p95 targets of 50 ms warm and 250 ms cached cold. The database was approximately 107 MiB with detail and 37 MiB after expiry, with no backup copies. Repeated replacement/prune cycles stabilized around 35 MiB. These are synthetic workload measurements, not a hard storage cap or a promise for every machine.
 
 The automated suites cover accounting parity, partial lines, large records, duplicate/replayed events, transaction rollback, retention, orphaned legacy data, compatible repricing, compaction closure, hook-only collection, and fresh DEV MCP restart/source restoration. The bundled panel's on-demand storage settings were inspected at 600 px and 320 px widths. Installed desktop presentation still requires the host restart that loads a newly installed DEV build.
+
+## Discovery
+
+The catalogue combines Codex metadata with validated local JSONL headers. Initial discovery scans sessions and archived sessions; warm launches reuse the discovery cache. Hooks and unknown host IDs use targeted lookup. Rescan threads discovers subsequently restored files. Missing source files cannot be reconstructed; already imported numeric summaries remain available.
+
+[Discovery implementation](../../plugins/token-monitor-embedded/server/src/discovery.ts) and [DEV cold-start checks](../../scripts/dev.test.mjs) cover this boundary.
+
+## Source and tests
+
+[Implementation](../../plugins/token-monitor-embedded/server/src/history-database.ts) · [Regression tests](../../plugins/token-monitor-embedded/tests/history-import.test.mjs) · [Documentation index](../index.md)

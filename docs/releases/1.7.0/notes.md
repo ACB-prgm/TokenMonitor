@@ -1,4 +1,4 @@
-# TokenMonitor 1.7.0
+# TokenMonitor 1.7.0 release notes
 
 Update TokenMonitor directly from its version menu.
 
@@ -10,6 +10,6 @@ Update TokenMonitor directly from its version menu.
 
 In-panel installation supports existing local release marketplace installations and requires the Codex CLI. Account and Git installations continue to use their original update mechanism; the updater does not create a duplicate installation. Restart Codex after installation and review hook trust if prompted.
 
-For first installation or updating an older version without this button, use the complete `token-monitor-1.7.0-TARGET.zip` and its checksum from this release and follow the [installation instructions](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/INSTALL.md). The new button becomes available after loading 1.7.0.
+For first installation or updating an older version without this button, use the complete `token-monitor-1.7.0-TARGET.zip` and its checksum from this release and follow the [installation instructions](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/guides/installation.md). The new button becomes available after loading 1.7.0.
 
 All four native packages are built and verified by the release workflow. Desktop rendering and trusted lifecycle delivery remain separate checks; Windows desktop interaction has not been confirmed locally.

@@ -113,3 +113,22 @@ test('complete recent numeric sequences reprice compaction charges without a tra
   await store.scan(home,[],true,now+6000);closeTo(store.snapshot('a',now+6000).thread,expected);assert.equal(store.snapshot('a',now+6000).history.frozenThreads,0);
  }finally{store.close();rmSync(home,{recursive:true,force:true});}
 });
+
+test('active payback survives incremental import, restart and closure without double counting',()=>fixture(({home,f,db,file})=>{
+ writeFileSync(f.file,lines([header,context,call(1),{type:'compacted',timestamp:stamp(2),payload:{}}]));drain(db,home,f);
+ assert.equal(summarize([],db.outcomes()).pending,1);
+ let i=3;
+ while(db.statement('SELECT breakEven FROM history_paybacks').get().breakEven==null&&i<100){
+  appendFileSync(f.file,lines([call(i++,40000)]));drain(db,home,f);
+ }
+ assert.ok(i<100);assert.equal(db.statement('SELECT completed FROM history_paybacks').get().completed,null);
+ const paid=summarize([],db.outcomes());assert.equal(paid.paybackRate,100);assert.equal(paid.pending,0);assert.equal(paid.evaluable,1);
+ const reopened=new HistoryDatabase(file);
+ try{
+  assert.deepEqual(summarize([],reopened.outcomes()),paid);
+  appendFileSync(f.file,lines([call(i++,40000)]));drain(reopened,home,f);
+  const continued=summarize([],reopened.outcomes());assert.equal(continued.evaluable,1);assert.ok(continued.netSavings>paid.netSavings);
+  appendFileSync(f.file,lines([{type:'compacted',timestamp:stamp(i++),payload:{}}]));drain(reopened,home,f);
+  const closed=summarize([],reopened.outcomes());assert.equal(closed.profitable,1);assert.equal(closed.evaluable,1);assert.equal(closed.pending,1);
+ }finally{reopened.close();}
+}));

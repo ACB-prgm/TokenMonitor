@@ -1,4 +1,4 @@
-# TokenMonitor 1.6.0
+# TokenMonitor 1.6.0 release notes
 
 Inspect recent calls with themed, persistent details and a compact Activity section.
 
@@ -11,6 +11,6 @@ Inspect recent calls with themed, persistent details and a compact Activity sect
 
 Activity is associated with the next accepted usage event and may be absent for continuation calls. Excerpts are limited to 600 characters, six tool requests, and eight file targets; user prompts, reasoning, and tool results are excluded. This view does not navigate to a location in the chat.
 
-Download the complete `token-monitor-1.6.0-TARGET.zip` and its `.sha256` companion, verify before extracting, and follow the [installation/update instructions](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/INSTALL.md). Plugin-only ZIPs remain available for existing direct/account deployments. Packages include pinned Node runtimes. Restart Codex after updating and review hook trust if prompted.
+Download the complete `token-monitor-1.6.0-TARGET.zip` and its `.sha256` companion, verify before extracting, and follow the [installation/update instructions](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/guides/installation.md). Plugin-only ZIPs remain available for existing direct/account deployments. Packages include pinned Node runtimes. Restart Codex after updating and review hook trust if prompted.
 
 The release workflow builds and validates all four native platform packages. Desktop rendering and trusted lifecycle delivery remain separate checks; Windows desktop interaction has not been confirmed locally.

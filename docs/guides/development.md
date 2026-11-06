@@ -97,6 +97,10 @@ following the required app restart.
 
 ## Durable-history validation
 
-Run `npm --prefix plugins/token-monitor-embedded run history:bench` to create and clean up a synthetic million-call SQLite fixture. The benchmark reports warm/cached-cold query latency, incremental append costs, memory growth, retained data/journal bytes, and repeated retention-cycle sizes. Its assertions enforce the 50 ms / 250 ms p95 historical query targets and preserve summary counts across expiry. It never uses the real Codex history. See [historical storage](HISTORICAL-EFFICIENCY.md) and [the recorded benchmark](HISTORY-BENCHMARK.json).
+Run `npm --prefix plugins/token-monitor-embedded run history:bench` to create and clean up a synthetic million-call SQLite fixture. The benchmark reports warm/cached-cold query latency, incremental append costs, memory growth, retained data/journal bytes, and repeated retention-cycle sizes. Its assertions enforce the 50 ms / 250 ms p95 historical query targets and preserve summary counts across expiry. It never uses the real Codex history. See [historical storage](../reference/efficiency-metrics.md) and [the recorded benchmark](../evidence/history-benchmark.json).
 
 `npm run dev:test` also runs the actual packaged hook and MCP server across process restarts, source loss, saved-chat selection, on-demand diagnostics, and restoration without duplicate calls. These checks use isolated temporary Codex homes. A new installed DEV version still needs a desktop restart before its panel/server can replace an already open version.
+
+## Source and tests
+
+[DEV builder](../../scripts/dev.mjs) · [DEV regression tests](../../scripts/dev.test.mjs).

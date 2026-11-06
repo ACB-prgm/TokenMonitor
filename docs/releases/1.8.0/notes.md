@@ -1,4 +1,4 @@
-# TokenMonitor 1.8.0
+# TokenMonitor 1.8.0 release notes
 
 A model-priced compaction forecast, smoother call previews, and fresher account allowances.
 
@@ -11,4 +11,4 @@ Account reads require the installed Codex CLI and existing authentication. They 
 
 The maintainer verified the updated panel locally on macOS. The release workflow builds and checks all four native packages; Windows desktop rendering and trusted lifecycle delivery remain separate from automated package validation.
 
-Existing local release installations can use **Update and install** once this candidate is published. For manual installation, use the complete `token-monitor-1.8.0-TARGET.zip` and matching checksum, following the [installation instructions](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/INSTALL.md). Restart Codex after installation and review hook trust if prompted.
+Existing local release installations can use **Update and install** once this candidate is published. For manual installation, use the complete `token-monitor-1.8.0-TARGET.zip` and matching checksum, following the [installation instructions](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/guides/installation.md). Restart Codex after installation and review hook trust if prompted.

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Count valid active compactions as paid back immediately when they reach break-even, while continuing to track savings and validity until the epoch closes.
+
+## 1.10.0
+
+- Add a **KPIs** tab to Recent calls with smooth Context / call and Cost / call USD trends, without data dots. Each point represents the running thread average through that call, including earlier calls outside the visible window. Cost / call includes compaction charges; the Cost tab retains its call cost bars.
+- Show compaction progress in the context ring.
+- Preserve queued history updates from concurrent panels and refresh saved history metadata independently of transcript changes.
+- Preserve saved thread titles when catalogue metadata is unavailable.
+- Avoid repeated remainder copies when reading JSONL records.
+
 ## 1.9.1
 
 - Display Context / call and Cost / call with four decimal places in both KPI rows and expanded calculation results.

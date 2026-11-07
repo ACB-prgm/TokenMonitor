@@ -1,3 +1,4 @@
+import {compactionLabel,type CompactionDetail} from '../../server/src/compaction.js';
 import type {TurnStats,TurnPayback} from '../../server/src/turns.js';
 import {compareCohorts} from '../../server/src/comparisons.js';
 import type {Bucket} from '../../server/src/efficiency.js';
@@ -23,7 +24,7 @@ export type Monitor = { panelId: string; revision?: string; unchanged?: boolean;
   efficiency?:Efficiency;historyError?:string; status: string; selectionSource?: string; followingMode?: string; disconnected?: boolean;
   available?: boolean; input?: number; cached?: number; fresh?: number; contextLimit?: number; contextPercent?: number;
   contextHealth?: number; freshHealth?: number; model?: string; effort?: string; callCount?: number;
-  samples?: Sample[]; compactions?: {timestamp: string; callPosition: number}[]; isCompacting?: boolean;
+  samples?: Sample[]; compactionCost?:number;compactions?: ({timestamp:string;callPosition:number}&Partial<CompactionDetail>)[]; isCompacting?: boolean;
   awaitingPostCompactionCall?: boolean; lastCall?: string; lastEvent?: string; cacheTemperature?: string;
   fiveHour?: Allowance; weekly?: Allowance;
   compactionValue?: CompactionForecast;turnStats?:TurnStats;compactionTurnPayback?:TurnPayback;sessionEnded?:boolean;
@@ -72,12 +73,12 @@ function CacheWarmth({s}:{s:Monitor}) {
 }
 function ThreadSummary({s}: {s:Monitor}) {
   const u=s.usage,calls=s.callCount??0,reported=s.outputTotals;
-  const partial = !!u && (u.unpricedCalls>0 || u.cumulativeMismatch);
+  const partial = !!u && (u.unpricedCalls>0 || u.cumulativeMismatch) || !!s.compactions?.some(c=>c.source&&c.totalCost==null);
   const allowance = threadAllowanceEstimate(u);
   const tokens = u?.cacheComplete && u.outputComplete ? composition(u.input,u.cached,u.cacheWrite,u.output,u.reasoningComplete?u.reasoning:undefined) : undefined;
   return <section className="thread-usage" aria-label="Thread usage">
     <div className="thread-overview"><div className="thread-financial"><div className="thread-heading"><h2>Thread usage</h2><span>{calls} recorded calls</span></div>
-      <div className="spend" title="Theoretical token cost using verified current API rates per recorded call. Not a Codex subscription charge."><strong>{u?.pricedCalls ? money(u.cost) : '—'}</strong><span className="cost-description"><span className="cost-long">Estimated API-equivalent cost</span><span className="cost-short">Est. API-equivalent</span>{partial?' · partial':''}</span></div>
+      <div className="spend" title="API-equivalent normal-call spending plus attributed compaction charges using current rates. Not a Codex subscription charge."><strong>{(u?.pricedCalls||s.efficiency?.thread.priced||s.compactions?.some(c=>c.totalCost!=null)) ? money((u?.cost??s.efficiency?.thread.cost??0)+(s.compactionCost??s.efficiency?.thread.overhead??0)) : '—'}</strong><span className="cost-description"><span className="cost-long">Estimated API-equivalent cost</span><span className="cost-short">Est. API-equivalent</span>{partial?' · partial':''}</span></div>
     </div><ContextGauge s={s}/></div>
     <div className="thread-metadata"><span className={s.disconnected||s.available===false?'offline':'live'} aria-hidden="true"/><span>{s.available===false?'Saved history · source unavailable':s.followingMode==='host-chat'?'Following this chat':'Following latest hook activity'}{s.selectionSource==='manual'?' · inspecting another thread':''}</span><span className="metadata-model">{s.model??'Model unknown'} · {s.effort??'Effort unknown'}</span></div>
     <div className="thread-allowances" aria-label="Account allowances and estimated thread contribution">{([{label:'5-hour',account:s.fiveHour,estimate:allowance?.fiveHour},{label:'Weekly',account:s.weekly,estimate:allowance?.weekly}]).map(({label,account:q,estimate})=>{
@@ -93,6 +94,7 @@ function ThreadSummary({s}: {s:Monitor}) {
       <p>API-equivalent estimate only; your subscription allowances are separate. {u?.coverage ?? 'Waiting for usage records.'} Rates verified {u?.verifiedAt ?? '—'}; current rates are applied to historical calls, not historical invoices.</p>
       <p>Thread allowance estimates use your fixed calibration: 12.9 percentage points per $1 for 5-hour usage (≈$7.75 per 100 points), and 2.1 for weekly (7-day) usage (≈$47.62 per 100 points). They convert this thread’s full recorded API-equivalent cost, across resets, without a rolling-window filter. Account remaining values are observed separately; thread estimates do not subtract from those values. Partial pricing produces partial estimates; unpriced calls are excluded.</p>
       <p>Models: {u?.models.join(', ') || 'Unknown'}. {u?.pricedCalls ?? 0} priced / {calls} recorded calls. {u?.assumedTierCalls ?? 0} calls assume Standard tier because tier was absent or automatic. Region premiums apply only when explicitly recorded. Separately billed tools, search, images and compute are excluded.</p>
+      <p>Compaction charges: {money(s.compactionCost??s.efficiency?.thread.overhead)} API equivalent, including recorded request costs where verified and modeled replacement writes. Normal-call composition below excludes these separately attributed charges.</p>
       {u?.cumulativeMismatch && <p className="warning">Reported cumulative counters differ from recorded call sums. Thread totals and cost cover recorded calls only; missing calls cannot be priced retrospectively.</p>}
       {u?.issues.map(issue=><p className="warning" key={issue}>{issue}</p>)}
       {!u?.cacheComplete && <p>Missing or inconsistent cache categories prevent exact input breakdown and pricing of affected calls.</p>}
@@ -158,6 +160,14 @@ function CompactionDetails({value:v,turnPayback:t}:{value?:CompactionForecast;tu
     <p>API-equivalent estimates, not subscription charges. Cache temperature is separate; future cache misses may change savings. Financial value does not guarantee context preservation.</p>
   </div>;
 }
+function CompactionPreview({c}:{c:CompactionDetail}){
+ const u=c.usage;
+ return <><div className="inspect-header"><strong>Compaction</strong><span>{compactionLabel(c)}</span></div><p>{c.source==='recorded'?'Recorded usage':'Estimated usage'} · {time(c.timestamp)}</p>
+ <p>{u?.model??'Unknown model'} · {u?.serviceTier??'Standard assumed'}</p>
+ <dl className="inspect-values">{[['Input',u?.input],['Cached',u?.cached],['Cache write',u?.cacheWrite],['Output',u?.output],['Thinking',u?.reasoningRecorded?u.reasoning:undefined]].map(([k,v])=><div key={k as string}><dt>{k}</dt><dd>{exact(v as number|undefined)}</dd></div>)}</dl>
+ <dl className="inspect-values">{[['Request',c.requestCost],['Replacement write (estimated)',c.replacementWrite],['Write credit',c.writeCredit],['API equivalent · total',c.totalCost]].map(([k,v])=><div key={k as string}><dt>{k}</dt><dd>{money(v as number|undefined)}</dd></div>)}</dl>
+ <p className="inspect-rates">{c.reason&&`${c.reason}. `}{c.source==='estimated'?'Request assumes a warm read of the preceding context and 3,600 output tokens. ':''}Replacement write uses {exact(c.replacementTokens)} retained tokens; 40,000 assumed until reported. Recorded writes on the first following call are credited once. Request model, tier and region use the surrounding recorded metadata; absent tier assumes Standard. Costs are API equivalents.</p>{c.totalCost==null&&<p className="warning">Cost unavailable: missing usage or verified pricing.</p>}</>;
+}
 function History({s}: {s: Monitor}) {
   const [mode,setMode] = useState<'Cost'|'Tokens'|'Context'|'KPIs'>('Cost');
   const [preview,setPreview]=useState<Inspection>({hovered:null,focused:null,pinned:null,closing:false});
@@ -165,43 +175,56 @@ function History({s}: {s: Monitor}) {
   useEffect(()=>()=>inspection.dispose(),[inspection]);
   const {hovered,focused,pinned}=preview;
   const samples=s.samples??[], compactions=s.compactions??[];
+  const compactionKey=(c:{timestamp:string})=>`compaction:${c.timestamp}`;
   const start=(s.callCount??samples.length)-samples.length;
   const callKey=(c:Sample,i:number)=>`${start+i}:${c.timestamp}`;
   const activeKey=hovered??focused??pinned;
   const inspect=samples.findIndex((c,i)=>callKey(c,i)===activeKey);
   const selected=inspect>=0?samples[inspect]:undefined;
-  const retainedKeys=samples.map(callKey).join('|');
+  const selectedCompaction=compactions.find(c=>compactionKey(c)===activeKey);
+  const retainedKeys=[...samples.map(callKey),...compactions.map(compactionKey)].join('|');
   useEffect(()=>inspection.retain(new Set(retainedKeys.split('|'))),[inspection,retainedKeys]);
   const clearInspection=()=>inspection.clear();
   const toggleInspection=(key:string)=>inspection.pin(key);
-  const end=Math.max(start+1,(s.callCount??samples.length)-1,...compactions.map(c=>c.callPosition));
+  const slots=[...samples.map((c,i)=>({key:callKey(c,i),position:start+i,timestamp:c.timestamp})),...compactions.map(c=>({key:compactionKey(c),position:c.callPosition,timestamp:c.timestamp}))].sort((a,b)=>a.position-b.position||a.timestamp.localeCompare(b.timestamp));
+  const slotX=(key:string)=>45+slots.findIndex(c=>c.key===key)/Math.max(1,slots.length-1)*510;
+  const width=Math.min(16,460/Math.max(1,slots.length));
+  const bars=mode==='Cost'||mode==='Tokens';
+  const compactionValue=(c:typeof compactions[number])=>mode==='Cost'?c.totalCost:c.usage?c.usage.input+c.usage.output:undefined;
   const values=samples.map(c=>mode==='Cost'?c.price?.categories:sampleTokens(c));
   const visibleBuckets:Bucket[]=samples.map(c=>({timestamp:c.timestamp,model:c.model,effort:c.effort,serviceTier:c.serviceTier,regionalProcessing:c.regionalProcessing,rateBand:c.price?.rates?JSON.stringify(c.price.rates):undefined,input:c.input,cached:c.cached,cacheWrite:c.cacheWrite??0,output:c.output,calls:1,priced:c.price?.total!=null?1:0,inputPriced:c.price?.categories?1:0,cost:c.price?.total??0,inputCost:c.price?.categories?.slice(0,3).reduce((a,b)=>a+b,0)??0,overhead:0,cacheInput:c.price?.categories?c.input:0,cacheRead:c.price?.categories?c.cached:0}));
   const referenceData=s.efficiency?.reference;
   const comparison=referenceData?compareCohorts(visibleBuckets,referenceData.buckets.map(b=>({...b,overhead:0})),referenceData.ready).cost:undefined;
   const reference=mode==='Cost'&&comparison&&!comparison.provisional?comparison.reference:null;
   const showKpis=mode==='KPIs';
-  const max=Math.max(.000001,reference??0,...samples.map((c,i)=>mode==='Context'?c.input:showKpis?Math.max(c.contextPerCall??0,c.costPerCall??0):values[i]?.reduce((a,b)=>a+b,0)??0));
-  const x=(i:number)=>45+(i-start)/(end-start)*510, y=(n:number)=>130-n/max*110;
+  const max=Math.max(.000001,reference??0,...(bars?compactions.map(c=>compactionValue(c)??0):[]),...samples.map((c,i)=>mode==='Context'?c.input:showKpis?Math.max(c.contextPerCall??0,c.costPerCall??0):values[i]?.reduce((a,b)=>a+b,0)??0));
+  const x=(i:number)=>slotX(callKey(samples[i-start],i-start)), y=(n:number)=>130-n/max*110;
   const describe=(c:Sample,i:number)=>`Call ${start+i+1}${c.ordinal!=null?` · ordinal ${c.ordinal}`:''} · ${c.model??'Unknown model'} · ${time(c.timestamp)}${showKpis?` · Running context / call ${c.contextPerCall==null?'—':`$${c.contextPerCall.toFixed(6)}`} (${c.contextPricedCalls??0} calls with priceable input) · Running cost / call ${c.costPerCall==null?'—':`$${c.costPerCall.toFixed(6)}`} (${c.costPricedCalls??0} priced calls)`:''}\nInput ${exact(c.input)} · Cached ${exact(c.cachedRecorded===false?undefined:c.cached)} · Cache write ${exact(c.cacheWriteRecorded===false?undefined:c.cacheWrite)}\nOutput ${exact(c.outputRecorded===false?undefined:c.output)} · Thinking ${exact(c.reasoningRecorded===false?undefined:c.reasoning)}\nAPI equivalent ${c.price?.total==null?'—':`$${c.price.total.toFixed(6)}`} · ${c.price?.categories?.map((n,j)=>`${categories[j].label} $${n.toFixed(6)}`).join(' · ')??'Composition unavailable'}${c.price?.rates?` · USD/1M input ${c.price.rates.input}, read ${c.price.rates.cached}, write ${c.price.rates.write??'—'}, output ${c.price.rates.output}`:''} · ${c.serviceTier??'Standard assumed'}${c.price?.issue?` · ${c.price.issue}`:''}${compactions.some(m=>Math.abs(m.callPosition-(start+i))<=.5)?' · Near compaction boundary':''}`;
   return <section className="history" aria-label="Recent call history"><div className="section-title"><h2>Recent calls</h2><div className="segmented" role="group" aria-label="History view">{(['Cost','Tokens','Context','KPIs'] as const).map(m=><button key={m} title={`${m} per recorded call`} aria-pressed={mode===m} onClick={()=>setMode(m)}>{m}</button>)}</div></div>
-    {!samples.length?<p className="muted">Waiting for the first recorded call.</p>:<>
-      <svg onPointerDown={()=>inspection.blur()} onMouseEnter={()=>inspection.enter()} onMouseLeave={()=>inspection.leave()} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))inspection.blur();}} viewBox="0 0 580 155" role="group" aria-label={`${mode} for latest ${samples.length} calls; dotted lines mark compaction.`}>
-        <text className="chart-unit" x="45" y="10">{(mode==='Cost'||showKpis)?'USD / call':mode==='Context'?'Input tokens / call':'Tokens / call'}</text><text x="0" y="24">{(mode==='Cost'||showKpis)?money(max):number(max)}</text><text x="22" y="133">0</text><line x1="45" x2="565" y1="130" y2="130" className="axis"/>
+    {!samples.length&&!compactions.length?<p className="muted">Waiting for the first recorded call.</p>:<>
+      <svg onPointerDown={()=>inspection.blur()} onMouseEnter={()=>inspection.enter()} onMouseLeave={()=>inspection.leave()} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))inspection.blur();}} viewBox="0 0 580 155" role="group" aria-label={`${mode} for latest ${samples.length} calls; gray bars mark compaction in Cost and Tokens; dotted boundaries in Context and KPIs.`}>
+        <text className="chart-unit" x="45" y="10">{showKpis?'USD / call':mode==='Cost'?'USD / event':mode==='Context'?'Input tokens / call':'Tokens / event'}</text><text x="0" y="24">{(mode==='Cost'||showKpis)?money(max):number(max)}</text><text x="22" y="133">0</text><line x1="45" x2="565" y1="130" y2="130" className="axis"/>
 
-        {compactions.map(c=><g key={c.timestamp}><title>Context compacted · {time(c.timestamp)}</title><path className="compaction-marker" d={`M${x(c.callPosition)-4},12h8l-4,6z`}/><line x1={x(c.callPosition)} x2={x(c.callPosition)} y1="12" y2="130" className="compaction-line"/></g>)}
+        {compactions.map(c=>{const key=compactionKey(c),cx=slotX(key),value=compactionValue(c);return <g key={key} className="history-compaction" tabIndex={0} role="button" aria-label={`Compaction · ${time(c.timestamp)} · ${c.source?compactionLabel(c as CompactionDetail):'Usage unavailable'} · ${mode==='Cost'?'API equivalent USD':'Request tokens'} ${value??'unavailable'}`} aria-pressed={pinned===key} onMouseEnter={()=>inspection.enter(key)} onFocus={e=>{if(e.target.matches(':focus-visible'))inspection.focus(key);}} onClick={()=>toggleInspection(key)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleInspection(key);}else if(e.key==='Escape')clearInspection();}}>
+          <title>Compaction · {time(c.timestamp)} · {c.source?compactionLabel(c as CompactionDetail):'Usage unavailable'}</title>
+          {activeKey===key&&<rect className="call-highlight" x={cx-width/2-2} width={width+4} y="12" height="118" rx="3"/>}
+          <path className="compaction-marker" d={`M${cx-4},12h8l-4,6z`}/>
+          {bars&&c.source?(value!=null?<rect className="compaction-bar" x={cx-width/2} width={width} y={y(value)} height={value/max*110}/>:<text className="compaction-unpriced" x={cx} y="127" textAnchor="middle">×</text>):<line x1={cx} x2={cx} y1="12" y2="130" className="compaction-line"/>}
+          <rect x={cx-width/2} width={width} y="12" height="118" fill="transparent"/>
+        </g>;})}
         {mode==='Context' && (['input','fresh'] as const).map(series=><path key={series} className={`series ${series}`} d={samples.map((c,i)=>{
           if(series==='fresh'&&c.cachedRecorded===false)return '';
           const connected=i>0&&(series==='input'||samples[i-1].cachedRecorded!==false);
           return `${connected?'L':'M'}${x(start+i)},${y(series==='input'?c.input:c.input-c.cached)}`;
         }).join(' ')}/>)}
         {samples.map((c,i)=>{let below=0; const parts=values[i];const key=callKey(c,i);return <g key={key} className="history-call" tabIndex={0} role="button" aria-label={describe(c,i)} aria-pressed={pinned===key} onMouseEnter={()=>inspection.enter(key)} onFocus={e=>{if(e.target.matches(':focus-visible'))inspection.focus(key);}} onClick={()=>toggleInspection(key)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleInspection(key);}else if(e.key==='Escape'){clearInspection();}}}>
-          {activeKey===key&&<rect className="call-highlight" x={x(start+i)-Math.min(8,230/samples.length)-2} width={Math.min(16,460/samples.length)+4} y="12" height="118" rx="3"/>}{mode==='Context'?<circle cx={x(start+i)} cy={y(c.input)} r="3" className="point"/>:showKpis?null:parts?parts.map((n,j)=>{const bottom=below;below+=n;return n>0?<rect key={j} x={x(start+i)-Math.min(8,230/samples.length)} width={Math.min(16,460/samples.length)} y={y(below)} height={n/max*110} fill={categories[j].color}/>:null;}):<text x={x(start+i)} y="127" textAnchor="middle">×</text>}<rect x={x(start+i)-Math.min(8,230/samples.length)} width={Math.min(16,460/samples.length)} y="12" height="118" fill="transparent"/></g>;})}
+          {activeKey===key&&<rect className="call-highlight" x={x(start+i)-width/2-2} width={width+4} y="12" height="118" rx="3"/>}{mode==='Context'?<circle cx={x(start+i)} cy={y(c.input)} r="3" className="point"/>:showKpis?null:parts?parts.map((n,j)=>{const bottom=below;below+=n;return n>0?<rect key={j} x={x(start+i)-width/2} width={width} y={y(below)} height={n/max*110} fill={categories[j].color}/>:null;}):<text x={x(start+i)} y="127" textAnchor="middle">×</text>}<rect x={x(start+i)-width/2} width={width} y="12" height="118" fill="transparent"/></g>;})}
         {showKpis&&(['contextPerCall','costPerCall'] as const).map((metric,j)=><path key={metric} className={`series ${j?'fresh':'input'} kpi-trend`} pointerEvents="none" aria-label={`Running ${j?'Cost':'Context'} / call KPI in USD`} d={smoothLine(samples.map((c,i)=>c[metric]==null?undefined:{x:x(start+i),y:y(c[metric])}))}/>)}
         {reference!=null&&<g className="chart-reference"><line x1="45" x2="565" y1={y(reference)} y2={y(reference)}/><text x="565" y={Math.max(22,y(reference)-5)} textAnchor="end">Comparable {money(reference)}</text></g>}
         <text x="45" y="150">Call {start+1}</text><text x="565" y="150" textAnchor="end">{s.callCount}</text>
       </svg>
-      {selected && <div className={`inspect-shell${preview.closing?' closing':''}`} onMouseEnter={()=>inspection.enter()} onMouseLeave={()=>inspection.leave()} onPointerDown={()=>inspection.blur()} onFocus={e=>{if(e.target.matches(':focus-visible'))inspection.focus(activeKey??undefined);}} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))inspection.blur();}} onKeyDown={e=>{if(e.key==='Escape')clearInspection();}}><div className="inspect-inner"><div className="chart-inspect" role="status" aria-label={`Call ${start+inspect+1} details`}>
+      {(selected||selectedCompaction) && <div className={`inspect-shell${preview.closing?' closing':''}`} onMouseEnter={()=>inspection.enter()} onMouseLeave={()=>inspection.leave()} onPointerDown={()=>inspection.blur()} onFocus={e=>{if(e.target.matches(':focus-visible'))inspection.focus(activeKey??undefined);}} onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node))inspection.blur();}} onKeyDown={e=>{if(e.key==='Escape')clearInspection();}}><div className="inspect-inner"><div className="chart-inspect" role="status" aria-label={selectedCompaction?'Compaction details':`Call ${start+inspect+1} details`}>
+        {selectedCompaction?(<>{selectedCompaction.source?<CompactionPreview c={selectedCompaction as CompactionDetail}/>:<p>Compaction · usage unavailable in this snapshot.</p>}{pinned&&<button className="inspect-clear" onClick={clearInspection}>Clear selection</button>}</>):selected&&<>
         <div className="inspect-header"><div><strong>Call {start+inspect+1}</strong>{selected.ordinal!=null&&<span className="inspect-ordinal">Ordinal {selected.ordinal}</span>}<span className="inspect-state">{activeKey===pinned?'Pinned':'Preview'}</span></div>{pinned&&<button className="inspect-clear" onClick={clearInspection}>Clear selection</button>}</div>
         {showKpis&&<p>Running context / call: <strong>{selected.contextPerCall==null?'—':`$${selected.contextPerCall.toFixed(6)}`}</strong> · {selected.contextPricedCalls??0} calls with priceable input through this call<br/>Running cost / call: <strong>{selected.costPerCall==null?'—':`$${selected.costPerCall.toFixed(6)}`}</strong> · {selected.costPricedCalls??0} priced calls through this call</p>}
         <div className="inspect-meta"><span>{selected.model??'Unknown model'} · {selected.serviceTier??'Standard assumed'}</span><time dateTime={selected.timestamp}>{time(selected.timestamp)}</time></div>
@@ -220,10 +243,10 @@ function History({s}: {s: Monitor}) {
           {!!selected.activity?.files.length&&<div className="activity-files"><h4>File targets</h4>{selected.activity.files.map(file=><code key={file}>{file}</code>)}<p className="inspect-rates">From edit requests; successful changes are not verified here.</p></div>}
           {!selected.activity&&<p className="inspect-rates">No visible response or tool activity recorded for this call.</p>}
         </div>
-      </div></div></div>}
-      <p className="hint">{showKpis?'Blue: Context / call (input cost ÷ calls with priceable input). Orange: Cost / call ((input + output cost + compaction charges) ÷ priced calls). Running thread averages through each call, including earlier calls outside this chart. ':''}{mode==='Context'?'Blue: input · Orange: fresh. ':''}Dotted: compaction. {mode==='Cost'?'×: unpriced call. ':''}Hover or focus for details. Click or press Enter to pin; repeat to clear.</p>
+      </>}</div></div></div>}
+      <p className="hint">{showKpis?'Blue: Context / call (input cost ÷ calls with priceable input). Orange: Cost / call ((input + output cost + compaction charges) ÷ priced calls). Running thread averages through each call, including earlier calls outside this chart. ':''}{mode==='Context'?'Blue: input · Orange: fresh. ':''}Gray bars: compaction (recorded or estimated request tokens; full attributed cost). Dotted: compaction boundary in Context and KPIs. {mode==='Cost'?'×: unpriced call. ':''}Hover or focus for details. Click or press Enter to pin; repeat to clear.</p>
     </>}
-    {!!samples.length && <details><summary title="Inspect retained call records">Exact call values ({samples.length})</summary><div className="table-scroll"><table><thead><tr><th>Call / model</th><th>Input</th><th>Read</th><th>Write</th><th>Output</th><th>Thinking</th><th>USD</th></tr></thead><tbody>{samples.map((c,i)=><tr key={i} title={describe(c,i)}><th>{start+i+1}<small>{c.model??'—'}</small></th><td>{exact(c.input)}</td><td>{exact(c.cachedRecorded===false?undefined:c.cached)}</td><td>{exact(c.cacheWriteRecorded===false?undefined:c.cacheWrite)}</td><td>{exact(c.outputRecorded===false?undefined:c.output)}</td><td>{exact(c.reasoningRecorded===false?undefined:c.reasoning)}</td><td>{money(c.price?.total)}</td></tr>)}</tbody></table></div></details>}
+    {!!slots.length && <details><summary title="Inspect retained call records">Exact call values ({samples.length} calls; {compactions.length} compactions)</summary><div className="table-scroll"><table><thead><tr><th>Call / model</th><th>Input</th><th>Read</th><th>Write</th><th>Output</th><th>Thinking</th><th>USD</th></tr></thead><tbody>{slots.map(slot=>{const i=samples.findIndex((c,j)=>callKey(c,j)===slot.key),c=samples[i];if(c)return <tr key={i} title={describe(c,i)}><th>{start+i+1}<small>{c.model??'—'}</small></th><td>{exact(c.input)}</td><td>{exact(c.cachedRecorded===false?undefined:c.cached)}</td><td>{exact(c.cacheWriteRecorded===false?undefined:c.cacheWrite)}</td><td>{exact(c.outputRecorded===false?undefined:c.output)}</td><td>{exact(c.reasoningRecorded===false?undefined:c.reasoning)}</td><td>{money(c.price?.total)}</td></tr>;const m=compactions.find(c=>compactionKey(c)===slot.key)!;return <tr key={slot.key}><th>Compaction<small>{m.source?compactionLabel(m as CompactionDetail):'Usage unavailable'}</small><small>{time(m.timestamp)}</small></th><td>{exact(m.usage?.input)}</td><td>{exact(m.usage?.cached)}</td><td>{exact(m.usage?.cacheWrite)}</td><td>{exact(m.usage?.output)}</td><td>{exact(m.usage?.reasoningRecorded?m.usage.reasoning:undefined)}</td><td>{money(m.totalCost)}</td></tr>;})}</tbody></table></div></details>}
   </section>;
 }
 export function MonitorView({s, expanded, scale, error='', onAction, onLayout, storage='host widget state', updates, onUpdate, updateError,onFilter,onStorage}:

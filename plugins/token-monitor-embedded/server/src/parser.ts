@@ -1,3 +1,4 @@
+import {recordedCompaction,type CompactionDetail,type CompactionUsage} from './compaction.js';
 import {HistoryBuilder,summarize} from './history-builder.js';
 import {TurnCounter,type TurnAggregate} from './turns.js';
 import {normalizeAllowances} from './allowances.js';
@@ -25,14 +26,14 @@ function fingerprint(value:any) {
   }
   return hash.update(buffer).digest('hex');
 }
-export type NumericEvent = {kind:"turn";turn:TurnAggregate;timestamp?:string}|{kind:"call";sample:Sample;contextLimit?:number}|{kind:"compaction";timestamp:string}|{kind:"activity";timestamp:string}|{kind:"retained";tokens:number};
+export type NumericEvent = {kind:"turn";turn:TurnAggregate;timestamp?:string}|{kind:"call";sample:Sample;contextLimit?:number}|{kind:"compaction";timestamp:string;usage?:CompactionUsage;callPosition:number;reason?:string}|{kind:"activity";timestamp:string}|{kind:"retained";tokens:number};
 export class TelemetryParser {
   readonly turns:TurnCounter;
   constructor(private numericEvent?:(event:NumericEvent)=>void,private options:{numericOnly?:boolean;replay?:(group:string,key:string)=>boolean}={}){this.kpiHistory=options.numericOnly?undefined:new HistoryBuilder();this.turns=new TurnCounter((turn,timestamp)=>this.numericEvent?.({kind:"turn",turn,timestamp}),options.replay);}
   numericCheckpoint(){return {model:this.model,effort:this.effort,serviceTier:this.serviceTier,regionalProcessing:this.regionalProcessing,contextLimit:this.contextLimit,awaitingPostCompactionCall:this.awaitingPostCompactionCall,compactedContext:this.compactedContext,compactions:this.compactions.slice(-1),lastCallModel:this.lastCallModel,callCount:this.callCount,turns:this.turns.checkpoint()};}
   restoreNumeric(s:ReturnType<TelemetryParser['numericCheckpoint']>){this.model=s.model;this.effort=s.effort;this.serviceTier=s.serviceTier;this.regionalProcessing=s.regionalProcessing;this.contextLimit=s.contextLimit;this.awaitingPostCompactionCall=s.awaitingPostCompactionCall;this.compactedContext=s.compactedContext;this.compactions=s.compactions;this.lastCallModel=s.lastCallModel;this.callCount=s.callCount;this.turns.restore(s.turns);}
   private accept(group:string,key:string,set:BoundedSet){return this.options.replay?this.options.replay(group,key):set.add(key);}
-  awaitingPostCompactionCall=false; compactedContext?:number; compactions:{timestamp:string;callPosition:number}[]=[];
+  awaitingPostCompactionCall=false; compactedContext?:number; compactions:CompactionDetail[]=[];
   samples:Sample[]=[]; contextLimit?:number; fiveHour?:{used:number;reset?:string}; weekly?:{used:number;reset?:string};
   model?:string; effort?:string; title?:string; lastCallModel?:string; lastCallEffort?:string; lastEvent?:string; callCount=0;
   private activity=new ActivityCollector();
@@ -49,13 +50,20 @@ export class TelemetryParser {
     if(!object(r)||!object(r.payload))return;const p=r.payload,type=r.type,time=date(r.timestamp);
     if(time)this.numericEvent?.({kind:"activity",timestamp:time});
     if(!this.options.numericOnly)this.activity.consume(type,p);
-    // Only accept monotonically new compaction boundaries, just as call accounting does.
-    if(type!=='compacted'||time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp))this.turns.consume(type,p,time);
-    if(type==='compacted'&&time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp)){this.numericEvent?.({kind:"compaction",timestamp:time});this.kpiHistory?.compact(time);this.contextSegment++;this.forecastSamples=[];this.awaitingPostCompactionCall=true;this.compactedContext=undefined;this.pendingAttribution=undefined;this.contextAttribution=emptyAttribution();}
+    const newCompaction=type==='compacted'&&time&&(!this.compactions.length||time>this.compactions.at(-1)!.timestamp)&&this.accept('compaction',fingerprint(p.compaction_response_id??time),this.seenIdentities);
+    if(type!=='compacted'||newCompaction)this.turns.consume(type,p,time);
+    if(newCompaction){
+      const {usage,reason}=recordedCompaction(p,time,{model:this.model,effort:this.effort,serviceTier:this.serviceTier,regionalProcessing:this.regionalProcessing});
+      const callPosition=this.callCount-.5;
+      this.numericEvent?.({kind:'compaction',timestamp:time,usage,reason,callPosition});
+      const detail=this.kpiHistory?.compact(time,usage,callPosition,reason);
+      if(detail)this.compactions.push(detail);else this.compactions.push({timestamp:time,callPosition,usage,source:usage?'recorded':'estimated',reason,replacementTokens:40000,writeCredit:0,assumedMetadata:true});
+      if(this.compactions.length>120)this.compactions.shift();
+      this.contextSegment++;this.forecastSamples=[];this.awaitingPostCompactionCall=true;this.compactedContext=undefined;this.pendingAttribution=undefined;this.contextAttribution=emptyAttribution();
+    }
     const response=['reasoning','function_call','custom_tool_call'].includes(p.type)||(p.type==='message'&&p.role==='assistant');
     if(!this.options.numericOnly&&type==='response_item'&&!this.pendingAttribution&&response)this.pendingAttribution=this.attribution.snapshot();
     if(!this.options.numericOnly)this.attribution.consume(type,p);if(time)this.lastEvent=time;
-    if(type==='compacted'&&time&&this.compactions.at(-1)?.timestamp!==time){this.compactions.push({timestamp:time,callPosition:this.callCount-.5});if(this.compactions.length>120)this.compactions.shift();}
     if(type==='turn_context'){
       const next=typeof p.model==='string'?p.model:this.model;if(next!==this.model){this.contextSegment++;this.contextLimit=undefined;this.serviceTier=undefined;this.regionalProcessing=undefined;}
       this.model=next;this.serviceTier=typeof p.service_tier==='string'?p.service_tier:undefined;this.regionalProcessing=typeof p.regional_processing==='boolean'?p.regional_processing:undefined;
@@ -122,7 +130,7 @@ export class TelemetryParser {
     if(isCompacting||this.awaitingPostCompactionCall)compactionValue.limitation='Waiting for a reliable post-compaction call';
     return {version:1,task,turnStats:this.turns.snapshot(),sessionEnded:session.ended===true,status:!available?'Transcript unavailable · showing last recorded call':isCompacting?'Compacting…':session.ended===true?'Session ended · last recorded call':'Monitoring selected task',available,
       model:this.lastCallModel??session.model??metadata.model,effort:this.lastCallEffort??metadata.effort,input,cached,fresh,contextLimit:this.contextLimit,contextPercent,callCount:this.callCount,samples:this.samples,
-      compactions:this.compactions.filter(c=>c.callPosition>=this.callCount-this.samples.length),isCompacting,awaitingPostCompactionCall:this.awaitingPostCompactionCall,fiveHour:this.fiveHour,weekly:this.weekly,
+      compactionCost:this.kpiHistory?summarize(this.kpiHistory.data.buckets).overhead:undefined,compactions:this.compactions.filter(c=>c.callPosition>=this.callCount-this.samples.length),isCompacting,awaitingPostCompactionCall:this.awaitingPostCompactionCall,fiveHour:this.fiveHour,weekly:this.weekly,
       attribution:this.contextAttribution,usage:this.usage,outputTotals:this.outputTotals,lastEvent:this.lastEvent,lastCall:last?.timestamp,
       cacheTemperature:cacheTemperature(last?.timestamp,now),contextHealth:health(contextPercent,[40,50,65,75]),freshHealth:fresh!=null&&fresh>=2000&&input&&fresh<=input?health(fresh/input*100,[10,25,37.5,50]):0,compactionValue};
   }

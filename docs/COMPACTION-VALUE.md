@@ -38,3 +38,7 @@ If either input path exceeds the reported context window, simulation stops befor
 Warm, Uncertain and Presumed cold cache states remain separate diagnostics. Cache age and the ordinary fraction of newly added uncached tokens do not multiply CV. A complete cache miss can affect both paths; actual future misses may change realized savings.
 
 This forecast makes no model calls, triggers no compaction, modifies no conversations, adds no network requests, and persists no new transcript data. Existing UI refresh and thread-selection behavior is unchanged. Deterministic dollar fixtures, rolling-estimate tests, parser parity, MCP integration and compact/expanded rendering tests cover the calculation and display.
+
+## Recorded historical compactions
+
+Completed compactions use verified recorded request tokens when available, otherwise labeled estimates. Their graph bars and historical charges include replacement-write accounting. See [historical compaction accounting](HISTORICAL-EFFICIENCY.md#compaction-estimates) and [recent-call presentation](DASHBOARD-REDESIGN.md#insights-and-call-history). This does not change the prospective forecast above.

@@ -1,3 +1,4 @@
+import type {CompactionDetail} from './compaction.js';
 import type {TurnAggregate} from './turns.js';
 import {compareCohorts,type Comparisons} from './comparisons.js';
 import {HistoryDatabase} from './history-database.js';
@@ -7,12 +8,12 @@ import path from 'node:path';
 import {TelemetryParser} from './parser.js';
 import {pricingMetadata,pricingTableSignature} from './metrics.js';
 import {acceptedTranscript,privateDirectory,stateRoot} from './platform.js';
-export const historyBasis=JSON.stringify({version:4,table:pricingTableSignature,...pricingMetadata});
+export const historyBasis=JSON.stringify({version:5,table:pricingTableSignature,...pricingMetadata});
 export {HistoryBuilder,summarize,callBucket,inputCost} from './history-builder.js';
 import {HistoryBuilder,summarize,callBucket,type NumericCall,type Bucket,type Payback,type ThreadHistory,type Summary} from './history-builder.js';
 export type {NumericCall,Bucket,Payback,ThreadHistory,Summary} from './history-builder.js';
 export function weekly(buckets:Bucket[]){const weeks=new Map<string,Bucket[]>();for(const b of buckets){const d=new Date(b.timestamp.slice(0,10));d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);const key=d.toISOString().slice(0,10);weeks.set(key,[...(weeks.get(key)??[]),b]);}return [...weeks].sort().map(([week,b])=>({week,summary:summarize(b)}));}
-export type Efficiency={history?:{retentionDays:number;frozenThreads:number;detailCalls?:number;sourceAvailable?:boolean};threadSamples?:NumericCall[];turns?:{other:TurnAggregate[]};reference?:{buckets:Bucket[];ready:boolean};comparisons?:{thread:Comparisons;periods:Record<string,Comparisons>};activation:string;baseline:Summary;baselineCalls:number;baselineProvisional:boolean;baselineStart?:string;baselineEnd?:string;thread:Summary;threadWeeks:ReturnType<typeof weekly>;threadModels:{model:string;summary:Summary;baseline:Summary}[];baselineModels:{model:string;summary:Summary}[];paybacks:Payback[];periods:Record<string,{summary:Summary;previousSummary?:Summary;models:{model:string;summary:Summary}[];weeks:{week:string;summary:Summary}[]}>;rolling:Summary;threadRolling:Summary;progress:{processed:number;total:number;running:boolean;failed:number};pricingBasis:string};
+export type Efficiency={threadCompactions?:CompactionDetail[];history?:{retentionDays:number;frozenThreads:number;detailCalls?:number;sourceAvailable?:boolean};threadSamples?:NumericCall[];turns?:{other:TurnAggregate[]};reference?:{buckets:Bucket[];ready:boolean};comparisons?:{thread:Comparisons;periods:Record<string,Comparisons>};activation:string;baseline:Summary;baselineCalls:number;baselineProvisional:boolean;baselineStart?:string;baselineEnd?:string;thread:Summary;threadWeeks:ReturnType<typeof weekly>;threadModels:{model:string;summary:Summary;baseline:Summary}[];baselineModels:{model:string;summary:Summary}[];paybacks:Payback[];periods:Record<string,{summary:Summary;previousSummary?:Summary;models:{model:string;summary:Summary}[];weeks:{week:string;summary:Summary}[]}>;rolling:Summary;threadRolling:Summary;progress:{processed:number;total:number;running:boolean;failed:number};pricingBasis:string};
 export class EfficiencyStore {
  private snapshots=new Map<string,{value:Efficiency;bytes:number;expires:number}>();private snapshotBytes=0;
  private basisKey:string;readonly storage:HistoryDatabase;private scannedRevision?:string;private scanKey='';private lastScan=-Infinity;private lastMaintenance=-Infinity;private busy=false;private closed=false;private processed=0;private failed=0;private total=0;private importComplete=false;
@@ -35,14 +36,14 @@ export class EfficiencyStore {
   if(!count||count!==calls)return false;
   const boundaries=Number(db.statement("SELECT COUNT(*) AS n FROM history_boundaries WHERE source=? AND kind='context-limit'").get(id)!.n);
   const compactions=Number(db.statement("SELECT COUNT(*) AS n FROM history_boundaries WHERE source=? AND kind='compaction'").get(id)!.n),outcomes=db.outcomes(id).reduce((n,p)=>n+(p.events??1),0);
-  if(boundaries!==count||compactions!==outcomes)return false;
+  if(boundaries!==count||compactions!==outcomes||compactions!==Number(db.statement('SELECT COUNT(*) AS n FROM history_compactions WHERE source=?').get(id)!.n))return false;
   const revision=db.revision(),builder=new HistoryBuilder();let position=-1;
   for(;;){const rows=db.statement(`SELECT * FROM (
     SELECT position,0 AS sort,'call' AS kind,timestamp,dimension,input,cached,cacheWrite,output,reasoning,total,ordinal,cachedRecorded,cacheWriteRecorded,outputRecorded,reasoningRecorded,NULL AS tokens FROM history_samples WHERE source=?
     UNION ALL SELECT position,1 AS sort,kind,timestamp,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,tokens FROM history_boundaries WHERE source=? AND kind IN ('compaction','retained')
    ) WHERE position>? ORDER BY position,sort LIMIT 1000`).all(id,id,position) as any[];
    if(!rows.length)break;
-   for(const r of rows){position=r.position;if(r.kind==='compaction')builder.compact(r.timestamp);else if(r.kind==='retained')builder.retainedContext(r.tokens);else {const d=db.statement('SELECT model,effort,serviceTier,regionalProcessing FROM history_dimensions WHERE id=?').get(r.dimension) as any;const context=db.statement("SELECT tokens FROM history_boundaries WHERE source=? AND position=? AND kind='context-limit'").get(id,r.position);builder.call({...r,...d,model:d.model??undefined,effort:d.effort??undefined,serviceTier:d.serviceTier??undefined,regionalProcessing:d.regionalProcessing==null?undefined:!!d.regionalProcessing,cachedRecorded:!!r.cachedRecorded,cacheWriteRecorded:!!r.cacheWriteRecorded,outputRecorded:!!r.outputRecorded,reasoningRecorded:!!r.reasoningRecorded},context?.tokens==null?undefined:Number(context.tokens));}}
+   for(const r of rows){position=r.position;if(r.kind==='compaction'){const raw=db.statement('SELECT data FROM history_compactions WHERE source=? AND timestamp=?').get(id,r.timestamp);const c:CompactionDetail|undefined=raw?JSON.parse(String(raw.data)):undefined;builder.compact(r.timestamp,c?.source==='recorded'?c.usage:undefined,c?.callPosition,c?.reason);}else if(r.kind==='retained')builder.retainedContext(r.tokens);else {const d=db.statement('SELECT model,effort,serviceTier,regionalProcessing FROM history_dimensions WHERE id=?').get(r.dimension) as any;const context=db.statement("SELECT tokens FROM history_boundaries WHERE source=? AND position=? AND kind='context-limit'").get(id,r.position);builder.call({...r,...d,model:d.model??undefined,effort:d.effort??undefined,serviceTier:d.serviceTier??undefined,regionalProcessing:d.regionalProcessing==null?undefined:!!d.regionalProcessing,cachedRecorded:!!r.cachedRecorded,cacheWriteRecorded:!!r.cacheWriteRecorded,outputRecorded:!!r.outputRecorded,reasoningRecorded:!!r.reasoningRecorded},context?.tokens==null?undefined:Number(context.tokens));}}
    await new Promise<void>(r=>setImmediate(r));if(this.closed)return false;
   }
   const activity=db.statement('SELECT activity FROM history_sources WHERE id=?').get(id)?.activity;if(activity)builder.activity(String(activity));const cursor=db.statement('SELECT state FROM history_cursors WHERE source=?').get(id) as any,state=cursor?JSON.parse(cursor.state):undefined;
@@ -51,6 +52,7 @@ export class EfficiencyStore {
   let applied=false;db.transaction(()=>{if(db.revision()!==revision)return;
    db.statement('DELETE FROM history_daily WHERE source=?').run(id);for(const b of data.buckets)db.addBucket(id,b);
    db.statement('DELETE FROM history_outcomes WHERE source=?').run(id);db.statement('DELETE FROM history_paybacks WHERE source=?').run(id);for(const p of data.paybacks)db.updatePayback(id,p);
+   for(const c of data.compactions??[])db.saveCompaction(id,0,c,now);
    db.statement('DELETE FROM history_charges WHERE source=?').run(id);data.charges.forEach((b,i)=>{const keys=['cacheInput','cacheRead','input','cached','cacheWrite','output','calls','priced','inputPriced','inputCost','cost','overhead'] as const;db.statement(`INSERT INTO history_charges VALUES(${Array(16).fill('?').join(',')})`).run(id,i,db.dimension(b),b.timestamp,...keys.map(k=>b[k]));});
    db.statement('UPDATE history_day_basis SET basis=? WHERE source=?').run(this.basisKey,id);db.statement('UPDATE history_sources SET basis=? WHERE id=?').run(this.basisKey,id);
    if(state){state.builder=builder.checkpoint();db.statement('UPDATE history_cursors SET state=? WHERE source=?').run(JSON.stringify(state),id);}db.changed();applied=true;
@@ -96,11 +98,11 @@ export class EfficiencyStore {
   }
   const last=db.recent(),threadLast=id?db.recent(id):[];
   const withCharges=(calls:NumericCall[],source?:string)=>{if(!calls.length)return [];const where=source?'AND source=?':"AND source NOT LIKE '~%'";
-   const overhead=Number(db.statement(`SELECT COALESCE(SUM(overhead),0) AS overhead FROM history_charges WHERE timestamp>=? AND timestamp<=? ${where}`).get(calls[0].timestamp,calls.at(-1)!.timestamp,...(source?[source]:[]))!.overhead);
+   const overhead=Number(db.statement(`SELECT COALESCE(SUM(overhead),0) AS overhead FROM history_charges WHERE timestamp>=? AND timestamp<=? ${where}`).get(calls[0].timestamp,new Date(now).toISOString(),...(source?[source]:[]))!.overhead);
    const charge={...callBucket(calls[0]),calls:0,priced:0,inputPriced:0,cost:0,inputCost:0,overhead};return [...calls.map(callBucket),charge];};
 
   const paybacks=id?(db.statement('SELECT timestamp,completed,reason,calls,breakEven,net,valid FROM history_paybacks WHERE source=? ORDER BY timestamp DESC LIMIT 100').all(id) as any[]).reverse().map(p=>({...p,completed:p.completed??undefined,reason:p.reason??undefined,valid:!!p.valid})):[];
-  const result:Efficiency={history:{retentionDays:90,frozenThreads,detailCalls:id?Number(db.statement('SELECT COUNT(*) AS n FROM history_samples WHERE source=?').get(id)!.n):0,sourceAvailable:id?db.statement('SELECT available FROM history_catalogue WHERE source=?').get(id)?.available!==0:undefined},threadSamples:threadLast,activation:String(db.statement('SELECT value FROM meta WHERE key=?').get('activation')!.value),
+  const result:Efficiency={threadCompactions:id?db.compactionDetails(id):[],history:{retentionDays:90,frozenThreads,detailCalls:id?Number(db.statement('SELECT COUNT(*) AS n FROM history_samples WHERE source=?').get(id)!.n):0,sourceAvailable:id?db.statement('SELECT available FROM history_catalogue WHERE source=?').get(id)?.available!==0:undefined},threadSamples:threadLast,activation:String(db.statement('SELECT value FROM meta WHERE key=?').get('activation')!.value),
    turns:{other:db.turns(id)},reference:{buckets:reference,ready},comparisons:{thread:{...compareCohorts(threadBuckets,reference,ready),referenceLabel:'All available calls from other chats; excludes the selected chat.'},periods:comparisonPeriods},
    baseline:summarize(reference,referencePays),baselineCalls:reference.reduce((n,b)=>n+b.calls,0),baselineProvisional:!ready,
    thread:summarize(threadBuckets,threadPays),threadWeeks:[],threadModels:models(threadBuckets).map(m=>({...m,baseline:summarize(reference.filter(b=>(b.model??'Unknown model')===m.model))})),baselineModels:models(reference),paybacks,periods,

@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs --install",
     "dev:build": "node scripts/dev.mjs",
-    "dev:test": "node --test scripts/dev.test.mjs"
+    "dev:test": "node --test scripts/dev.test.mjs",
+    "docs:check": "node scripts/check-docs.mjs"
   }
 }

@@ -15,6 +15,7 @@ import {installedVersion} from './shared/version.js';
 import {compareCohorts} from './server/src/comparisons.js';
 import {estimateTurnPayback} from './server/src/turns.js';
 import {estimateCompactionValue} from './server/src/metrics.js';
+import {compactionDetail} from './server/src/compaction.js';
 const frame=document.querySelector('iframe');
 let calls=0,messages=0,updates=0,dark=false,offline=false;
 const stamp='2026-10-19T12:00:00Z';
@@ -32,6 +33,8 @@ const periodReference={...comparison,referenceLabel:'All available calls before 
 const noEarlier={...compareCohorts(buckets,[],true),referenceLabel:'No earlier reference exists when All history is selected.'};
 for(const metric of ['cost','context','cache'])noEarlier[metric].reason='All history has no earlier comparison period';
 const analytics={reference:{buckets:baseline,ready:true},comparisons:{thread:comparison,periods:{7:periodReference,30:periodReference,all:noEarlier}},activation:stamp,baseline:base,baselineCalls:240,baselineProvisional:false,baselineStart:stamp,baselineEnd:stamp,thread:sum,threadRolling:sum,rolling:sum,threadModels:[{model:'gpt-6.1-sol',summary:sum,baseline:base}],baselineModels:[{model:'gpt-6.1-sol',summary:base}],threadWeeks:[{week:'2026-10-19',summary:sum}],paybacks:[],periods:Object.fromEntries(['7','30','all'].map(k=>[k,{summary:sum,previousSummary:k==='all'?undefined:base,models:[{model:'gpt-6.1-sol',summary:sum}],weeks:[]} ])),progress:{processed:9,total:9,running:false,failed:0},pricingBasis:'Synthetic preview fixture'};
+state.compactions=[compactionDetail(stamp,11.5,samples[11],{...samples[11],timestamp:stamp,output:2100,outputRecorded:true,cachedRecorded:true,cacheWriteRecorded:true}),compactionDetail('2026-10-20T00:00:01Z',19.5,samples[19])];
+state.compactionCost=state.compactions.reduce((sum,c)=>sum+(c.totalCost??0),0);
 state.efficiency=analytics;state.matchCount=2;state.shownCount=2;
 const catalog=[...state.tasks,{id:'long-title',title:'A very long thread title for investigating responsive layouts and searchable local conversation history without horizontal overflow'}];
 const original={...state};let scenario='normal';

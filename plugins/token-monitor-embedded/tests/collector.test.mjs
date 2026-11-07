@@ -12,7 +12,7 @@ import {rates,price,cacheTemperature,health,AttributionEstimator,estimateTokens}
 const temp=mkdtempSync(path.join(tmpdir(),'tm-collector-'));after(()=>rmSync(temp,{recursive:true,force:true}));
 const normalized=x=>JSON.parse(JSON.stringify(x).replaceAll('.000Z','Z'));
 const fixtures=JSON.parse(readFileSync(new URL('fixtures/collector-parity.json',import.meta.url)));
-for(const f of fixtures)test('reference parity: '+f.id,()=>{const p=new TelemetryParser();for(const r of f.records)p.consume(r);const actual=p.snapshot(f.expected.task,{}, {},true,Date.UTC(2026,9,20));assert.deepEqual(normalized({...actual,samples:actual.samples.map(({contextPerCall,contextPricedCalls,costPerCall,costPricedCalls,...legacy})=>legacy)}),normalized({...f.expected,sessionEnded:false,turnStats:{models:[],epochCompleted:0}}));});
+for(const f of fixtures)test('reference parity: '+f.id,()=>{const p=new TelemetryParser();for(const r of f.records)p.consume(r);const actual=p.snapshot(f.expected.task,{}, {},true,Date.UTC(2026,9,20));assert.deepEqual(normalized({...actual,compactionCost:undefined,compactions:actual.compactions.map(({timestamp,callPosition})=>({timestamp,callPosition})),samples:actual.samples.map(({contextPerCall,contextPricedCalls,costPerCall,costPricedCalls,...legacy})=>legacy)}),normalized({...f.expected,sessionEnded:false,turnStats:{models:[],epochCompleted:0}}));});
 function fixture(id='task'){
  const home=mkdtempSync(path.join(temp,'home-')),file=path.join(home,id+'.jsonl');
  writeFileSync(file,JSON.stringify({type:'session_meta',payload:{id,source:'cli'}})+'\n');

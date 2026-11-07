@@ -113,3 +113,37 @@ test('complete recent numeric sequences reprice compaction charges without a tra
   await store.scan(home,[],true,now+6000);closeTo(store.snapshot('a',now+6000).thread,expected);assert.equal(store.snapshot('a',now+6000).history.frozenThreads,0);
  }finally{store.close();rmSync(home,{recursive:true,force:true});}
 });
+
+test('recorded compaction details survive bounded imports, restart and staged rebuild without transcript text',()=>fixture(({home,f,db,file})=>{
+ const u={input_tokens:100100,cached_input_tokens:99000,cache_write_input_tokens:0,output_tokens:2100,reasoning_output_tokens:0};
+ const comp={type:'compacted',timestamp:stamp(3),payload:{message:'PRIVATE SUMMARY',replacement_history:[{text:'PRIVATE HISTORY'}],compaction_response_id:'c1',latest_token_usage_record:{response_id:'c1',usage:u}}};
+ writeFileSync(f.file,lines([header,context,call(1),comp]));drain(db,home,f);
+ let c=db.compactionDetails('a')[0];assert.equal(c.source,'recorded');assert.equal(c.usage.output,2100);assert.equal(c.callPosition,.5);
+ assert.equal(JSON.stringify(db.compactionDetails('a')).includes('PRIVATE'),false);
+ const restarted=new HistoryDatabase(file);try{assert.deepEqual(restarted.compactionDetails('a'),db.compactionDetails('a'));}finally{restarted.close();}
+ appendFileSync(f.file,lines([{type:'event_msg',timestamp:stamp(4),payload:{type:'token_count',info:{last_token_usage:{input_tokens:0,cached_input_tokens:0,output_tokens:0,total_tokens:20000}}}},call(5,40000)]));drain(db,home,f);
+ c=db.compactionDetails('a')[0];assert.equal(c.replacementTokens,20000);assert.equal(c.replacementWrite,.05);assert.equal(db.compactionDetails('a').length,1);
+ const total=summarize(db.buckets('a')).overhead;assert.ok(Math.abs(total-c.totalCost)<1e-12);
+ importHistory(db,home,f,historyBasis);assert.equal(summarize(db.buckets('a')).overhead,total);
+ writeFileSync(f.file,lines([header,context,call(1),comp,call(6,40000)]));drain(db,home,f);assert.equal(db.compactionDetails('a').length,1);assert.equal(summarize(db.buckets('a')).calls,2);
+ rmSync(f.file);assert.equal(db.compactionDetails('a')[0].usage.output,2100);
+}));
+
+test('schema v3 upgrades without losing totals or relabeling legacy compactions as recorded',()=>fixture(({db,file})=>{
+ const b=new HistoryBuilder();b.call({timestamp:stamp(1),model:'gpt-6.1-sol',input:100000,cached:90000,cacheWrite:0,output:1000,reasoning:0,cachedRecorded:true,cacheWriteRecorded:true,outputRecorded:true,reasoningRecorded:true});b.compact(stamp(2));
+ db.replace('legacy','old','legacy-basis',b.data);const overhead=summarize(db.buckets('legacy')).overhead;
+ db.db.exec('DROP TABLE history_compactions; PRAGMA user_version=3');
+ const upgraded=new HistoryDatabase(file);try{assert.equal(upgraded.statement('PRAGMA user_version').get().user_version,4);assert.equal(summarize(upgraded.buckets('legacy')).overhead,overhead);assert.deepEqual(upgraded.compactionDetails('legacy'),[]);}finally{upgraded.close();}
+}));
+
+test('recorded compaction usage reprices from numeric history after source loss',async()=>{
+ const home=mkdtempSync(path.join(tmpdir(),'tm-recorded-reprice-'));mkdirSync(path.join(home,'sessions'));const f={id:'a',file:path.join(home,'sessions','a.jsonl')};const store=new mod.exports.EfficiencyStore(home);
+ try{
+  const c={type:'compacted',timestamp:stamp(3),payload:{compaction_response_id:'c',latest_token_usage_record:{response_id:'c',usage:{input_tokens:100000,cached_input_tokens:95000,cache_write_input_tokens:0,output_tokens:2000}}}};
+  writeFileSync(f.file,lines([header,context,call(1),c,call(4,40000)]));await store.scan(home,[f],true,now);
+  const expected=store.snapshot('a',now).thread.overhead,db=store.storage,old=db.internBasis(JSON.stringify({...JSON.parse(historyBasis),table:'old-table'}));
+  db.statement('UPDATE history_sources SET basis=? WHERE id=?').run(old,'a');db.statement('UPDATE history_day_basis SET basis=? WHERE source=?').run(old,'a');db.changed();rmSync(f.file);
+  await store.scan(home,[],true,now+6000);const snap=store.snapshot('a',now+6000);
+  assert.ok(Math.abs(snap.thread.overhead-expected)<1e-12);assert.equal(snap.threadCompactions[0].source,'recorded');assert.equal(snap.threadCompactions[0].usage.output,2000);assert.equal(snap.history.frozenThreads,0);
+ }finally{store.close();rmSync(home,{recursive:true,force:true});}
+});

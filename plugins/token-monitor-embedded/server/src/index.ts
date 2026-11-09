@@ -12,6 +12,8 @@ import {AutoUpdater} from './auto-update.js';
 import {Updates, targets,compareVersions} from './updates.js';
 import { Panels } from './panels.js';
 import { Collector } from './collector.js';
+import {ResumeProbe} from './resume.js';
+import {stateRoot} from './platform.js';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const resourceUri = `ui://${pluginName}/panel-v${installedVersion}.html`;
@@ -20,6 +22,13 @@ const server = new McpServer({ name: pluginName, version: installedVersion });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 const collector = new Collector();
 const panels = new Panels(collector);
+let resumeProbe:ResumeProbe|undefined;
+const probe=()=>resumeProbe??=new ResumeProbe(stateRoot());
+const resumeState=(panelId:string)=>{if(!isDev)return undefined;try{const threadId=panels.context(panelId).threadId;return threadId?probe().status(threadId):{available:!!process.env.CODEX_APP_TOOLS_PIPE_PATH};}catch{return {available:false};}};
+process.on('exit',()=>resumeProbe?.close());
+process.stdin.on('end',()=>resumeProbe?.close());
+process.on('SIGTERM',()=>resumeProbe?.close());
+process.on('SIGINT',()=>resumeProbe?.close());
 const updates = new Updates(installedVersion);
 const installer = new AutoUpdater();
 const installationState = async()=>{const value=await installer.status();return value?.phase==='installed'&&compareVersions(installedVersion,value.version)>=0?undefined:value;};
@@ -76,8 +85,22 @@ server.registerTool('get_monitor_state', {
     action: z.enum(['select','rescan']).optional(),query:z.string().max(200).optional(),includeArchived:z.boolean().optional(), revision: z.string().max(500).optional() },
   annotations: {...annotations,openWorldHint:true}, _meta: { ui: { visibility: ['app'] } },
 }, async (args, extra) => {
-  try { return { content: [], _meta: { monitor: await panels.state(args.panelId, args, hostID(extra)), updates: await updateState() } }; }
+  try { const monitor=await panels.state(args.panelId, args, hostID(extra));return { content: [], _meta: { monitor, updates: await updateState(),resume:resumeState(args.panelId) } }; }
   catch { return { isError: true, content: [], _meta: { error: 'Task unavailable. Refresh the local task list.' } }; }
+});
+if(isDev)server.registerTool('manage_resume_probe',{
+  title:'DEV continuation probe',description:'Panel-only explicit one-shot continuation test. Uses the experimental app-supplied bridge; never retries a send.',
+  inputSchema:{panelId:z.string().uuid(),threadId:z.string().min(1).max(200),action:z.enum(['status','test','reset','cancel'])},
+  annotations:{readOnlyHint:false,destructiveHint:true,openWorldHint:true},_meta:{ui:{visibility:['app']}},
+},async(args,extra)=>{
+  try{
+    await panels.state(args.panelId,{},hostID(extra));
+    const {sourceThreadId,threadId}=panels.context(args.panelId);
+    if(!sourceThreadId||!threadId)throw Error('Open DEV from a recognized chat and choose a local chat first.');
+    if(threadId!==args.threadId)throw Error('The selected chat changed. Verify its title and try again.');
+    const resume=args.action==='status'?probe().status(threadId):args.action==='cancel'?probe().cancel(threadId):await probe().arm(threadId,sourceThreadId,args.action);
+    return {content:[],_meta:{resume}};
+  }catch(error){return {isError:true,content:[],_meta:{error:error instanceof Error?error.message:'Unable to manage DEV probe.'}};}
 });
 server.registerTool('get_history_storage', {
  title:'Inspect local history storage',description:'Read aggregate local storage diagnostics on demand.',

@@ -4,6 +4,11 @@ Investigated November 8, 2026 against Token Monitor commit `9e02a13` and the
 installed ChatGPT/Codex desktop app version `26.1103.41825` (build `25679`).
 This is a feasibility assessment, not an implemented or end-to-end validated feature.
 
+Follow-up: a [DEV-only test prototype](DEV-RESUME-PROBE.md) now exercises an
+app-supplied local tools pipe. Read-only access passed using the app's bundled
+runtime. The live capped-account continuation and goal-state questions below
+remain open.
+
 ## Finding
 
 The design is plausible: read usage without a model turn, wait outside the model,

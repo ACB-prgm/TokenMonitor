@@ -126,3 +126,7 @@ details[open]>summary::before,details[open]>summary .disclosure-caret,
 @keyframes context-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.context-ring.is-compacting svg{animation:none}}
 .compaction-bar{fill:#808080;fill-opacity:1}.history svg .compaction-unpriced{fill:#808080}
+.resume-probe { margin: 10px 0; padding: 10px; border: 1px solid var(--muted); border-radius: 8px; }
+.resume-probe p { line-height: 1.5; overflow-wrap: anywhere; }
+.resume-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.resume-actions button { white-space: normal; padding: 7px 10px; }

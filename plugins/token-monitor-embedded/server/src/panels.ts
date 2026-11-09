@@ -12,6 +12,7 @@ export class Panels {
     this.panels.set(id, { hostId, source: 'waiting', touched: Date.now(), disconnected: false, hostMatched: false });
     return id;
   }
+  context(id:string){const panel=this.panels.get(id);return {sourceThreadId:panel?.hostId,threadId:panel?.selected};}
   private panel(id: string, hostId?: string) {
     // UI state may outlive an MCP restart. Recover selection from the exact
     // host ID or hooks.

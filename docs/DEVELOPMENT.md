@@ -1,5 +1,8 @@
 # Local Token Monitor DEV
 
+For the experimental one-shot continuation test and its required app runtime,
+see [DEV resume probe](DEV-RESUME-PROBE.md).
+
 Install build dependencies once with Node 24+ and npm:
 
 ```sh

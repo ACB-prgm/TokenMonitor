@@ -34,7 +34,7 @@ export class AppBridge {
     try{return JSON.parse(text);}catch{if(tool==='send_message_to_thread')return {acknowledgement:true};throw Error('The app returned an unsupported response shape.');}
   }
 }
-export type ResumeState={id:string;threadId:string;title:string;phase:'armed'|'sending'|'sent'|'cancelled'|'uncertain'|'expired';mode:'test'|'reset';notBefore:number;expires:number;message:string;checkedAt?:number;accountId:string;hostId:string;turnId:string;sourceThreadId:string;pid:number};
+export type ResumeState={id:string;threadId:string;title:string;phase:'armed'|'sending'|'sent'|'cancelled'|'uncertain'|'expired';mode:'test'|'reset';waitingForLimit?:boolean;notBefore:number;expires:number;message:string;checkedAt?:number;accountId:string;hostId:string;turnId:string;sourceThreadId:string;pid:number};
 export interface ResumeBridge{available:boolean;call(tool:'get_usage_limits'|'read_thread'|'send_message_to_thread',args:Record<string,unknown>,sourceThreadId:string):Promise<any>}
 const windows=(usage:any)=>{
   const map=usage?.rateLimitsByLimitId;
@@ -71,15 +71,12 @@ export class ResumeProbe {
     if(this.stopped)throw Error('DEV probe is shutting down.');
     if(!this.bridge.available)throw Error('The app did not supply its tools bridge to DEV.');
     this.status(threadId);
-    const info=target(await this.bridge.call('read_thread',{threadId,turnLimit:1,maxOutputCharsPerItem:1},sourceThreadId));
+    const info=target(await this.bridge.call('read_thread',{threadId,turnLimit:1,maxOutputCharsPerItem:1},sourceThreadId),mode==='test');
     if(info.thread.id!==threadId||info.thread.kind!=='codex')throw Error('Only the exact selected Codex chat can be armed.');
-    const usage=await this.bridge.call('get_usage_limits',{},sourceThreadId),cap=capacity(usage);
+    const usage=await this.bridge.call('get_usage_limits',{},sourceThreadId);
     if(typeof usage.accountId!=='string'||!usage.accountId)throw Error('Account identity unavailable; probe not armed.');
-    if(mode==='reset'&&!cap.blocked.length)throw Error('No exhausted usage window is reported. Use the 30-second test first.');
-    const resets=cap.blocked.map((w:any)=>w.resetsAt);
-    if(mode==='reset'&&resets.some((n:any)=>typeof n!=='number'||!Number.isFinite(n)))throw Error('Reset time unavailable; probe not armed.');
-    const now=this.now(),notBefore=mode==='test'?now+30000:Math.max(now,...resets.map((n:number)=>n*1000+5000));
-    const r:ResumeState={id:randomUUID(),threadId,title:String(info.thread.title??threadId),phase:'armed',mode,notBefore,expires:Math.max(now+24*3600000,notBefore+3600000),message:mode==='test'?'Armed: one harmless test message after 30 seconds and a fresh capacity check.':'Armed: waiting for reset and a fresh capacity check.',accountId:usage.accountId,hostId:info.thread.hostId,turnId:info.turn.id,sourceThreadId,pid:process.pid};
+    const now=this.now(),notBefore=mode==='test'?now+30000:now;
+    const r:ResumeState={id:randomUUID(),threadId,title:String(info.thread.title??threadId),phase:'armed',mode,waitingForLimit:mode==='reset',notBefore,expires:Math.max(now+24*3600000,notBefore+3600000),message:mode==='test'?'Armed: one harmless test message after 30 seconds and a fresh capacity check.':'On for this chat: waiting for usage to run out and the chat to stop.',accountId:usage.accountId,hostId:info.thread.hostId,turnId:info.turn.id,sourceThreadId,pid:process.pid};
     if(this.stopped)throw Error('DEV probe is shutting down.');
     try{this.db.prepare('INSERT INTO resume_requests VALUES(?,?,?,?)').run(r.id,r.threadId,r.phase,JSON.stringify(r));}catch{throw Error('This chat already has a pending DEV probe. Cancel it before re-arming.');}
     if(!this.timer)this.timer=setInterval(()=>void this.tick().catch(()=>{/* A storage failure must not crash the MCP server or authorize a send. */}),15000);
@@ -96,6 +93,18 @@ export class ResumeProbe {
           if(this.now()>=r.expires){r.phase='expired';r.message='Expired without dispatch.';if(valid())this.save(r);continue;}
           const info=target(await this.bridge.call('read_thread',{threadId:r.threadId,hostId:r.hostId,turnLimit:1,maxOutputCharsPerItem:1},r.sourceThreadId),false);
           if(!valid())continue;
+          if(r.waitingForLimit){
+            if(info.thread.id!==r.threadId||info.thread.hostId!==r.hostId)throw Error('Target chat identity changed.');
+            const usage=await this.bridge.call('get_usage_limits',{},r.sourceThreadId);if(!valid())continue;
+            if(usage.accountId!==r.accountId){r.phase='cancelled';r.message='Account changed; cancelled.';this.save(r);continue;}
+            r.checkedAt=this.now();
+            if(!capacity(usage).blocked.length){r.message='On for this chat: waiting for usage to run out and the chat to stop.';this.save(r);continue;}
+            target({thread:info.thread,turns:[info.turn]});
+            const resets=capacity(usage).blocked.map((w:any)=>w.resetsAt);
+            if(resets.some((n:any)=>typeof n!=='number'||!Number.isFinite(n)))throw Error('Waiting for a known usage reset time.');
+            r.turnId=info.turn.id;r.waitingForLimit=false;r.notBefore=Math.max(this.now(),...resets.map((n:number)=>n*1000+5000));
+            r.expires=Math.max(r.expires,r.notBefore+3600000);r.message='On: chat stopped at exhausted usage; waiting for reset and fresh capacity.';this.save(r);continue;
+          }
           if(info.thread.id!==r.threadId||info.thread.hostId!==r.hostId||info.turn.id!==r.turnId){r.phase='cancelled';r.message='Chat changed or was manually continued; cancelled.';this.save(r);continue;}
           target({thread:info.thread,turns:[info.turn]});r.checkedAt=this.now();
           if(this.now()<r.notBefore){this.save(r);continue;}

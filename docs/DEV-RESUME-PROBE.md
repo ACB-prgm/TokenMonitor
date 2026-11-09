@@ -7,26 +7,23 @@ status or consume a reset credit.
 
 ## Test tonight
 
-1. Restart the desktop app after installing the DEV build. While you still have
-   capacity, ask to open **Token Monitor DEV**. Expand **DEV · Resume after reset
-   test**, just below Efficiency Insights. Confirm the target chat's title.
-2. First select an idle chat and click **Send harmless test in 30 seconds**.
-   Do not send another message to that chat while waiting. Within roughly
-   30–45 seconds, plus bridge request time, it should receive a test message and
-   reply **Token Monitor DEV continuation received.** The test will wait longer
-   if fresh usage does not confirm capacity. It uses an ordinary model turn.
-3. For the real test, keep DEV available before hitting the cap. Once the target
-   chat has stopped, click **Resume this chat after usage reset**. This requires
-   a reported exhausted usage window and known reset timestamp. It waits until
-   the latest exhausted-window reset plus five seconds, then rechecks usage.
-4. Keep the desktop app running and the computer awake. The panel may be hidden
-   or closed if the host keeps its MCP process alive. Any MCP shutdown cancels
-   pending work. Restarting never automatically restores a pending continuation.
+1. Open **Token Monitor DEV** and confirm the selected chat's title.
+2. Turn on **Resume this chat after usage reset**. You can enable this while a
+   turn is running or before usage runs out, and keep working in that chat.
+3. When the worker observes exhausted usage and an idle chat, it records that
+   turn and waits until the latest exhausted-window reset plus five seconds.
+   Fresh usage must confirm capacity before the one continuation is submitted.
+   The toggle turns off after dispatch; turn it on again for another reset.
+4. Keep the app running and computer awake. Turning the toggle off cancels it.
+   Once exhausted usage has been detected, a new turn cancels the pending send.
+   Before that point, new turns are followed. Switching the monitor selection
+   does not cancel another chat's toggle. Requests expire after at least 24 hours.
+5. **Send harmless test in 30 seconds** still provides a separate idle-chat test.
+   It asks for **Token Monitor DEV continuation received.** and uses one ordinary
+   model turn once live capacity is available.
 
-**Cancel pending resume** is available until dispatch begins. A new turn in the
-target chat or a changed account cancels pending work. Switching the monitor's
-selection does not cancel another chat's armed request; select that chat again
-to inspect or cancel it.
+The panel may be hidden if the host keeps its MCP process alive. Any MCP shutdown
+cancels pending work; restarting never restores a pending continuation.
 
 The panel displays a probe ID, earliest send time, last check, and outcome:
 
@@ -57,9 +54,14 @@ Build and install this experiment with:
 /Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node scripts/dev.mjs --install
 ```
 
-The existing DEV build flow records that executable in the MCP configuration and
-hooks. It must remain at that path. Other hosts may reject the bridge or not
-supply it; the UI reports those failures. Regular `npm run dev` uses whichever
+The DEV build records that executable in the MCP configuration and hooks. It
+also explicitly passes the current app-supplied bridge pipe and caller host into
+the MCP environment: the app does not inherit those variables into plugin servers.
+No other environment values are copied. It must remain at that path. Other hosts may reject the bridge or not
+supply it; the UI reports those failures. The pipe belongs to the current app session. After an app restart, rebuild and
+reinstall DEV from that session. Reconnect the DEV plugin server to load an updated
+installation; restarting the entire app can invalidate the saved pipe. This is a
+DEV-only shortcut pending a supported persistent host integration. Regular `npm run dev` uses whichever
 Node runs npm and can therefore produce a DEV build without working bridge access.
 
 The worker checks every 15 seconds while its MCP process remains alive. It checks
@@ -74,7 +76,8 @@ Claims and outcomes are stored in
 `~/.codex/token-monitor-dev/resume-probe.sqlite` (or the configured `CODEX_HOME`).
 A unique pending claim per target and an atomic transition to `sending` prevent
 duplicate sends across panels/processes. Uncertain sends are never replayed.
-The database stores request metadata, not credentials, tool outputs, or pipe paths.
+The database stores request metadata, not credentials or tool outputs. The current pipe path is stored only in the DEV
+MCP configuration.
 Pending requests expire after at least 24 hours, or one hour after their expected
 reset if later. Crash recovery marks abandoned sends uncertain; PID reuse can
 require waiting for the old process to exit before an abandoned claim is cleared.
@@ -82,18 +85,20 @@ require waiting for the old process to exit before an abandoned claim is cleared
 ## Validation
 
 - TypeScript check and build passed.
-- Plugin suite: 288 tests passed, including 13 new worker cases.
+- Worker coverage includes enabling during a running turn, following later turns,
+  waiting for actual exhaustion, reset-time recovery, cancellation, and one send.
+- UI coverage verifies per-chat toggle state, clickability, cancellation, and
+  disabled states during mutation and dispatch.
 - DEV build/install suite: four tests passed, including DEV-only app-visible tool
   registration and rejection of an unbound panel.
 - Live bridge read with the app's bundled runtime returned account identity,
   usage eligibility, and Codex limit buckets without requesting a model turn.
 - Control preview inspected at 600px and 320px; neither had horizontal overflow.
 
-Installed locally as `1.10.0-dev.1794197991559.224635`. A smoke test against the
+The original probe was installed locally as `1.10.0-dev.1794197991559.224635`. A smoke test against the
 installed package verified the bundled runtime path, panel-only probe tool,
 monitor refresh, supplied bridge, and live account/thread reads. It requested
-zero model turns and armed no pending probe. Restart the desktop app to replace
-already-running DEV MCP processes with this version.
+zero model turns and armed no pending probe. Reconnect DEV to replace already-running MCP processes.
 
 The live send and actual capped-account reset test are intentionally left to the
 explicit controls above. The earlier

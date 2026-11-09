@@ -25,9 +25,9 @@ test('30-second test sends once to the exact host and target without changing mo
  assert.equal(f.state.sent.length,1);assert.equal(f.state.sent[0].source,'source');assert.equal(f.state.sent[0].args.threadId,'target');assert.equal(f.state.sent[0].args.hostId,'local');assert.equal(f.state.sent[0].args.model,undefined);assert.match(f.state.sent[0].args.prompt,/Reply only/);assert.equal(f.probe.status('target').request.phase,'sent');
 });
 test('reset waits for exhausted windows and live capacity instead of assuming time means reset',async t=>{
- const f=fixture(t);await assert.rejects(f.probe.arm('target','source','reset'),/No exhausted/);
+ const f=fixture(t);
  f.state.usage.ordinaryUsageAllowed=false;f.state.usage.rateLimitsByLimitId.codex.primary.usedPercent=100;
- await f.probe.arm('target','source','reset');f.advance(55000);await f.probe.tick();assert.equal(f.state.sent.length,0);
+ await f.probe.arm('target','source','reset');await f.probe.tick();f.advance(55000);await f.probe.tick();assert.equal(f.state.sent.length,0);
  f.state.usage.ordinaryUsageAllowed=true;f.state.usage.rateLimitsByLimitId.codex.primary.usedPercent=0;await f.probe.tick();assert.equal(f.state.sent.length,1);assert.match(f.state.sent[0].args.prompt,/Continue the task/);
 });
 test('additional exhausted buckets prevent an early send',async t=>{
@@ -61,4 +61,26 @@ test('a dead process sending claim is marked uncertain, never replayed',async t=
 });
 test('expiry and cancellation prevent delivery; busy targets cannot be armed',async t=>{
  const f=fixture(t);f.state.thread.turns[0].status='inProgress';await assert.rejects(f.probe.arm('target','source','test'),/idle/);f.state.thread.turns[0].status='failed';await f.probe.arm('target','source','test');f.advance(25*3600000);await f.probe.tick();assert.equal(f.probe.status('target').request.phase,'expired');assert.equal(f.state.sent.length,0);
+});
+
+test('chat toggle can be enabled during work and follows turns until usage runs out',async t=>{
+ const f=fixture(t);f.state.thread.turns[0].status='inProgress';
+ await f.probe.arm('target','source','reset');await f.probe.tick();
+ f.state.thread.turns=[{id:'next-turn',status:'completed'}];f.advance(30000);await f.probe.tick();
+ assert.equal(f.probe.status('target').request.waitingForLimit,true);assert.equal(f.state.sent.length,0);
+ f.state.usage.ordinaryUsageAllowed=false;f.state.usage.rateLimitsByLimitId.codex.primary.usedPercent=100;
+ f.state.thread.turns[0].status='inProgress';await f.probe.tick();assert.equal(f.probe.status('target').request.waitingForLimit,true);
+ f.state.thread.turns[0].status='failed';await f.probe.tick();assert.equal(f.probe.status('target').request.waitingForLimit,false);
+ f.advance(30000);f.state.usage.ordinaryUsageAllowed=true;f.state.usage.rateLimitsByLimitId.codex.primary.usedPercent=0;
+ await f.probe.tick();await f.probe.tick();assert.equal(f.state.sent.length,1);assert.equal(f.probe.status('target').request.phase,'sent');
+});
+test('toggle cancellation and manual continuation after exhausted usage prevent dispatch',async t=>{
+ const f=fixture(t);await f.probe.arm('target','source','reset');f.probe.cancel('target');await f.probe.tick();assert.equal(f.state.sent.length,0);
+ await f.probe.arm('target','source','reset');f.state.usage.rateLimitsByLimitId.codex.primary.usedPercent=100;await f.probe.tick();
+ f.state.thread.turns=[{id:'manual',status:'inProgress'}];await f.probe.tick();assert.equal(f.probe.status('target').request.phase,'cancelled');assert.equal(f.state.sent.length,0);
+});
+test('unknown reset time waits without dispatch and recovers when supplied',async t=>{
+ const f=fixture(t);f.state.usage.rateLimitsByLimitId.codex.primary={usedPercent:100};await f.probe.arm('target','source','reset');await f.probe.tick();
+ assert.match(f.probe.status('target').request.message,/known usage reset/);assert.equal(f.state.sent.length,0);
+ f.state.usage.rateLimitsByLimitId.codex.primary.resetsAt=150;await f.probe.tick();assert.equal(f.probe.status('target').request.waitingForLimit,false);
 });

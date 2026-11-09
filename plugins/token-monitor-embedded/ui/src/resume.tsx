@@ -5,17 +5,17 @@ export type ResumeAction='test'|'reset'|'cancel';
 export function ResumeControls({value,threadId,title,busy,error,onAction}:{value?:ResumeView;threadId?:string;title?:string;busy:boolean;error?:string;onAction:(action:ResumeAction)=>void}){
   const candidate=value?.request,request=candidate?.threadId===threadId?candidate:undefined;
   const pending=request?.phase==='armed'||request?.phase==='sending';
-  return <details className="resume-probe"><summary>DEV · Resume after reset test</summary>
+  return <section className="resume-probe" aria-label="Resume after usage reset">
     <p>Target: <strong>{title??'Choose a chat'}</strong></p>
-    <p>Arm only after the target chat stops. One message will be sent through the app’s existing connection. Keep the desktop app running and the computer awake; this panel may be closed. Restarting cancels pending work.</p>
+    <label><input type="checkbox" role="switch" checked={!!pending&&request?.mode==='reset'} disabled={busy||!threadId||request?.phase==='sending'||!!pending&&request?.mode==='test'} onChange={e=>onAction(e.target.checked?'reset':'cancel')}/> Resume this chat after usage reset</label>
+    <p>Turn on now and keep working in this chat. After usage runs out and the chat stops, send one continuation when capacity returns, then turn off. Keep the app running and computer awake.</p>
     <div className="resume-actions">
       <button disabled={busy||pending||!threadId||!value?.available} onClick={()=>onAction('test')}>Send harmless test in 30 seconds</button>
-      <button disabled={busy||pending||!threadId||!value?.available} onClick={()=>onAction('reset')}>Resume this chat after usage reset</button>
       <button disabled={busy||request?.phase!=='armed'} onClick={()=>onAction('cancel')}>Cancel pending resume</button>
     </div>
-    {!value?.available&&<p role="status">App tools bridge unavailable in this DEV process. Restart the app and reopen DEV.</p>}
-    {request&&<p role="status"><strong>{request.phase}</strong> · {request.message}<br/>Earliest send: {new Date(request.notBefore).toLocaleString()}{request.checkedAt&&<> · Last check: {new Date(request.checkedAt).toLocaleTimeString()}</>}<br/>Probe: <code>{request.id}</code></p>}
+    {value?.available===false&&<p role="status">App tools bridge unavailable. Rebuild and install DEV from this app session, then reopen the panel.</p>}
+    {request&&<p role="status"><strong>{request.phase}</strong> · {request.message}<br/>{request.waitingForLimit?'Waiting for exhausted usage':`Earliest send: ${new Date(request.notBefore).toLocaleString()}`}{request.checkedAt&&<> · Last check: {new Date(request.checkedAt).toLocaleTimeString()}</>}<br/>Probe: <code>{request.id}</code></p>}
     {error&&<p role="alert" className="warning">{error}</p>}
-    <p>The 30-second test asks for a fixed acknowledgement only. Reset mode asks the chat to continue its task. Both require fresh usage availability. A new user turn cancels pending work. Delivery is attempted once; verify the response in the target chat. Goal resumption is still experimental.</p>
-  </details>;
+    <p>The 30-second test asks for a fixed acknowledgement only. Reset mode asks the chat to continue its task. Both require fresh usage availability. You can keep sending messages before a limit is detected. Manually continuing after the limit is detected cancels the pending resume. Restarting the app cancels it too. Delivery is attempted once; verify the response in the target chat. Goal resumption is still experimental.</p>
+  </section>;
 }

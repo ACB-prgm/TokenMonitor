@@ -28,6 +28,8 @@ test('DEV builds have isolated identity/state and serve the real panel over MCP'
     const config=await json(path.join(first.pluginRoot,'.mcp.json'));
     assert.deepEqual(Object.keys(config.mcpServers),['token-monitor-dev']);
     assert.equal(config.mcpServers['token-monitor-dev'].command,process.execPath);
+    assert.deepEqual(config.mcpServers['token-monitor-dev'].env,Object.fromEntries(['CODEX_APP_TOOLS_PIPE_PATH','CODEX_APP_TOOLS_CALLER_HOST_ID'].flatMap(key=>process.env[key]?[[key,process.env[key]]]:[])));
+    assert.equal(Object.keys(config.mcpServers['token-monitor-dev'].env).some(key=>/KEY|TOKEN|SECRET/.test(key)),false);
     const {hooks}=await json(path.join(first.pluginRoot,'hooks/hooks.json'));
     assert.equal(hooks.UserPromptSubmit,undefined);assert.equal(Object.keys(hooks).length,5);
     const {stateRoot}=await import(pathToFileURL(path.join(first.pluginRoot,'server/dist/platform.mjs')));
@@ -55,6 +57,7 @@ test('DEV builds have isolated identity/state and serve the real panel over MCP'
     assert.match(panel.contents[0].text,/<title>Token Monitor DEV<\/title>/);
     assert.match(panel.contents[0].text,/Token Monitor DEV/);
     assert.match(panel.contents[0].text,/Send harmless test in 30 seconds/);
+    assert.match(panel.contents[0].text,/Resume this chat after usage reset/);
     assert.doesNotMatch(panel.contents[0].text,/process\.env\.TOKEN_MONITOR/);
     const second=await buildDev({marketplaceRoot});
     assert.notEqual(first.version,second.version);

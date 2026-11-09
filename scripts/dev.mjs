@@ -27,7 +27,9 @@ export async function buildDev({marketplaceRoot=path.join(repo,'.build/tokenmoni
   await cp(path.join(repo,'plugins/token-monitor-embedded/assets'),path.join(pluginRoot,'assets'),{recursive:true});
   for(const name of ['LICENSE','NOTICE']) await cp(path.join(repo,name),path.join(pluginRoot,name));
   await writeJSON(path.join(pluginRoot,'.mcp.json'),{mcpServers:{[pluginName]:{
-    command:process.execPath,args:['./server/dist/index.mjs'],cwd:'.'
+    command:process.execPath,args:['./server/dist/index.mjs'],cwd:'.',
+    // shortcut: bridge belongs to this app session; rebuild DEV after restarting the app.
+    env:Object.fromEntries(['CODEX_APP_TOOLS_PIPE_PATH','CODEX_APP_TOOLS_CALLER_HOST_ID'].flatMap(key=>process.env[key]?[[key,process.env[key]]]:[]))
   }}});
   // Keep DEV metadata current without requesting a second automatic panel.
   const hookCommand=process.platform==='win32'

@@ -89,6 +89,12 @@ require waiting for the old process to exit before an abandoned claim is cleared
   usage eligibility, and Codex limit buckets without requesting a model turn.
 - Control preview inspected at 600px and 320px; neither had horizontal overflow.
 
+Installed locally as `1.10.0-dev.1794197991559.224635`. A smoke test against the
+installed package verified the bundled runtime path, panel-only probe tool,
+monitor refresh, supplied bridge, and live account/thread reads. It requested
+zero model turns and armed no pending probe. Restart the desktop app to replace
+already-running DEV MCP processes with this version.
+
 The live send and actual capped-account reset test are intentionally left to the
 explicit controls above. The earlier
 [feasibility investigation](RESUME-AFTER-RESET-INVESTIGATION.md) describes the

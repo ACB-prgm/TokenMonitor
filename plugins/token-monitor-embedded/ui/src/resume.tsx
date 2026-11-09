@@ -13,7 +13,7 @@ export function ResumeControls({value,threadId,title,busy,error,onAction}:{value
       <button disabled={busy||pending||!threadId||!value?.available} onClick={()=>onAction('test')}>Send harmless test in 30 seconds</button>
       <button disabled={busy||request?.phase!=='armed'} onClick={()=>onAction('cancel')}>Cancel pending resume</button>
     </div>
-    {value?.available===false&&<p role="status">App tools bridge unavailable. Rebuild and install DEV from this app session, then reopen the panel.</p>}
+    {value?.available===false&&<p role="status">App tools bridge unavailable. Reconnect Token Monitor DEV or restart Codex, then reopen the panel.</p>}
     {request&&<p role="status"><strong>{request.phase}</strong> · {request.message}<br/>{request.waitingForLimit?'Waiting for exhausted usage':`Earliest send: ${new Date(request.notBefore).toLocaleString()}`}{request.checkedAt&&<> · Last check: {new Date(request.checkedAt).toLocaleTimeString()}</>}<br/>Probe: <code>{request.id}</code></p>}
     {error&&<p role="alert" className="warning">{error}</p>}
     <p>The 30-second test asks for a fixed acknowledgement only. Reset mode asks the chat to continue its task. Both require fresh usage availability. You can keep sending messages before a limit is detected. Manually continuing after the limit is detected cancels the pending resume. Restarting the app cancels it too. Delivery is attempted once; verify the response in the target chat. Goal resumption is still experimental.</p>

@@ -21,18 +21,15 @@ test('DEV builds have isolated identity/state and serve the real panel over MCP'
   const original=await readFile(stableManifest,'utf8');
   let client;
   try {
-    const originalPipe=process.env.CODEX_APP_TOOLS_PIPE_PATH;
-    let first;
-    try{process.env.CODEX_APP_TOOLS_PIPE_PATH='/tmp/dev-bridge-fixture.sock';first=await buildDev({marketplaceRoot});}
-    finally{if(originalPipe===undefined)delete process.env.CODEX_APP_TOOLS_PIPE_PATH;else process.env.CODEX_APP_TOOLS_PIPE_PATH=originalPipe;}
+    const first=await buildDev({marketplaceRoot});
     const manifest=await json(path.join(first.pluginRoot,'.codex-plugin/plugin.json'));
     assert.equal(manifest.name,'token-monitor-dev');assert.equal(manifest.interface.displayName,'Token Monitor DEV');
     assert.match(manifest.version,/^\d+\.\d+\.\d+-dev\.\d+\.\d+$/);
     const config=await json(path.join(first.pluginRoot,'.mcp.json'));
     assert.deepEqual(Object.keys(config.mcpServers),['token-monitor-dev']);
     assert.equal(config.mcpServers['token-monitor-dev'].command,process.execPath);
-    assert.deepEqual(config.mcpServers['token-monitor-dev'].env,Object.fromEntries(['CODEX_APP_TOOLS_PIPE_PATH','CODEX_APP_TOOLS_CALLER_HOST_ID'].flatMap(key=>{const value=key==='CODEX_APP_TOOLS_PIPE_PATH'?'/tmp/dev-bridge-fixture.sock':process.env[key];return value?[[key,value]]:[];})));
-    assert.equal(Object.keys(config.mcpServers['token-monitor-dev'].env).some(key=>/KEY|TOKEN|SECRET/.test(key)),false);
+    assert.deepEqual(config.mcpServers['token-monitor-dev'].env_vars,['CODEX_APP_TOOLS_PIPE_PATH','CODEX_APP_TOOLS_CALLER_HOST_ID']);
+    assert.equal(config.mcpServers['token-monitor-dev'].env,undefined);
     const {hooks}=await json(path.join(first.pluginRoot,'hooks/hooks.json'));
     assert.equal(hooks.UserPromptSubmit,undefined);assert.equal(Object.keys(hooks).length,5);
     const {stateRoot}=await import(pathToFileURL(path.join(first.pluginRoot,'server/dist/platform.mjs')));

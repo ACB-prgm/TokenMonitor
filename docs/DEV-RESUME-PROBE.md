@@ -54,15 +54,17 @@ Build and install this experiment with:
 /Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node scripts/dev.mjs --install
 ```
 
-The DEV build records that executable in the MCP configuration and hooks. It
-also explicitly passes the current app-supplied bridge pipe and caller host into
-the MCP environment: the app does not inherit those variables into plugin servers.
-No other environment values are copied. It must remain at that path. Other hosts may reject the bridge or not
-supply it; the UI reports those failures. The pipe belongs to the current app session. After an app restart, rebuild and
-reinstall DEV from that session. Reconnect the DEV plugin server to load an updated
-installation; restarting the entire app can invalidate the saved pipe. This is a
-DEV-only shortcut pending a supported persistent host integration. Regular `npm run dev` uses whichever
-Node runs npm and can therefore produce a DEV build without working bridge access.
+The DEV build records that executable in the MCP configuration and hooks. Its
+`env_vars` allowlist asks Codex to pass the current app-supplied bridge pipe and
+caller host when starting the MCP process. No session-specific address is saved
+in the package, so restarting Codex refreshes the bridge without rebuilding DEV.
+The executable must remain at that path. Other hosts may reject the bridge or
+not supply it; the UI reports those failures. Reconnect DEV after installing an
+update. Regular `npm run dev` uses whichever Node runs npm and can therefore
+produce a DEV build without working bridge access.
+
+Bridge reconnection does not restore pending resumes: restarting still cancels
+them, and you must explicitly turn the selected chat's toggle back on.
 
 The worker checks every 15 seconds while its MCP process remains alive. It checks
 the latest turn before waiting and again immediately before dispatch. It requires
@@ -76,8 +78,8 @@ Claims and outcomes are stored in
 `~/.codex/token-monitor-dev/resume-probe.sqlite` (or the configured `CODEX_HOME`).
 A unique pending claim per target and an atomic transition to `sending` prevent
 duplicate sends across panels/processes. Uncertain sends are never replayed.
-The database stores request metadata, not credentials or tool outputs. The current pipe path is stored only in the DEV
-MCP configuration.
+The database stores request metadata, not credentials or tool outputs. The pipe
+path is inherited only at runtime and is not stored in the DEV package.
 Pending requests expire after at least 24 hours, or one hour after their expected
 reset if later. Crash recovery marks abandoned sends uncertain; PID reuse can
 require waiting for the old process to exit before an abandoned claim is cleared.
@@ -108,8 +110,8 @@ remaining Continue-button and goal-state questions.
 ## Per-chat toggle update (November 9)
 
 The original installed MCP processes lacked `CODEX_APP_TOOLS_PIPE_PATH`, which
-made the old buttons disabled. The updated DEV package explicitly forwards the
-supplied bridge into its MCP configuration. The toggle itself remains clickable
+made the old buttons disabled. The updated DEV package requests the
+supplied bridge through its MCP environment allowlist. The toggle itself remains clickable
 so bridge failures produce an actionable error instead of a silently disabled
 control. Reset mode now accepts running chats and follows new turns until it
 observes an exhausted window and a stopped turn.
@@ -120,3 +122,19 @@ with its configured environment, then read live usage and this chat through the
 bundled Node runtime. It requested no model turns and armed no continuation.
 The same socket check needs an unsandboxed local runtime; the shell sandbox blocks
 it. An actual capped-account continuation still needs the manual overnight test.
+
+## Automatic bridge refresh (November 9)
+
+DEV now uses the documented MCP `env_vars` field instead of saving bridge values
+at build time. The bundled app-tools plugin uses the same inheritance mechanism.
+Two fresh Codex app-server processes passed different supplied bridge values into
+an unchanged MCP configuration. A separate live check used the installed DEV
+adapter through Codex's MCP launcher and read current usage and this chat with no
+model turn or armed continuation. Four DEV tests, 18 resume/UI tests, TypeScript,
+and documentation checks passed.
+
+Installed DEV: `1.10.0-dev.1794241588912.510495`. Full desktop restart and a real
+capped-account continuation remain manual checks. Pending continuations still
+cancel on process shutdown; reconnection does not silently re-arm them.
+
+See [MCP environment inheritance](https://developers.openai.com/api/docs/guides/agents-api/tools/plugins#authenticate-mcp-servers).

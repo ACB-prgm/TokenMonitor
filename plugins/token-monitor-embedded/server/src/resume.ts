@@ -14,7 +14,7 @@ export class AppBridge {
       const socket=net.createConnection(this.pipe!);let buffer=Buffer.alloc(0),finished=false;
       const finish=(error?:Error,value?:unknown)=>{if(finished)return;finished=true;clearTimeout(timer);socket.destroy();error?reject(error):resolve(value);};
       const timer=setTimeout(()=>finish(Error('App bridge timed out; delivery may be unknown.')),15000);
-      socket.on('error',()=>finish(Error('App bridge unavailable. Rebuild DEV in this app session and reconnect the plugin.')));
+      socket.on('error',()=>finish(Error('App bridge unavailable. Reconnect Token Monitor DEV or restart Codex to refresh the app connection.')));
       socket.on('close',()=>finish(Error('App bridge closed; delivery may be unknown.')));
       socket.on('connect',()=>{const body=Buffer.from(JSON.stringify({jsonrpc:'2.0',id:1,method,params})),header=Buffer.alloc(4);header.writeUInt32LE(body.length);socket.write(Buffer.concat([header,body]));});
       socket.on('data',chunk=>{

@@ -67,3 +67,17 @@ test('attribution deduplicates text and rebuilds surviving compaction history',(
 });
 test('collector is in-process and close releases all entries',async()=>{const f=fixture(),c=new Collector(f.home);await c.request('state',{taskId:f.id});assert.equal(c.store.activeCollectorCount,1);assert.equal('child' in c,false);c.close();assert.equal(c.store.activeCollectorCount,0);});
 
+test('collector forecast uses comparison readiness and suppresses guidance during import or history errors',async()=>{
+ const f=fixture(),c=new Collector(f.home);
+ let efficiency={comparisonReady:true,progress:{running:false},turns:{other:[{model:'m',turns:20,calls:40}]},paybacks:[]},fail=false;
+ c.store.snapshot=()=>({available:true,compactions:[],lastCall:new Date().toISOString(),turnStats:{epochCompleted:4,models:[{model:'m',turns:5,calls:20}]},compactionValue:{model:'m',status:'available',breakEvenCalls:6,completedCalls:20,horizonCalls:20,netSavingsUsd:.1,assumptions:{pricingAvailable:true,contextLimitKnown:true,growth:{source:'thread'},output:{fallback:false}}}});
+ c.store.efficiency={snapshot:async()=>{if(fail)throw new Error('storage unavailable');return efficiency;},close(){}};
+ try{
+  const forecast=async()=>(await c.request('state',{taskId:f.id})).state.compactionTurnPayback;
+  assert.equal((await forecast()).status,'available');
+  efficiency.comparisonReady=false;assert.equal((await forecast()).status,'unavailable');
+  efficiency.comparisonReady=true;efficiency.progress.running=true;assert.equal((await forecast()).status,'unavailable');
+  efficiency.progress.running=false;assert.equal((await forecast()).status,'available');
+  fail=true;assert.equal((await forecast()).status,'unavailable');
+ }finally{c.close();}
+});

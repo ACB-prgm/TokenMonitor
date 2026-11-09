@@ -102,3 +102,32 @@ test('compactions occupy separate gray slots in Cost and Tokens, with inspectabl
  const unknown=render({...s,compactions:s.compactions.map(c=>({...c,totalCost:undefined}))});assert.match(unknown,/compaction-unpriced/);assert.doesNotMatch(unknown,/NaN|Infinity/);
  const only=render({...s,samples:[],callCount:0,compactions:[s.compactions[0]]});assert.match(only,/compaction-bar/);
 });
+
+test('payback diamonds mark the exact call in every mode and reuse call inspection',()=>{
+ const p=parser();for(let i=0;i<5;i++)p.consume(call(i));
+ const timestamp='2026-11-04T00:00:00.500Z';
+ const compaction={timestamp,callPosition:.5};
+ const payback={timestamp,valid:true,breakEven:2,calls:4,net:.1};
+ const s={...p.snapshot({id:'test',title:'Test'}),panelId:'test',status:'Monitoring',compactions:[compaction],efficiency:{thread:{calls:5,priced:0,inputPriced:0,cost:0,inputCost:0,overhead:0,evaluable:0,netSavings:0,paybackRate:null,costPerCall:null,contextPerCall:null},periods:{},progress:{running:false},paybacks:[payback],threadCompactions:[compaction]}};
+ const chart=html=>html.match(/<section class="history"[\s\S]*?<\/svg>/)[0];
+ for(const mode of ['Cost','Tokens','Context','KPIs']){
+  const html=render(s,mode),svg=chart(html);
+  assert.equal((svg.match(/class="payback-marker"/g)??[]).length,1);
+  // Five calls plus the compaction slot: the third call is at x=351.
+  assert.match(svg,/class="payback-marker" d="M351,126l4,4l-4,4l-4,-4z"/);
+  assert.match(svg,/aria-label="Call 3[^\"]*Compaction reached estimated break-even · 2 calls after compaction/);
+  assert.match(html,/◇: estimated compaction break-even/);
+  const selected=render(s,mode,{hovered:null,focused:`2:${s.samples[2].timestamp}`,pinned:null,closing:false});
+  assert.match(selected,/Estimated cumulative savings covered its cost at this call/);
+  assert.match(selected,/Later costs can still reduce savings/);
+ }
+ const cropped={...s,samples:s.samples.slice(2),compactions:[]};
+ assert.match(chart(render(cropped)),/class="payback-marker" d="M45,126/);
+ for(const change of [{valid:false},{breakEven:null},{breakEven:0},{breakEven:5}]){
+  assert.doesNotMatch(chart(render({...s,efficiency:{...s.efficiency,paybacks:[{...payback,...change}]}})),/class="payback-marker"/);
+ }
+ assert.doesNotMatch(chart(render({...s,samples:s.samples.slice(3)})),/class="payback-marker"/);
+ assert.doesNotMatch(chart(render({...s,compactions:[],efficiency:{...s.efficiency,threadCompactions:[]}})),/class="payback-marker"/);
+ const single=render({...s,efficiency:{...s.efficiency,paybacks:[{...payback,breakEven:1}]}});
+ assert.match(single,/1 call after compaction/);assert.doesNotMatch(single,/1 calls after compaction/);
+});

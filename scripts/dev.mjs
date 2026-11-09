@@ -75,6 +75,6 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
   console.log(`Built Token Monitor DEV ${result.version}\n${result.pluginRoot}`);
   if(flags.includes('--install')) {
     await installDev(result);
-    console.log('Restart Codex, review DEV hook trust, then ask to open Token Monitor DEV.');
+    console.log('Reconnect Token Monitor DEV and reopen its panel. Keep this app session running: restarting Codex invalidates the DEV resume bridge and requires rebuilding. Review DEV hook trust if prompted.');
   } else console.log('Run npm run dev to build and install locally.');
 }

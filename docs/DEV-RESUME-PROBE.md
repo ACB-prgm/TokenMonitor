@@ -104,3 +104,19 @@ The live send and actual capped-account reset test are intentionally left to the
 explicit controls above. The earlier
 [feasibility investigation](RESUME-AFTER-RESET-INVESTIGATION.md) describes the
 remaining Continue-button and goal-state questions.
+
+## Per-chat toggle update (November 9)
+
+The original installed MCP processes lacked `CODEX_APP_TOOLS_PIPE_PATH`, which
+made the old buttons disabled. The updated DEV package explicitly forwards the
+supplied bridge into its MCP configuration. The toggle itself remains clickable
+so bridge failures produce an actionable error instead of a silently disabled
+control. Reset mode now accepts running chats and follows new turns until it
+observes an exhausted window and a stopped turn.
+
+Validation: 293 plugin tests and four DEV build/install tests passed, along with
+TypeScript and documentation checks. An installed-package smoke test started MCP
+with its configured environment, then read live usage and this chat through the
+bundled Node runtime. It requested no model turns and armed no continuation.
+The same socket check needs an unsandboxed local runtime; the shell sandbox blocks
+it. An actual capped-account continuation still needs the manual overnight test.

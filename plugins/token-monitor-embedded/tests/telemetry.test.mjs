@@ -75,7 +75,7 @@ test('fallback follows background completion and compaction clears cached/fresh 
  }finally{await f.client.close();}
 });
 test('disconnect retains metrics and recovery reconstructs a host-bound panel',async()=>{
- let broken=false;const backend={request:async(method)=>{
+ let broken=false;const backend={account:{bind(){}},request:async(method)=>{
   if(broken)throw new Error('offline');if(method==='catalog')return {hostMatched:true,tasks:[{id:'a',title:'A'}]};
   return {revision:'r1',state:{task:{id:'a',title:'A'},input:123,available:true,status:'Monitoring selected task'}};
  }};
@@ -86,7 +86,7 @@ test('disconnect retains metrics and recovery reconstructs a host-bound panel',a
 });
 
 test('concurrent task switches cannot label a stale snapshot as the newly selected task',async()=>{
- const backend={request:async(method,p)=>{
+ const backend={account:{bind(){}},request:async(method,p)=>{
   if(method==='catalog')return {hostMatched:false,tasks:[{id:'a',title:'A'},{id:'b',title:'B'}]};
   if(p.taskId==='a')await new Promise(resolve=>setTimeout(resolve,35));
   return {revision:p.taskId,state:{task:{id:p.taskId,title:p.taskId},status:'Monitoring selected task',input:p.taskId==='a'?100:200}};
@@ -100,7 +100,7 @@ test('concurrent task switches cannot label a stale snapshot as the newly select
 for(const manual of [false,true])test(`${manual?'manual':'hook'} task switch failure never reuses another task's snapshot or revision`,async()=>{
  let selected='a',broken=false;
  const requests=[];
- const backend={request:async(method,input)=>{
+ const backend={account:{bind(){}},request:async(method,input)=>{
   if(method==='catalog')return {hostMatched:false,tasks:[{id:'a',title:'A'},{id:'b',title:'B'}],latestHook:{id:selected,sequence:selected}};
   requests.push({...input});
   if(broken)throw new Error('offline');

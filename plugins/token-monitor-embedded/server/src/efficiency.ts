@@ -1,6 +1,5 @@
 import type {CompactionDetail} from './compaction.js';
 import type {TurnAggregate} from './turns.js';
-import {compareCohorts,type Comparisons} from './comparisons.js';
 import {HistoryDatabase} from './history-database.js';
 import {statSync} from 'node:fs';
 import {importHistory,type HistoryFile} from './history-import.js';
@@ -9,11 +8,14 @@ import {TelemetryParser} from './parser.js';
 import {pricingMetadata,pricingTableSignature} from './metrics.js';
 import {acceptedTranscript,privateDirectory,stateRoot} from './platform.js';
 export const historyBasis=JSON.stringify({version:5,table:pricingTableSignature,...pricingMetadata});
+function compatibleBasis(definition:string):boolean {
+ try{const {version,...basis}=JSON.parse(definition),{version:current,...expected}=JSON.parse(historyBasis);return [3,4,current].includes(version)&&Object.keys(basis).length===Object.keys(expected).length&&Object.entries(expected).every(([key,value])=>basis[key]===value);}catch{return false;}
+}
 export {HistoryBuilder,summarize,callBucket,inputCost} from './history-builder.js';
 import {HistoryBuilder,summarize,callBucket,type NumericCall,type Bucket,type Payback,type ThreadHistory,type Summary} from './history-builder.js';
 export type {NumericCall,Bucket,Payback,ThreadHistory,Summary} from './history-builder.js';
 export function weekly(buckets:Bucket[]){const weeks=new Map<string,Bucket[]>();for(const b of buckets){const d=new Date(b.timestamp.slice(0,10));d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);const key=d.toISOString().slice(0,10);weeks.set(key,[...(weeks.get(key)??[]),b]);}return [...weeks].sort().map(([week,b])=>({week,summary:summarize(b)}));}
-export type Efficiency={threadCompactions?:CompactionDetail[];history?:{retentionDays:number;frozenThreads:number;detailCalls?:number;sourceAvailable?:boolean};threadSamples?:NumericCall[];turns?:{other:TurnAggregate[]};reference?:{buckets:Bucket[];ready:boolean};comparisons?:{thread:Comparisons;periods:Record<string,Comparisons>};activation:string;baseline:Summary;baselineCalls:number;baselineProvisional:boolean;baselineStart?:string;baselineEnd?:string;thread:Summary;threadWeeks:ReturnType<typeof weekly>;threadModels:{model:string;summary:Summary;baseline:Summary}[];baselineModels:{model:string;summary:Summary}[];paybacks:Payback[];periods:Record<string,{summary:Summary;previousSummary?:Summary;models:{model:string;summary:Summary}[];weeks:{week:string;summary:Summary}[]}>;rolling:Summary;threadRolling:Summary;progress:{processed:number;total:number;running:boolean;failed:number};pricingBasis:string};
+export type Efficiency={threadCompactions?:CompactionDetail[];history?:{retentionDays:number;frozenThreads:number;detailCalls?:number;sourceAvailable?:boolean};threadSamples?:NumericCall[];turns?:{other:TurnAggregate[];ready:boolean};activation:string;comparisonReady:boolean;thread:Summary;threadWeeks:ReturnType<typeof weekly>;paybacks:Payback[];periods:Record<string,{summary:Summary;previousSummary?:Summary;models:{model:string;summary:Summary}[];weeks:{week:string;summary:Summary}[]}>;rolling:Summary;threadRolling:Summary;progress:{processed:number;total:number;running:boolean;failed:number};pricingBasis:string};
 export class EfficiencyStore {
  private snapshots=new Map<string,{value:Efficiency;bytes:number;expires:number}>();private snapshotBytes=0;
  private basisKey:string;readonly storage:HistoryDatabase;private scannedRevision?:string;private scanKey='';private lastScan=-Infinity;private lastMaintenance=-Infinity;private busy=false;private closed=false;private processed=0;private failed=0;private total=0;private importComplete=false;
@@ -82,18 +84,15 @@ export class EfficiencyStore {
  snapshot(id?:string,now=Date.now()):Efficiency {
   const db=this.storage,key=JSON.stringify([db.revision(),id,Math.floor(now/864e5),this.importComplete,this.busy,this.failed,this.processed,this.total]);
   const cached=this.snapshots.get(key);if(cached&&now<cached.expires){this.snapshots.delete(key);this.snapshots.set(key,cached);return cached.value;}
-  const frozenThreads=this.frozenThreads(),ready=this.importComplete&&!this.failed&&!frozenThreads;
-  const all=db.buckets(),threadBuckets=id?db.buckets(id):[],reference=db.buckets(undefined,undefined,undefined,id);
-  const threadPays=id?db.outcomes(id):[],referencePays=db.outcomes(undefined,undefined,undefined,id);
-  const periods:Efficiency['periods']={},comparisonPeriods:Record<string,Comparisons>={};
+  const frozenThreads=this.frozenThreads(),compatible=(db.statement("SELECT DISTINCT b.definition FROM history_sources s LEFT JOIN history_basis b ON s.basis=b.id WHERE s.basis<>? AND s.id NOT LIKE '~%'").all(this.basisKey) as {definition:string}[]).every(b=>compatibleBasis(b.definition)),ready=this.importComplete&&!this.failed&&compatible;
+  const all=db.buckets(),threadBuckets=id?db.buckets(id):[];
+  const threadPays=id?db.outcomes(id):[];
+  const periods:Efficiency['periods']={};
   const models=(bs:Bucket[])=>[...new Set(bs.map(b=>b.model??'Unknown model'))].map(model=>({model,summary:summarize(bs.filter(b=>(b.model??'Unknown model')===model))}));
   for(const days of ['7','30','all']){
    const start=days==='all'?undefined:new Date(now-(Number(days)-1)*864e5).toISOString().slice(0,10);
    const previousStart=start?new Date(Date.parse(start)-Number(days)*864e5).toISOString().slice(0,10):undefined;
    const buckets=start?db.buckets(undefined,start):all,earlier=start?db.buckets(undefined,previousStart,start):[];
-   const comparisons=compareCohorts(buckets,earlier,ready);
-   comparisonPeriods[days]={...comparisons,referenceLabel:start?`Previous ${days} days: ${previousStart} to before ${start} (UTC); excludes the selected period.`:'No earlier reference exists when All history is selected.'};
-   if(days==='all')for(const metric of ['cost','context','cache'] as const)comparisons[metric].reason='All history has no earlier comparison period';
    periods[days]={summary:summarize(buckets,db.outcomes(undefined,start)),previousSummary:start?summarize(earlier):undefined,models:models(buckets),weeks:[]};
   }
   const last=db.recent(),threadLast=id?db.recent(id):[];
@@ -103,9 +102,8 @@ export class EfficiencyStore {
 
   const paybacks=id?(db.statement('SELECT timestamp,completed,reason,calls,breakEven,net,valid FROM history_paybacks WHERE source=? ORDER BY timestamp DESC LIMIT 100').all(id) as any[]).reverse().map(p=>({...p,completed:p.completed??undefined,reason:p.reason??undefined,valid:!!p.valid})):[];
   const result:Efficiency={threadCompactions:id?db.compactionDetails(id):[],history:{retentionDays:90,frozenThreads,detailCalls:id?Number(db.statement('SELECT COUNT(*) AS n FROM history_samples WHERE source=?').get(id)!.n):0,sourceAvailable:id?db.statement('SELECT available FROM history_catalogue WHERE source=?').get(id)?.available!==0:undefined},threadSamples:threadLast,activation:String(db.statement('SELECT value FROM meta WHERE key=?').get('activation')!.value),
-   turns:{other:db.turns(id)},reference:{buckets:reference,ready},comparisons:{thread:{...compareCohorts(threadBuckets,reference,ready),referenceLabel:'All available calls from other chats; excludes the selected chat.'},periods:comparisonPeriods},
-   baseline:summarize(reference,referencePays),baselineCalls:reference.reduce((n,b)=>n+b.calls,0),baselineProvisional:!ready,
-   thread:summarize(threadBuckets,threadPays),threadWeeks:[],threadModels:models(threadBuckets).map(m=>({...m,baseline:summarize(reference.filter(b=>(b.model??'Unknown model')===m.model))})),baselineModels:models(reference),paybacks,periods,
+   turns:{other:db.turns(id),ready:this.importComplete&&!this.failed&&!this.busy},comparisonReady:ready,
+   thread:summarize(threadBuckets,threadPays),threadWeeks:[],paybacks,periods,
    rolling:summarize(withCharges(last)),threadRolling:summarize(withCharges(threadLast,id)),progress:{processed:this.processed,total:this.total,running:this.busy,failed:this.failed},pricingBasis:`Current bundled rates · verified ${pricingMetadata.verifiedAt} · effective ${pricingMetadata.configurationEffectiveDate}${frozenThreads?` · ${frozenThreads} saved chats retain their original calculation basis`:''}`};
   const bytes=Buffer.byteLength(JSON.stringify(result));if(bytes<=16*1024*1024){const prior=this.snapshots.get(key);if(prior)this.snapshotBytes-=prior.bytes;this.snapshots.set(key,{value:result,bytes,expires:Math.min((Math.floor(now/864e5)+1)*864e5,db.nextClosure())});this.snapshotBytes+=bytes;}
   while(this.snapshots.size>64||this.snapshotBytes>16*1024*1024){const oldest=this.snapshots.keys().next().value!;this.snapshotBytes-=this.snapshots.get(oldest)!.bytes;this.snapshots.delete(oldest);}return result;

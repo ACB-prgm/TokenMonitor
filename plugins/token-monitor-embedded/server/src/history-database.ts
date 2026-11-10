@@ -44,7 +44,6 @@ export class HistoryDatabase {
    const data=JSON.parse(row.data) as ThreadHistory;
    this.transaction(()=>{if(!this.statement('SELECT 1 FROM history_sources WHERE id=?').get(row.id))this.save(row.id,row.signature,row.basis,data);this.statement('DELETE FROM threads WHERE id=?').run(row.id);});
   }
-  const baseline=this.statement("SELECT value FROM meta WHERE key='baseline'").get()?.value;if(typeof baseline==='string'){try{const samples=JSON.parse(baseline);if(Array.isArray(samples)&&samples.every(s=>s&&typeof s.timestamp==='string'&&typeof s.input==='number')){const summary={samples:samples.length,start:samples[0]?.timestamp??null,end:samples.at(-1)?.timestamp??null,input:0,cached:0,cacheWrite:0,output:0,reasoning:0};for(const sample of samples)for(const key of ['input','cached','cacheWrite','output','reasoning'] as const)if(Number.isFinite(sample[key])&&sample[key]>=0)summary[key]+=sample[key];this.transaction(()=>{this.statement("INSERT OR REPLACE INTO meta VALUES('legacy_baseline_summary',?)").run(JSON.stringify(summary));this.statement("DELETE FROM meta WHERE key='baseline'").run();});}}catch{/* Preserve unrecognized metadata rather than treating it as numeric detail. */}}
  }
  private save(id:string,signature:string,basis:string,d:ThreadHistory,detail:NumericCall[]=[...d.first,...d.last]){
   for(const table of ['history_buckets','history_samples','history_paybacks','history_turns','history_charges'])this.statement(`DELETE FROM ${table} WHERE source=?`).run(id);

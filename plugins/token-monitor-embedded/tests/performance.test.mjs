@@ -28,7 +28,7 @@ test('only capacity pressure produces guidance without an eligible forecast',()=
  }
 });
 
-const forecastState=(epoch=4)=>state({available:true,compactionTurnPayback:{status:'available',turns:4,calls:6,epochCompleted:epoch,threadTurns:5,historyTurns:20,threadMean:4,historyMean:2,bufferedMean:1.5,source:'both',buffer:.75,netSavingsUsd:.1}});
+const forecastState=(epoch=4)=>state({available:true,compactionTurnPayback:{status:'available',turns:4,calls:6,epochCompleted:epoch,threadTurns:5,historyTurns:20,threadMean:4,historyMean:2,bufferedMean:1.5,source:'thread',buffer:.75,netSavingsUsd:.1}});
 test('compaction guidance appears at equality and above epoch threshold, never earlier',()=>{
  for(const [epoch,expected] of [[3,false],[4,true],[5,true]]){const list=efficiencyInsights(forecastState(epoch));assert.equal(list.some(i=>i.id==='compaction-forecast'),expected);}
  const item=efficiencyInsights(forecastState())[0];assert.match(item.title,/≈4 more turns/);assert.match(item.recommendation,/Continuing work that needs this chat’s context/);assert.match(item.recommendation,/Starting unrelated work/);assert.match(item.details.map(d=>d.value).join(' '),/heuristic, not a statistical confidence bound/);

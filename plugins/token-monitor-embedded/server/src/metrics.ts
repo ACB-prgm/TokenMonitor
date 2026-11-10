@@ -127,7 +127,7 @@ export function rollingContextGrowth(samples:readonly ForecastObservation[],pers
     previous=s;
   }
   const recent=intervals.slice(-D.CONTEXT_GROWTH_WINDOW),observed=recent.length?recent.reduce((sum,n)=>sum+n/recent.length,0):undefined;
-  const source=recent.length>=D.CONTEXT_GROWTH_WINDOW?'thread':personal&&finiteNonnegative(personal.observed)&&Number.isInteger(personal.sampleCount)&&personal.sampleCount>=D.MIN_PERSONAL_GROWTH_SAMPLES?'user':'default';
+  const source=recent.length>=D.CONTEXT_GROWTH_WINDOW-1?'thread':personal&&finiteNonnegative(personal.observed)&&Number.isInteger(personal.sampleCount)&&personal.sampleCount>=D.MIN_PERSONAL_GROWTH_SAMPLES?'user':'default';
   return {observed,effective:source==='thread'?observed!:source==='user'?personal!.observed:D.DEFAULT_GROWTH_PER_CALL,
     sampleCount:recent.length,minimumApplied:false,fallback:source==='default',source,...(source==='user'?{userSampleCount:personal!.sampleCount}:{})};
 }

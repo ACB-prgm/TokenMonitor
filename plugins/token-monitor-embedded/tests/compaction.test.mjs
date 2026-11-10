@@ -5,18 +5,20 @@ import {TelemetryParser} from '../server/dist/parser.mjs';
 const base={currentInput:168000,model:'gpt-6.1-sol',growthPerCall:2000,typicalOutput:3000};
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-12,`${a} != ${b}`);
 const samples=(inputs,outputs=inputs.map(()=>3000))=>inputs.map((input,i)=>({timestamp:new Date(Date.UTC(2026,9,20,0,0,i)).toISOString(),input,output:outputs[i],outputRecorded:true,model:base.model}));
-test('growth uses personal history until 20 intervals, then the unclamped latest-20 mean',()=>{
+test('growth uses current context at 20 calls, retaining an unclamped latest-20 interval mean',()=>{
  const personal={observed:1750,sampleCount:500};
  const zero=samples(Array(21).fill(10000));
- assert.equal(growth(zero.slice(0,20),personal).effective,1750);
- assert.equal(growth(zero.slice(0,20),personal).source,'user');
+ assert.equal(growth(zero.slice(0,19),personal).effective,1750);
+ assert.equal(growth(zero.slice(0,19),personal).source,'user');
+ assert.equal(growth(zero.slice(0,20),personal).source,'thread');
+ assert.equal(growth(zero.slice(0,20),personal).sampleCount,19);
  assert.equal(growth(zero,personal).effective,0);
  assert.equal(growth(zero).source,'thread');
  assert.equal(growth(zero).minimumApplied,false);
- assert.equal(growth(zero.slice(0,20)).effective,2000);
- assert.equal(growth(zero.slice(0,20)).fallback,true);
- assert.equal(growth(zero.slice(0,20),{observed:0,sampleCount:20}).effective,0);
- for(const invalid of [{observed:900,sampleCount:19},{observed:NaN,sampleCount:30},{observed:-1,sampleCount:30}])assert.equal(growth(zero.slice(0,20),invalid).source,'default');
+ assert.equal(growth(zero.slice(0,19)).effective,2000);
+ assert.equal(growth(zero.slice(0,19)).fallback,true);
+ assert.equal(growth(zero.slice(0,19),{observed:0,sampleCount:20}).effective,0);
+ for(const invalid of [{observed:900,sampleCount:19},{observed:NaN,sampleCount:30},{observed:-1,sampleCount:30}])assert.equal(growth(zero.slice(0,19),invalid).source,'default');
  const large=samples(Array.from({length:21},(_,i)=>10000+i*30000));
  assert.equal(growth(large).effective,30000);
  const window=samples(Array.from({length:24},(_,i)=>i===0?0:100000+i*3000));

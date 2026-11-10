@@ -35,15 +35,18 @@ test('legacy user-message boundaries work; mismatched ids and non-user triggers 
  start(c,'bad');c.consume('turn_context',{turn_id:'different'},stamp);c.call('m');end(c,'bad');assert.deepEqual(c.snapshot().models,[{model:'m',turns:1,calls:1}]);
 });
 const args=(extra={})=>({forecast:{model:'m',status:'available',breakEvenCalls:6,completedCalls:20,horizonCalls:20,netSavingsUsd:.1,assumptions:{pricingAvailable:true,contextLimitKnown:true,growth:{source:'thread'},output:{fallback:false}}},stats:{epochCompleted:4,models:[{model:'m',turns:5,calls:20}]},history:[{model:'m',turns:20,calls:40}],ready:true,available:true,lastCall:stamp,now,...extra});
-test('turn conversion uses smaller qualifying mean, 25% buffer and upward rounding',()=>{
- const r=estimateTurnPayback(args());assert.equal(r.source,'both');assert.equal(r.threadMean,4);assert.equal(r.historyMean,2);assert.equal(r.bufferedMean,1.5);assert.equal(r.turns,4);
- assert.equal(estimateTurnPayback(args({stats:{epochCompleted:4,models:[{model:'m',turns:4,calls:16}]}})).source,'history');
- assert.equal(estimateTurnPayback(args({history:[{model:'m',turns:19,calls:38}]})).source,'thread');
+test('turn conversion prefers 20 current calls independently and uses history only below that threshold',()=>{
+ const r=estimateTurnPayback(args({ready:false}));assert.equal(r.source,'thread');assert.equal(r.threadMean,4);assert.equal(r.historyMean,2);assert.equal(r.bufferedMean,3);assert.equal(r.turns,2);
+ assert.equal(estimateTurnPayback(args({stats:{epochCompleted:4,models:[{model:'m',turns:4,calls:19}]}})).source,'history');
+ assert.equal(estimateTurnPayback(args({stats:{epochCompleted:4,models:[{model:'m',turns:1,calls:20}]},history:[]})).source,'thread');
  assert.equal(estimateTurnPayback(args({stats:{epochCompleted:4,models:[]},history:[]})).status,'unavailable');
- const f=args().forecast;assert.equal(estimateTurnPayback(args({forecast:{...f,breakEvenCalls:7}})).turns,5);
+ assert.equal(estimateTurnPayback(args({stats:{epochCompleted:4,models:[]},ready:false})).status,'unavailable');
+ assert.equal(estimateTurnPayback(args({stats:{epochCompleted:4,models:[]},history:[{model:'m',turns:2,calls:20}]})).source,'history');
+ assert.equal(estimateTurnPayback(args({stats:{epochCompleted:4,models:[]},history:[{model:'m',turns:2,calls:19}]})).status,'unavailable');
+ const f=args().forecast;assert.equal(estimateTurnPayback(args({forecast:{...f,breakEvenCalls:7}})).turns,3);
 });
 test('guidance gates require recent telemetry, observed forecasts and recovered prior compaction',()=>{
- const original=args();for(const extra of [{ready:false},{available:false},{ended:true},{lastCall:undefined},{lastCall:new Date(now-7200001).toISOString()},{lastCall:new Date(now+1).toISOString()},{isCompacting:true},{awaitingPostCompactionCall:true},{hasCompactions:true},{hasCompactions:true,latestPayback:{valid:true,breakEven:null}},{hasCompactions:true,latestPayback:{valid:false,breakEven:1}},{hasCompactions:true,latestCompaction:stamp,latestPayback:{valid:true,breakEven:1,timestamp:'older'}}])assert.equal(estimateTurnPayback(args(extra)).status,'unavailable',JSON.stringify(extra));
+ const original=args();for(const extra of [{available:false},{ended:true},{lastCall:undefined},{lastCall:new Date(now-7200001).toISOString()},{lastCall:new Date(now+1).toISOString()},{isCompacting:true},{awaitingPostCompactionCall:true},{hasCompactions:true},{hasCompactions:true,latestPayback:{valid:true,breakEven:null}},{hasCompactions:true,latestPayback:{valid:false,breakEven:1}},{hasCompactions:true,latestCompaction:stamp,latestPayback:{valid:true,breakEven:1,timestamp:'older'}}])assert.equal(estimateTurnPayback(args(extra)).status,'unavailable',JSON.stringify(extra));
  for(const patch of [{status:'limited'},{breakEvenCalls:null},{breakEvenCalls:21},{breakEvenCalls:Infinity},{netSavingsUsd:0},{netSavingsUsd:-1},{netSavingsUsd:.0000009},{assumptions:{...original.forecast.assumptions,growth:{source:'default'}}},{assumptions:{...original.forecast.assumptions,growth:{}}},{assumptions:{...original.forecast.assumptions,output:{}}},{assumptions:{...original.forecast.assumptions,output:{fallback:true}}},{assumptions:{...original.forecast.assumptions,contextLimitKnown:false}}])assert.equal(estimateTurnPayback(args({forecast:{...original.forecast,...patch}})).status,'unavailable');
  assert.equal(estimateTurnPayback(args({hasCompactions:true,latestPayback:{valid:true,breakEven:2}})).status,'available');
  assert.equal(estimateTurnPayback(args({forecast:{...original.forecast,netSavingsUsd:.000001}})).status,'available');
@@ -59,7 +62,7 @@ test('versioned historical replay preserves totals, restart and other-chat-only 
  const db=new DatabaseSync(path.join(home,process.env.TOKEN_MONITOR_DEV==='1'?'token-monitor-dev':'token-monitor-embedded','efficiency.sqlite'));db.prepare('UPDATE threads SET basis=?').run('legacy-format');db.prepare('INSERT OR REPLACE INTO meta VALUES (?,?)').run('baseline','frozen-record');db.close();
  s=new EfficiencyStore(home);await s.scan(home,files,true,now+6000);const after=s.snapshot('a',now);assert.deepEqual(after.thread,before.thread);assert.deepEqual(after.periods.all.summary,before.periods.all.summary);assert.deepEqual(after.turns,before.turns);s.close();
  const read=new DatabaseSync(path.join(home,process.env.TOKEN_MONITOR_DEV==='1'?'token-monitor-dev':'token-monitor-embedded','efficiency.sqlite'));assert.equal(read.prepare("SELECT value FROM meta WHERE key='baseline'").get().value,'frozen-record');read.close();
- s=new EfficiencyStore(home);assert.deepEqual(s.snapshot('a',now).turns,before.turns);s.close();
+ s=new EfficiencyStore(home);assert.deepEqual(s.snapshot('a',now).turns.other,before.turns.other);assert.equal(s.snapshot('a',now).turns.ready,false);s.close();
  }finally{rmSync(home,{recursive:true,force:true});}
 });
 

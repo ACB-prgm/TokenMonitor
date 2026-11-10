@@ -122,6 +122,8 @@ export class TelemetryStore {
     if(session)entry.session=session;entry.touched=now;let available=!!session;
     try{if(session)entry.tail.read(source,()=>entry!.parser=new TelemetryParser(),line=>entry!.parser.consume(line));}catch{available=false;}
     const metadata=this.metadata(id)[0]??{},s=entry.session,p=entry.parser;
+    const local=p.snapshot(this.task(s,cleanTitle(s.title)??cleanTitle(metadata.title)??p.title),s,metadata,available,now);
+    if(local.compactionValue.assumptions.growth?.source==='thread')return local;
     const personal=this.growthHistory.read(()=>[{id,file:source},...this.metadata(undefined,true).filter(row=>row.id!==id).map(row=>({id:row.id,file:row.rollout_path}))],p.lastCallModel,p.growthIntervals,now);
     return p.snapshot(this.task(s,cleanTitle(s.title)??cleanTitle(metadata.title)??p.title),s,metadata,available,now,personal);
   }
@@ -143,7 +145,7 @@ export class Collector {
     const local=this.catalogue.read(()=>this.store.allowanceFiles(params.taskId as string));
     const snapshot=this.store.snapshot(params.taskId);let efficiency:Efficiency|undefined,historyError:string|undefined;try{efficiency=await this.store.efficiency?.snapshot(params.taskId);if(efficiency)this.lastHistory={id:params.taskId,value:efficiency};}catch{historyError='Historical storage is temporarily unavailable. Showing committed data where available; collection will retry automatically.';if(this.lastHistory?.id===params.taskId)efficiency=this.lastHistory.value;}
     const fallback=!snapshot&&efficiency?{task:this.store.taskMetadata(params.taskId),callCount:efficiency.thread.calls,compactions:efficiency.threadCompactions?.filter(c=>c.callPosition>=efficiency.thread.calls-(efficiency.threadSamples?.length??0)),samples:efficiency.threadSamples?.map(s=>({...s,price:price(s)})),lastCall:efficiency.threadSamples?.at(-1)?.timestamp,status:'Saved history · source transcript unavailable',available:false}:undefined;
-    const state={...fallback,...snapshot,efficiency,historyError,compactionTurnPayback:estimateTurnPayback({forecast:snapshot?.compactionValue,stats:snapshot?.turnStats,history:efficiency?.turns?.other,ready:!historyError&&!!efficiency?.comparisonReady&&!efficiency.progress.running,available:snapshot?.available===true,lastCall:snapshot?.lastCall,now:Date.now(),isCompacting:snapshot?.isCompacting,awaitingPostCompactionCall:snapshot?.awaitingPostCompactionCall,ended:snapshot?.sessionEnded,latestPayback:efficiency?.paybacks.at(-1),latestCompaction:snapshot?.compactions.at(-1)?.timestamp,hasCompactions:!!(efficiency?.paybacks.length||snapshot?.compactions.length)})};
+    const state={...fallback,...snapshot,efficiency,historyError,compactionTurnPayback:estimateTurnPayback({forecast:snapshot?.compactionValue,stats:snapshot?.turnStats,history:efficiency?.turns?.other,ready:!historyError&&efficiency?.turns?.ready===true,available:snapshot?.available===true,lastCall:snapshot?.lastCall,now:Date.now(),isCompacting:snapshot?.isCompacting,awaitingPostCompactionCall:snapshot?.awaitingPostCompactionCall,ended:snapshot?.sessionEnded,latestPayback:snapshot?.latestPayback,latestCompaction:snapshot?.compactions.at(-1)?.timestamp,hasCompactions:!!snapshot?.compactions.length})};
     const allowances=chooseAllowances(this.account.snapshot(),local);
     state.fiveHour=allowances.fiveHour;state.weekly=allowances.weekly;
     const revision=createHash('sha256').update(JSON.stringify(state)).digest('hex');return params.revision===revision?{revision,unchanged:true}:{revision,state};

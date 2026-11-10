@@ -40,21 +40,22 @@ export class TurnCounter {
  call(model?:string){const a=this.active;if(!a)return;a.calls++;if(!model||a.model&&a.model!==model)a.invalid=true;else a.model=model;}
  snapshot():TurnStats{return {models:[...this.groups.values()].map(g=>({...g})),epochCompleted:this.epochCompleted};}
 }
-export type TurnPayback={status:'available'|'unavailable';reason?:string;turns?:number;calls?:number;epochCompleted:number;threadTurns:number;historyTurns:number;threadMean?:number;historyMean?:number;bufferedMean?:number;source?:'thread'|'history'|'both';buffer:number;netSavingsUsd?:number};
+export type TurnPayback={status:'available'|'unavailable';reason?:string;turns?:number;calls?:number;epochCompleted:number;threadTurns:number;historyTurns:number;threadMean?:number;historyMean?:number;bufferedMean?:number;source?:'thread'|'history';buffer:number;netSavingsUsd?:number};
 export function estimateTurnPayback(input:{forecast?:CompactionForecast;stats?:TurnStats;history?:TurnAggregate[];ready:boolean;available:boolean;lastCall?:string;now:number;isCompacting?:boolean;awaitingPostCompactionCall?:boolean;ended?:boolean;latestPayback?:{valid:boolean;breakEven:number|null;timestamp?:string};latestCompaction?:string;hasCompactions?:boolean}):TurnPayback {
  const f=input.forecast,model=f?.model,t=input.stats?.models.find(g=>g.model===model),h=input.history?.find(g=>g.model===model);
  const mean=(g?:TurnAggregate)=>g&&g.turns>0&&Number.isFinite(g.calls)&&g.calls>0?g.calls/g.turns:undefined;
  const result:TurnPayback={status:'unavailable',epochCompleted:input.stats?.epochCompleted??0,threadTurns:t?.turns??0,historyTurns:h?.turns??0,threadMean:mean(t),historyMean:mean(h),buffer:.75};
  const fail=(reason:string)=>({...result,reason});
  if(!input.available||input.ended||!date(input.lastCall)||input.now-Date.parse(input.lastCall!)>7200000||input.now<Date.parse(input.lastCall!))return fail('Current transcript or recent call unavailable');
- if(!input.ready)return fail('Historical turn import is incomplete');
  if(input.isCompacting||input.awaitingPostCompactionCall)return fail('Waiting for reliable post-compaction telemetry');
  if(input.hasCompactions&&(!input.latestPayback?.valid||input.latestPayback.breakEven==null||input.latestCompaction&&input.latestPayback.timestamp!==input.latestCompaction))return fail('The latest compaction has not demonstrably reached break-even');
  if(!f||f.status!=='available'||!f.assumptions.pricingAvailable||!f.assumptions.contextLimitKnown||!f.assumptions.growth||!['thread','user'].includes(f.assumptions.growth.source)||f.assumptions.growth.fallback===true||!f.assumptions.output||f.assumptions.output.fallback!==false)return fail('Observed growth, output, context and pricing are required');
  if(f.breakEvenCalls==null||!Number.isFinite(f.breakEvenCalls)||f.breakEvenCalls<=0||f.breakEvenCalls>f.completedCalls||f.breakEvenCalls>f.horizonCalls||f.netSavingsUsd==null||!Number.isFinite(f.netSavingsUsd)||f.netSavingsUsd<.000001)return fail('No supported positive payback within the forecast horizon');
- const thread=result.threadTurns>=5&&result.threadMean!=null,history=result.historyTurns>=20&&result.historyMean!=null;
- if(!thread&&!history)return fail('Need 5 completed same-model turns in this chat or 20 in other chats');
- const rate=Math.min(...[thread?result.threadMean!:Infinity,history?result.historyMean!:Infinity])*.75;
+ const thread=!!t&&t.calls>=20&&result.threadMean!=null;
+ if(!thread&&!input.ready)return fail('Historical turn import is incomplete');
+ const history=!!h&&h.calls>=20&&result.historyMean!=null;
+ if(!thread&&!history)return fail('Need 20 calls in completed same-model turns in this chat or other chats');
+ const rate=(thread?result.threadMean!:result.historyMean!)*.75;
  if(!Number.isFinite(rate)||rate<=0)return fail('Calls per turn unavailable');
- return {...result,status:'available',turns:Math.ceil(f.breakEvenCalls/rate),calls:f.breakEvenCalls,bufferedMean:rate,source:thread&&history?'both':thread?'thread':'history',netSavingsUsd:f.netSavingsUsd};
+ return {...result,status:'available',turns:Math.ceil(f.breakEvenCalls/rate),calls:f.breakEvenCalls,bufferedMean:rate,source:thread?'thread':'history',netSavingsUsd:f.netSavingsUsd};
 }

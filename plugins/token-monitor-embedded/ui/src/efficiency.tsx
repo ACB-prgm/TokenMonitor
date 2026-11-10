@@ -46,7 +46,7 @@ export function EfficiencyBanner({data:d}:{data?:Efficiency}){
  {!!d?.progress?.failed&&<p role="status">Historical collection is paused after a storage or import error. Showing committed totals; collection will retry automatically.</p>}
  {!d&&<p role="status">Historical analytics are loading.</p>}
  <p className="kpi-comparison-scope">{comparisonLabel}: all local chats in the selected period, including this thread · {all?.calls??0} recorded calls. Thread uses its full recorded history.{matchesHistory&&' This period includes all available history, so Comp matches All history.'}</p>
- {Boolean(d?.history?.frozenThreads)&&<p className="provisional-explanation">Saved history includes {d?.history?.frozenThreads} chats with estimates from an earlier calculation version. Their original totals are retained; comparisons remain provisional.</p>}
+ {Boolean(d?.history?.frozenThreads)&&<p className="provisional-explanation">Saved history includes {d?.history?.frozenThreads} chats with estimates from an earlier calculation version. Their original estimated totals are retained.</p>}
  {d?.history?.sourceAvailable===false&&<p>Source transcript unavailable. Saved summaries remain available; {d.history.detailCalls??0} of {d.thread.calls} recorded calls retain numeric detail.</p>}
  <dl className="kpi-definitions">
  <div><dt>Context / call <span>(USD)</span></dt><dd>Average estimated input cost per call: fresh, cached and cache-write input. Repeated context reads count each time; output and reasoning tokens are excluded.<p className="kpi-formula">Total input cost ÷ calls with priceable input</p><Calculation thread={t} all={all} metric="context" comparisonLabel={comparisonLabel}/></dd></div>

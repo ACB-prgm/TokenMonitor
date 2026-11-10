@@ -7,7 +7,7 @@ import {createRequire} from 'node:module';
 import {mkdtempSync,rmSync,writeFileSync,mkdirSync} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-const bundle=await build({entryPoints:[fileURLToPath(new URL('../server/src/efficiency.ts',import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);const {HistoryBuilder,EfficiencyStore,inputCost,callBucket,summarize}=mod.exports;
+const bundle=await build({entryPoints:[fileURLToPath(new URL('../server/src/efficiency.ts',import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);const {historyBasis,HistoryBuilder,EfficiencyStore,inputCost,callBucket,summarize}=mod.exports;
 const sample=(i=0,extra={})=>({timestamp:new Date(Date.UTC(2026,9,1,0,0,i)).toISOString(),input:100000,cached:90000,cacheWrite:0,output:1000,reasoning:500,cachedRecorded:true,cacheWriteRecorded:true,outputRecorded:true,reasoningRecorded:true,model:'gpt-6.1-sol',...extra});
 test('independent input pricing, missing output, reasoning inclusion and weighted averages',()=>{assert.equal(inputCost(sample()),.029);assert.equal(inputCost(sample(0,{outputRecorded:false})),.029);assert.equal(callBucket(sample()).cost,.039);assert.equal(inputCost(sample(0,{cachedRecorded:false})),undefined);const s=summarize([callBucket(sample()),callBucket(sample(1,{model:'gpt-6-astra'}))]);assert.equal(s.costPerCall,(.039+.24)/2);assert.equal(s.calls,2);assert.equal(summarize([]).paybackRate,null);});
 test('rolling buffers are exactly 100 normal calls and legacy first-call buffers retain earliest calls',()=>{const b=new HistoryBuilder();for(let i=0;i<150;i++)b.call(sample(i));assert.equal(b.data.first.length,100);assert.equal(b.data.last.length,100);assert.equal(b.data.first[0].timestamp,sample(0).timestamp);assert.equal(b.data.last[0].timestamp,sample(50).timestamp);assert.equal(summarize(b.data.buckets).calls,150);});
@@ -73,5 +73,21 @@ test('active imports, import errors and frozen calculation bases keep comparison
   const oldBasis=store.storage.internBasis(JSON.stringify({version:0}));
   store.storage.statement('UPDATE history_sources SET basis=? WHERE id=?').run(oldBasis,'a');store.storage.changed();
   const frozen=store.snapshot('a');assert.equal(frozen.history.frozenThreads,1);assert.equal(frozen.comparisonReady,false);assert.equal(frozen.thread.calls,20);
+ }finally{store?.close();rmSync(home,{recursive:true,force:true});}
+});
+
+test('older estimated calculation bases remain comparable only with matching pricing metadata',async()=>{
+ const home=mkdtempSync(path.join(os.tmpdir(),'efficiency-compatible-'));let store;
+ try{
+  mkdirSync(path.join(home,'sessions'));const files=[transcript(home,'a',20)];store=new EfficiencyStore(home);await store.scan(home,files,true);
+  const basis=JSON.parse(historyBasis);
+  for(const version of [3,4,5]){
+   const id=store.storage.internBasis(JSON.stringify({...basis,version}));store.storage.statement('UPDATE history_sources SET basis=? WHERE id=?').run(id,'a');store.storage.changed();
+   assert.equal(store.snapshot('a').comparisonReady,true);assert.equal(store.snapshot('a').turns.ready,true);
+  }
+  for(const patch of [{version:99},{table:'different rates'},{verifiedAt:'different date'}]){
+   const id=store.storage.internBasis(JSON.stringify({...basis,...patch}));store.storage.statement('UPDATE history_sources SET basis=? WHERE id=?').run(id,'a');store.storage.changed();
+   assert.equal(store.snapshot('a').comparisonReady,false);assert.equal(store.snapshot('a').turns.ready,true);
+  }
  }finally{store?.close();rmSync(home,{recursive:true,force:true});}
 });

@@ -130,7 +130,7 @@ export class TelemetryParser {
     if(isCompacting||this.awaitingPostCompactionCall)compactionValue.limitation='Waiting for a reliable post-compaction call';
     return {version:1,task,turnStats:this.turns.snapshot(),sessionEnded:session.ended===true,status:!available?'Transcript unavailable · showing last recorded call':isCompacting?'Compacting…':session.ended===true?'Session ended · last recorded call':'Monitoring selected task',available,
       model:this.lastCallModel??session.model??metadata.model,effort:this.lastCallEffort??metadata.effort,input,cached,fresh,contextLimit:this.contextLimit,contextPercent,callCount:this.callCount,samples:this.samples,
-      compactionCost:this.kpiHistory?summarize(this.kpiHistory.data.buckets).overhead:undefined,compactions:this.compactions.filter(c=>c.callPosition>=this.callCount-this.samples.length),isCompacting,awaitingPostCompactionCall:this.awaitingPostCompactionCall,fiveHour:this.fiveHour,weekly:this.weekly,
+      latestPayback:this.kpiHistory?.data.paybacks.at(-1),compactionCost:this.kpiHistory?summarize(this.kpiHistory.data.buckets).overhead:undefined,compactions:this.compactions.filter(c=>c.callPosition>=this.callCount-this.samples.length),isCompacting,awaitingPostCompactionCall:this.awaitingPostCompactionCall,fiveHour:this.fiveHour,weekly:this.weekly,
       attribution:this.contextAttribution,usage:this.usage,outputTotals:this.outputTotals,lastEvent:this.lastEvent,lastCall:last?.timestamp,
       cacheTemperature:cacheTemperature(last?.timestamp,now),contextHealth:health(contextPercent,[40,50,65,75]),freshHealth:fresh!=null&&fresh>=2000&&input&&fresh<=input?health(fresh/input*100,[10,25,37.5,50]):0,compactionValue};
   }

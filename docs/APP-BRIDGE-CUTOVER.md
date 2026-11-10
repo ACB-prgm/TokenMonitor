@@ -111,3 +111,10 @@ account/host isolation, long-chat compaction recovery and checkpoint restoration
 and uncertain-delivery status/restart checks. TypeScript and documentation checks
 also pass. The live acceptance limits above remain open; these regression tests
 do not establish capped-work recovery or full desktop restart acceptance.
+
+Installed review-fix DEV: `1.10.0-dev.1794322195321.102910`, built from
+`0a8c716`. Its installed-package read-only smoke check confirmed live bridge
+usage, the correct selected chat, existing Current thread permission, and removal
+of the old probe tool. No preferences were enabled and no continuation messages
+were sent. Reconnect DEV and reopen its panel to replace an old running server.
+Stable was untouched and nothing was pushed.

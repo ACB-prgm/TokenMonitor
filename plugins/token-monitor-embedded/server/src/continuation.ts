@@ -67,7 +67,7 @@ export class Continuation {
   }
   const {p,all,enabled,mode}=this.preference(u.accountId,t.hostId,threadId);
   const fresh=this.now()-this.usage.observedAt<=30000;
-  return {available:this.usage.available,threadId,enabled,mode,message:all?'All local threads: waiting for confirmed usage-limit interruptions.':p?.message??'Off',offer:!enabled&&fresh&&!!q&&q.used>=90&&!!q.reset&&Date.parse(q.reset)>this.now()&&p?.dismissed!==q.reset};
+  return {available:this.usage.available,threadId,enabled,mode,message:!enabled?'Off':p?.message&&!['Off','On for all threads'].includes(p.message)?p.message:all?'All local threads: waiting for confirmed usage-limit interruptions.':p?.message??'Off',offer:!enabled&&fresh&&!!q&&q.used>=90&&!!q.reset&&Date.parse(q.reset)>this.now()&&p?.dismissed!==q.reset};
  }
  async tick(){
   if(this.running||this.stopped)return;this.running=true;

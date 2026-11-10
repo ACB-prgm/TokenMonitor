@@ -133,3 +133,19 @@ test('separate processes changing Current thread leave exactly one scope enabled
   assert.equal(rows.length,1);assert.ok(['a','b'].includes(rows[0].thread));
  }finally{f.close();}
 });
+
+test('All threads reports uncertain delivery across restart without replay',async()=>{
+ const f=fixture();try{
+  await f.all();assert.match((await f.view()).message,/All local threads/);
+  failed(f);f.fail();await f.tick();
+  const status=await f.view();assert.equal(status.mode,'all');assert.match(status.message,/Delivery uncertain/);
+  f.restart();await new Promise(r=>setImmediate(r));await f.tick();
+  assert.equal(f.sends,1);assert.equal((await f.view()).mode,'all');assert.match((await f.view()).message,/uncertain/);
+  const db=new DatabaseSync(path.join(f.root,'continuation.sqlite'));
+  for(const message of ['Paused: account changed.','Cannot confirm the failure reason; no continuation will be sent.','Waiting for reset and fresh available capacity.','Continuation sent; still enabled for future limits.']){
+   db.prepare("UPDATE preferences SET message=? WHERE thread='chat'").run(message);
+   assert.equal((await f.view()).message,message);
+  }
+  db.close();
+ }finally{f.close();}
+});

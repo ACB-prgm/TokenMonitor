@@ -42,3 +42,11 @@ test('dropdown exposes all three modes with an accessible label and no chat titl
  const tree=mod.exports.ResumeControls({threadId:'target',title:'PRIVATE TITLE',value:{threadId:'target',available:true,enabled:false,mode:'off'},busy:false,onAction:()=>{}});
  assert.equal(JSON.stringify(tree).includes('PRIVATE TITLE'),false);
 });
+
+test('All threads exposes selected worker outcomes as accessible status',()=>{
+ for(const message of ['Delivery uncertain. Check this chat; this turn will not be retried.','Paused: account changed.','Cannot confirm the failure reason.','Waiting for reset and fresh available capacity.','Continuation sent; still enabled for future limits.']){
+  const tree=mod.exports.ResumeControls({threadId:'target',value:{threadId:'target',available:true,enabled:true,mode:'all',message},busy:false,onAction:()=>{}});
+  assert.ok(nodes(tree).some(n=>n.props?.role==='status'&&n.props.children===message));
+  assert.equal(nodes(tree).find(n=>n.type==='select').props.value,'all');
+ }
+});

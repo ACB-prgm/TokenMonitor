@@ -17,9 +17,9 @@ Costs are estimates using the bundled rate table, not invoices. Subscription all
 
 ## Platforms and installation
 
-Published 1.10.0 packages target macOS Apple silicon (`macos-arm64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Intel macOS and Linux packages are not published for this release. Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop rendering and trusted lifecycle delivery require separate verification.
+Published 1.11.0 packages target macOS Apple silicon (`macos-arm64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Intel macOS and Linux packages are not published for this release. Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop rendering and trusted lifecycle delivery require separate verification.
 
-Version 1.10.0 adds smooth Context / call and Cost / call trends in the Recent calls KPIs tab, a compaction progress indicator, and more reliable saved history and thread titles. **Update and install** is available in Settings → About. See the [release notes](docs/releases/1.10.0/notes.md) and [validation scope](docs/releases/1.10.0/validation.md).
+Version 1.11.0 adds recorded compaction usage and gray history bars, focused compaction guidance, shared live account usage, and optional automatic continuation after a usage reset. **Update and install** is available in Settings → About. See the [release notes](docs/releases/1.11.0/notes.md) and [validation scope](docs/releases/1.11.0/validation.md).
 
 Download a complete `token-monitor-VERSION-TARGET.zip` and its `.sha256` companion from [Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Verify the checksum before extraction, then run the included macOS `install.sh` or Windows `install.ps1`. Restart Codex and review hook trust. The installer requires the existing Codex CLI, but uses the bundled Node runtime.
 

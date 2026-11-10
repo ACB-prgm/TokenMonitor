@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 1.11.0
+
+- Account for verified recorded compaction usage, disclose remaining estimates, and show separate gray compaction bars with break-even markers.
+- Keep spending comparisons in the KPI container and focus insights on context capacity and evidence-backed compaction guidance.
+- Share live app-bridge account usage and add persistent Off, Current thread and All threads continuation settings for confirmed usage-limit interruptions.
+- Harden continuation capacity checks, atomic scope changes, offline revocation, uncertain delivery and restart recovery.
+- Count valid active compactions at break-even and retain recovery checks beyond the visible chart window.
+- Consolidate documentation into canonical guides, references and release records with checked navigation.
+
 - Count valid active compactions as paid back immediately when they reach break-even, while continuing to track savings and validity until the epoch closes.
 
 ## 1.10.0

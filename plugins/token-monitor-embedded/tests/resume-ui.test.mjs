@@ -9,17 +9,17 @@ const mod={exports:{}};new Function('require','module','exports',bundle.outputFi
 function nodes(n){return !n||typeof n!=='object'?[]:[n,...[n.props?.children].flat(Infinity).flatMap(nodes)];}
 function control(value,busy=false,threadId='target'){
  const actions=[],tree=mod.exports.ResumeControls({value,busy,threadId,onAction:a=>actions.push(a)});
- return {actions,switch:nodes(tree).find(n=>n.type==='input'&&n.props.type==='range')};
+ return {actions,switch:nodes(tree).find(n=>n.type==='select')};
 }
 test('per-chat toggle remains clickable without bridge metadata and can be turned off',()=>{
- const off=control({available:true,threadId:'target',enabled:false});assert.equal(off.switch.props.disabled,false);assert.equal(off.switch.props.value,0);
- off.switch.props.onChange({target:{value:'1'}});assert.deepEqual(off.actions,['enable']);
+ const off=control({available:true,threadId:'target',enabled:false});assert.equal(off.switch.props.disabled,false);assert.equal(off.switch.props.value,'off');
+ off.switch.props.onChange({target:{value:'current'}});assert.deepEqual(off.actions,['enable']);
  const on=control({available:true,threadId:'target',enabled:true});
- assert.equal(on.switch.props.value,1);assert.equal(on.switch.props.disabled,false);on.switch.props.onChange({target:{value:'0'}});assert.deepEqual(on.actions,['disable']);
+ assert.equal(on.switch.props.value,'current');assert.equal(on.switch.props.disabled,false);on.switch.props.onChange({target:{value:'off'}});assert.deepEqual(on.actions,['disable']);
 });
 test('toggle reflects selected chat only and blocks interaction during mutation or dispatch',()=>{
- assert.equal(control({available:true,threadId:'other',enabled:true}).switch.props.value,0);
- assert.equal(control({available:true,threadId:'target',enabled:false}).switch.props.value,0);
+ assert.equal(control({available:true,threadId:'other',enabled:true}).switch.props.value,'off');
+ assert.equal(control({available:true,threadId:'target',enabled:false}).switch.props.value,'off');
  assert.equal(control({available:true},true).switch.props.disabled,true);
  assert.equal(control({available:false,threadId:'target',enabled:true}).switch.props.disabled,false);
  assert.equal(control({available:true},false,'').switch.props.disabled,true);
@@ -34,10 +34,11 @@ test('near-limit offer is scoped to the selected chat and exposes enable and dis
  const buttons=nodes(tree).filter(n=>n.type==='button');buttons[0].props.onClick();buttons[1].props.onClick();assert.deepEqual(actions,['enable','dismiss']);
 });
 
-test('slider exposes all three modes with accessible values and no chat title',()=>{
+test('dropdown exposes all three modes with an accessible label and no chat title',()=>{
  const all=control({threadId:'target',available:true,enabled:true,mode:'all'});
- assert.equal(all.switch.props.value,2);assert.equal(all.switch.props['aria-valuetext'],'All threads');
- all.switch.props.onChange({target:{value:'2'}});assert.deepEqual(all.actions,['enable_all']);
+ assert.equal(all.switch.props.value,'all');assert.equal(all.switch.props['aria-label'],'Continue after usage reset');
+ assert.deepEqual(all.switch.props.children.map(n=>[n.props.value,n.props.children]),[['off','Off'],['current','Current thread'],['all','All threads']]);
+ all.switch.props.onChange({target:{value:'all'}});assert.deepEqual(all.actions,['enable_all']);
  const tree=mod.exports.ResumeControls({threadId:'target',title:'PRIVATE TITLE',value:{threadId:'target',available:true,enabled:false,mode:'off'},busy:false,onAction:()=>{}});
  assert.equal(JSON.stringify(tree).includes('PRIVATE TITLE'),false);
 });

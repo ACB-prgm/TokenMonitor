@@ -9,7 +9,7 @@ a continuation or near-limit offer.
 
 ## Settings and behavior
 
-Open Settings and use the **Continue after reset** slider: **Off**, **Current thread**,
+Open Settings and use the **Continue after reset** dropdown: **Off**, **Current thread**,
 or **All threads**. The title is on the left and the control on the right, matching
 other settings. No chat name is repeated. Off disables continuation on this account
 and host; Current thread enables only the selected chat; All threads covers existing
@@ -80,7 +80,7 @@ and absence of the old probe tool and harmless-test UI. It sent no messages and
 enabled no preferences. Reconnect DEV and reopen its panel to replace an already
 running old MCP process. Stable was not published or reinstalled.
 
-The scope slider uses a native three-stop range input with keyboard support and
-accessible value text. All-thread discovery reads the complete local metadata
+The scope dropdown uses a native select with keyboard support and
+an accessible label. All-thread discovery reads the complete local metadata
 index plus discovered local transcripts, excludes archived chats and subagents,
 and retains the same structured-failure and one-attempt-per-turn requirements.

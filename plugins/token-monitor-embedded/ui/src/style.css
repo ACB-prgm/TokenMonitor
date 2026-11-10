@@ -132,4 +132,4 @@ details[open]>summary::before,details[open]>summary .disclosure-caret,
 .resume-actions button { white-space: normal; padding: 7px 10px; }
 
 .payback-marker{fill:var(--bg);stroke:var(--green);stroke-opacity:.8;stroke-width:1.4}
-.continuation-setting{margin:12px 0}.settings-body .continuation-row{align-items:flex-start;gap:12px}.continuation-row>span:first-child{max-width:35%;line-height:1.4}.continuation-slider{display:block;flex:1;min-width:0}.continuation-slider input{display:block;width:100%;margin:1px 0 6px;accent-color:var(--blue)}.continuation-stops{display:flex;justify-content:space-between;gap:4px;font-size:.8em;color:var(--muted)}.continuation-stops span{text-align:center;flex:1}.continuation-stops .selected{color:var(--ink);font-weight:600}.continuation-setting .hint{margin:8px 0 0;line-height:1.4}
+.continuation-setting{margin:12px 0}.settings-body .continuation-row{align-items:flex-start;gap:12px}.continuation-row>span{line-height:1.4}.continuation-row select{max-width:55%}.continuation-setting .hint{margin:8px 0 0;line-height:1.4}

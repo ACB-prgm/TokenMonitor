@@ -13,7 +13,7 @@ export async function checkDocs(root) {
  const seen=new Set();function visit(p){if(seen.has(p))return;seen.add(p);for(const q of graph.get(p)||[])visit(q);}visit(path.join(root,'docs/index.md'));
  for(const p of docs)assert.ok(seen.has(p),'Unreachable document: '+p);
  const version=(await readFile(path.join(root,'VERSION'),'utf8')).trim();for(const name of ['notes','validation'])await exact(path.join(root,'docs/releases',version,name+'.md'));
- assert.ok((await readFile(path.join(root,'CHANGELOG.md'),'utf8')).includes('## '+version+'\n'),'Missing current changelog entry');
+ assert.ok((await readFile(path.join(root,'CHANGELOG.md'),'utf8')).replace(/\r\n/g,'\n').includes('## '+version+'\n'),'Missing current changelog entry');
  return files.length;
 }
 if(process.argv[1]===fileURLToPath(import.meta.url))console.log(`Documentation verified: ${await checkDocs(fileURLToPath(new URL('..',import.meta.url)))} files`);

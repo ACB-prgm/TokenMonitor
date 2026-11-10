@@ -11,6 +11,9 @@ test('documentation checker rejects redirects, broken links, casing and missing 
  try{
   for(const p of ['LICENSE','docs','AGENTS.md','README.md','CONTRIBUTING.md','CHANGELOG.md','VERSION','plugins/token-monitor-embedded/README.md','plugins/token-monitor-embedded/VALIDATION.md','plugins/token-monitor-embedded/server/src','plugins/token-monitor-embedded/ui/src','plugins/token-monitor-embedded/tests','scripts'])await cp(path.join(repo,p),path.join(root,p),{recursive:true});
   await checkDocs(root);
+  const changelog=path.join(root,'CHANGELOG.md'),text=await readFile(changelog,'utf8');
+  await writeFile(changelog,text.replace(/\r?\n/g,'\r\n'));await checkDocs(root);
+  await writeFile(changelog,text);
   const index=path.join(root,'docs/index.md'),original=await readFile(index,'utf8');
   for(const link of ['missing.md','Architecture.md','https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/INSTALL.md']){await writeFile(index,original+`\n[Broken](${link})\n`);await assert.rejects(checkDocs(root),/Missing or wrong-case/);}
   await writeFile(index,original+'\n<!-- compatibility-redirect -->\n');

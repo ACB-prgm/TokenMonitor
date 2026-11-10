@@ -23,7 +23,7 @@ const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint:
 const collector = new Collector();
 const panels = new Panels(collector);
 let continuation:Continuation|undefined;
-const continuations=()=>continuation??=new Continuation(stateRoot(),collector.account,undefined,undefined,id=>!!collector.store.metadata(id,true)[0]?.archived);
+const continuations=()=>continuation??=new Continuation(stateRoot(),collector.account,undefined,undefined,id=>!!collector.store.metadata(id,true)[0]?.archived,()=>collector.store.continuationTargets());
 try{continuations();}catch{/* Settings storage must not prevent local telemetry. */}
 const resumeState=async(panelId:string)=>{try{const {threadId,sourceThreadId}=panels.context(panelId);return threadId&&sourceThreadId?continuations().view(threadId,sourceThreadId):{available:false,enabled:false,offer:false,message:'Choose a chat.'};}catch{return {available:false,enabled:false,offer:false,message:'Continuation settings storage unavailable.'};}};
 process.on('exit',()=>continuation?.close());
@@ -91,7 +91,7 @@ server.registerTool('get_monitor_state', {
 });
 server.registerTool('manage_continuation',{
   title:'Chat continuation settings',description:'Panel-only persistent permission to continue confirmed usage-interrupted work. Never retries an uncertain send.',
-  inputSchema:{panelId:z.string().uuid(),threadId:z.string().min(1).max(200),action:z.enum(['status','enable','disable','dismiss'])},
+  inputSchema:{panelId:z.string().uuid(),threadId:z.string().min(1).max(200),action:z.enum(['status','enable','enable_all','disable','dismiss'])},
   annotations:{readOnlyHint:false,destructiveHint:true,openWorldHint:true},_meta:{ui:{visibility:['app']}},
 },async(args,extra)=>{
   try{

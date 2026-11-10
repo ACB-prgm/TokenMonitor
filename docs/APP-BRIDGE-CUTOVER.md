@@ -9,9 +9,13 @@ a continuation or near-limit offer.
 
 ## Settings and behavior
 
-Open Settings and select **Continue this chat after usage reset**. It defaults
-to off, is scoped to account/host/chat, and stays enabled across restarts and
-successful continuations. Existing DEV probe permissions are not migrated.
+Open Settings and use the **Continue after reset** slider: **Off**, **Current thread**,
+or **All threads**. The title is on the left and the control on the right, matching
+other settings. No chat name is repeated. Off disables continuation on this account
+and host; Current thread enables only the selected chat; All threads covers existing
+and future local chats on this host. The choice persists across restarts and successful
+continuations. Existing per-chat permissions remain until a new scope is selected.
+Existing DEV probe permissions are not migrated.
 The panel offers the same setting at 90% five-hour usage. **Not now** dismisses
 that offer for the selected chat and reset window, including across reopenings.
 
@@ -75,3 +79,8 @@ correct selected chat, default-off continuation settings, the new settings tool,
 and absence of the old probe tool and harmless-test UI. It sent no messages and
 enabled no preferences. Reconnect DEV and reopen its panel to replace an already
 running old MCP process. Stable was not published or reinstalled.
+
+The scope slider uses a native three-stop range input with keyboard support and
+accessible value text. All-thread discovery reads the complete local metadata
+index plus discovered local transcripts, excludes archived chats and subagents,
+and retains the same structured-failure and one-attempt-per-turn requirements.

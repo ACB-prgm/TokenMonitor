@@ -10,8 +10,8 @@ function fixture(){
  const u={accountId:'account',ordinaryUsageAllowed:true,rateLimits:{primary:{usedPercent:90,windowDurationMins:300,resetsAt:1010}}};
  const thread={thread:{id:'chat',kind:'codex',hostId:'local',status:{activeFlags:[]}},turns:[{id:'turn',status:'completed',error:null}]};
  const bridge={available:true,async call(tool){if(tool==='get_usage_limits')return structuredClone(u);if(tool==='read_thread')return structuredClone(thread);if(tool==='send_message_to_thread'){sends++;if(failSend)throw Error('unknown');return {};}}};
- const usage=new BridgeUsage(bridge,()=>now);usage.bind('source');let worker=new Continuation(root,usage,bridge,()=>now,()=>archived);
- return {u,thread,usage,root,get worker(){return worker;},get sends(){return sends;},advance(n=30000){now+=n;},fail(){failSend=true;},archive(){archived=true;},async enable(){return worker.view('chat','source','enable');},async view(action='status',id='chat'){return worker.view(id,'source',action);},async tick(){await worker.tick();},restart(){worker.close();worker=new Continuation(root,usage,bridge,()=>now,()=>archived);},close(){worker.close();usage.close();rmSync(root,{recursive:true,force:true});}};
+ const usage=new BridgeUsage(bridge,()=>now);usage.bind('source');let worker=new Continuation(root,usage,bridge,()=>now,()=>archived,()=>[thread.thread.id]);
+ return {u,thread,usage,root,get worker(){return worker;},get sends(){return sends;},advance(n=30000){now+=n;},fail(){failSend=true;},archive(){archived=true;},async all(){return worker.view('chat','source','enable_all');},async enable(){return worker.view('chat','source','enable');},async view(action='status',id='chat'){return worker.view(id,'source',action);},async tick(){await worker.tick();},restart(){worker.close();worker=new Continuation(root,usage,bridge,()=>now,()=>archived,()=>[thread.thread.id]);},close(){worker.close();usage.close();rmSync(root,{recursive:true,force:true});}};
 }
 const failed=f=>{f.thread.turns[0]={id:'turn',status:'failed',error:{codexErrorInfo:'usageLimitExceeded'}};};
 test('default off, per chat permission, prompt threshold and dismissal persist',async()=>{
@@ -53,5 +53,17 @@ test('weekly exhaustion delays continuation and disabling works when bridge goes
  const f=fixture();try{await f.enable();failed(f);f.u.rateLimits.secondary={usedPercent:100,windowDurationMins:10080,resetsAt:1050};await f.tick();assert.equal(f.sends,0);
  f.advance(60000);f.u.rateLimits.secondary.usedPercent=1;await f.tick();assert.equal(f.sends,1);
  f.usage.close();assert.equal((await f.view()).enabled,true);await f.view('disable');assert.equal((await f.view()).enabled,false);
+ }finally{f.close();}
+});
+
+test('all threads discovers future local threads, persists, and current/off revoke global permission',async()=>{
+ const f=fixture();try{
+  assert.equal((await f.all()).mode,'all');f.restart();assert.equal((await f.view()).mode,'all');
+  f.thread.thread.id='future';f.thread.turns[0]={id:'future-turn',status:'failed',error:{codexErrorInfo:'usageLimitExceeded'}};
+  await new Promise(r=>setImmediate(r));await f.tick();assert.equal(f.sends,1);
+  const off=await f.view('disable','future');assert.equal(off.mode,'off');
+  f.thread.turns[0].id='another';await f.tick();assert.equal(f.sends,1);
+  assert.equal((await f.view('enable','future')).mode,'current');
+  f.thread.thread.id='other';f.thread.turns[0].id='other-turn';await f.tick();assert.equal(f.sends,1);
  }finally{f.close();}
 });

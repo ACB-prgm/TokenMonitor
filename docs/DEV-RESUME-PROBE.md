@@ -5,8 +5,7 @@ See [App bridge cutover](APP-BRIDGE-CUTOVER.md) for current behavior, storage,
 validation commands and remaining acceptance checks.
 
 1. Reconnect Token Monitor DEV after installing an update and reopen the panel.
-2. Verify the selected chat title, open Settings and enable **Continue this chat
-   after usage reset**. New settings default to off; old probes grant no permission.
+2. Verify the selected chat title, open Settings and enable **Continue after reset → Current thread**. New settings default to off; old probes grant no permission.
 3. Work in that chat until it actually fails at a usage limit. An already-idle
    chat no longer qualifies as a test. Keep Codex running and the computer awake.
 4. After reset, verify one continuation message and a completed response. The

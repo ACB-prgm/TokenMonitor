@@ -96,6 +96,7 @@ export class TelemetryStore {
     for(const id of [options.selectedId,options.hostId]){const e=id?items.get(id):undefined;if(e&&!tasks.some(t=>t.id===id))tasks.push(e);}
     return {tasks:tasks.map(({updated,...task})=>task),matchCount:matches.length,shownCount:Math.min(matches.length,100),discovery:{...this.discovery.status,targeting:this.discovery.targeting,index:this.indexStatus,readable:[...items.values()].filter(t=>(t as any).sourceAvailable!==false).length},hostMatched:!!options.hostId&&!!this.resolve(options.hostId),...(hook?{latestHook:{id:hook.session.session_id,sequence:hook.sequence,event:hook.session.hook_event_name??''}}:{})};
   }
+  continuationTargets(){return [...new Set([...this.metadata(undefined,true,true).filter(r=>!r.archived).map(r=>String(r.id)),...Array.from(this.discovery.entries.values()).filter(e=>!e.archived).map(e=>e.id)])];}
   taskMetadata(id:string){const s=this.resolve(id);return s?this.task(s,s.title??this.metadata(id)[0]?.title):this.saved.get(id);}
   async record(payload:unknown):Promise<boolean> {
     if(!payload||typeof payload!=='object')return false;const p=payload as RecordValue;

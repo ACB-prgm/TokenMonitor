@@ -57,7 +57,7 @@ test('DEV builds have isolated identity/state and serve the real panel over MCP'
     assert.match(panel.contents[0].text,/<title>Token Monitor DEV<\/title>/);
     assert.match(panel.contents[0].text,/Token Monitor DEV/);
     assert.doesNotMatch(panel.contents[0].text,/Send harmless test in 30 seconds/);
-    assert.match(panel.contents[0].text,/Continue this chat after usage reset/);
+    assert.match(panel.contents[0].text,/Continue after reset/);
     assert.doesNotMatch(panel.contents[0].text,/process\.env\.TOKEN_MONITOR/);
     const second=await buildDev({marketplaceRoot});
     assert.notEqual(first.version,second.version);

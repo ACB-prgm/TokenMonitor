@@ -9,7 +9,7 @@ export class BridgeUsage {
   get available(){return this.bridge.available&&!!this.source&&!this.closed;}
   get observedAt(){return this.observed;}
   get current(){return this.value;}
-  snapshot():Allowances{return this.value?liveAllowances(this.value,new Date(this.observed).toISOString()):{};}
+  snapshot():Allowances{const values=this.value?liveAllowances(this.value,new Date(this.observed).toISOString()):{};if(this.failures)for(const v of Object.values(values))v.stale=true;return values;}
   async read(force=false){
     if(!this.available)throw Error('Live app usage unavailable.');
     if(this.pending)return this.pending;

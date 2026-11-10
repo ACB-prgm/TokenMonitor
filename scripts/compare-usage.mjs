@@ -5,7 +5,7 @@ import {appendFile} from 'node:fs/promises';
 import {setTimeout as delay} from 'node:timers/promises';
 import {pathToFileURL} from 'node:url';
 import {AppBridge} from '../plugins/token-monitor-embedded/server/dist/app-bridge.mjs';
-import {resolveCodex} from '../plugins/token-monitor-embedded/server/dist/allowances.mjs';
+import {resolveCodex} from '../plugins/token-monitor-embedded/server/dist/legacy-allowances.mjs';
 export function comparable(value){
  const buckets=value?.rateLimitsByLimitId!==undefined?value.rateLimitsByLimitId:{legacy:value?.rateLimits};
  return {ordinaryUsageAllowed:value?.ordinaryUsageAllowed??null,buckets:!buckets||typeof buckets!=='object'?null:Object.fromEntries(Object.entries(buckets).sort(([a],[b])=>a.localeCompare(b)).map(([key,b])=>[key,{primary:window(b?.primary),secondary:window(b?.secondary)}]))};

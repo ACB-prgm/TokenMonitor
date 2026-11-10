@@ -1,5 +1,6 @@
+import {BridgeUsage} from './bridge-usage.js';
 import {estimateTurnPayback} from './turns.js';
-import {AccountLimits,CatalogueAllowances,chooseAllowances} from './allowances.js';
+import {CatalogueAllowances,chooseAllowances} from './allowances.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {readFileSync,readdirSync,lstatSync,existsSync} from 'node:fs';
 import path from 'node:path';
@@ -133,7 +134,7 @@ export class TelemetryStore {
 // stays stable so panel selection and revision handling do not change.
 export class Collector {
   readonly store:TelemetryStore;private lastHistory?:{id:string;value:Efficiency};private catalogue=new CatalogueAllowances();
-  readonly account:AccountLimits;constructor(home=codexHome(),account?:AccountLimits){this.store=new TelemetryStore(home);this.account=account??new AccountLimits(home);}
+  readonly account:BridgeUsage;constructor(home=codexHome(),account?:BridgeUsage){this.store=new TelemetryStore(home);this.account=account??new BridgeUsage();}
   async request(method:'catalog'|'state',params:Record<string,unknown>={}):Promise<any> {
     if(method==='catalog')return this.store.catalogue(params as any);
     if(typeof params.taskId!=='string'||!validID(params.taskId))return {unavailable:true};

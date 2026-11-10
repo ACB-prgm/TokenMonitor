@@ -28,7 +28,7 @@ for(const target of targets){
  await mkdir(path.join(output,'runtime'),{recursive:true});await writeFile(path.join(output,'runtime/node.gz'),gzipSync(node,{mtime:0}));await writeFile(path.join(output,'runtime/node.sha256'),digest(node)+'\n');await cp(path.join(extract,prefix,'LICENSE'),path.join(output,'runtime/NODE-LICENSE.txt'));
  await mkdir(path.join(output,'scripts'),{recursive:true});const windows=config.os==='win';const launcher=windows?'launch.ps1':'launch.sh';await cp(path.join(plugin,'scripts',launcher),path.join(output,'scripts',launcher));
  const command=windows?'powershell.exe':'/bin/sh',args=windows?['-NoLogo','-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File','./scripts/launch.ps1']:['./scripts/launch.sh'];
- await writeFile(path.join(output,'.mcp.json'),JSON.stringify({mcpServers:{'token-monitor-embedded':{command,args,cwd:'.'}}},null,2)+'\n');
+ await writeFile(path.join(output,'.mcp.json'),JSON.stringify({mcpServers:{'token-monitor-embedded':{command,args,cwd:'.',env_vars:['CODEX_APP_TOOLS_PIPE_PATH','CODEX_APP_TOOLS_CALLER_HOST_ID','CODEX_MCP_NODE_PATH']}}},null,2)+'\n');
  const hooks={};for(const event of ['UserPromptSubmit','SessionStart','Stop','SessionEnd','PreCompact','PostCompact']){
   const mode=event==='UserPromptSubmit'?'--startup-hook':'--hook';
   const hookCommand=windows?`powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$env:PLUGIN_ROOT/scripts/launch.ps1" -Mode ${mode.slice(2)}`:`/bin/sh "$PLUGIN_ROOT/scripts/launch.sh" ${mode}`;

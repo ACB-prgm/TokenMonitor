@@ -2,7 +2,7 @@ import {compactionLabel,type CompactionDetail} from '../../server/src/compaction
 import type {TurnStats,TurnPayback} from '../../server/src/turns.js';
 import {EfficiencyInsights} from './insights.js';
 import {ThreadPicker,Settings} from './controls.js';
-import {ResumeControls,type ResumeView,type ResumeAction} from './resume.js';
+import {ResumeControls,ResumeOffer,type ResumeView,type ResumeAction} from './resume.js';
 import {HistoryStorage,type HistoryDiagnostics} from './history-storage.js';
 import {EfficiencyBanner} from './efficiency.js';
 import type {Efficiency} from '../../server/src/efficiency.js';
@@ -255,9 +255,9 @@ export function MonitorView({s, expanded, scale, error='', onAction, onLayout, s
  {resume?:ResumeView;resumeBusy?:boolean;resumeError?:string;onResume?:(action:ResumeAction)=>void;onStorage?:()=>Promise<HistoryDiagnostics>;updates?:UpdateStatus;onUpdate?:(action:UpdateAction)=>void;updateError?:string;s:Monitor; expanded:boolean; scale:number; error?:string; onAction?:(action?:'select'|'rescan',taskId?:string)=>void;onFilter?:(query:string,includeArchived:boolean)=>void; onLayout?:(expanded:boolean,scale:number)=>void; storage?:string}) {
   const a=s.attribution, attributed=a?.contributors.reduce((sum,c)=>sum+c.tokens,0)??0;
   return <main className={`monitor ${expanded?'expanded':'compact'}`} style={{fontSize:`${scale*85}%`}}>
-    <header className="compact-header"><ThreadPicker s={s} onSelect={onAction?id=>onAction('select',id):undefined} onFilter={onFilter}/><div className="header-controls"><button className="rescan-button" disabled={!onAction||s.discovery?.state==='scanning'} onClick={()=>onAction?.('rescan')} aria-label="Rescan threads" title="Rescan threads: discover restored and newly available local transcripts"><span className="rescan-text">Rescan threads</span><span className="rescan-icon" aria-hidden="true">⟳</span></button><button disabled={!onAction} onClick={()=>onAction?.()} aria-label="Refresh metrics" title="Refresh current telemetry">↻</button><Settings expanded={expanded} scale={scale} onLayout={onLayout} updates={updates} onUpdate={onUpdate} error={updateError}><HistoryStorage load={onStorage}/></Settings></div></header>
+    <header className="compact-header"><ThreadPicker s={s} onSelect={onAction?id=>onAction('select',id):undefined} onFilter={onFilter}/><div className="header-controls"><button className="rescan-button" disabled={!onAction||s.discovery?.state==='scanning'} onClick={()=>onAction?.('rescan')} aria-label="Rescan threads" title="Rescan threads: discover restored and newly available local transcripts"><span className="rescan-text">Rescan threads</span><span className="rescan-icon" aria-hidden="true">⟳</span></button><button disabled={!onAction} onClick={()=>onAction?.()} aria-label="Refresh metrics" title="Refresh current telemetry">↻</button><Settings expanded={expanded} scale={scale} onLayout={onLayout} updates={updates} onUpdate={onUpdate} error={updateError}><HistoryStorage load={onStorage}/>{onResume&&<ResumeControls value={resume} threadId={s.selectedId} title={s.task?.title} busy={resumeBusy} error={resumeError} onAction={onResume}/>}</Settings></div></header>
     <EfficiencyInsights s={s}/>
-    {isDev&&onResume&&<ResumeControls value={resume} threadId={s.selectedId} title={s.task?.title} busy={resumeBusy} error={resumeError} onAction={onResume}/>}
+    {onResume&&<ResumeOffer value={resume} threadId={s.selectedId} title={s.task?.title} busy={resumeBusy} onAction={onResume}/>}
     {s.discovery?.targeting&&<p className="hint" role="status">Looking for the current local thread…</p>}
     {(error||s.disconnected||s.available===false||!s.task)&&<p className="status" role="status">{error||s.status}</p>}
     <ThreadSummary s={s}/>{s.historyError&&<p role="status" className="warning">{s.historyError}</p>}<EfficiencyBanner data={s.efficiency}/><LatestCall s={s} expanded={expanded}/><History key={s.selectedId??s.task?.id??s.panelId} s={s}/>

@@ -42,6 +42,11 @@ if (!(Test-Path -LiteralPath $nodePath)) {
         } finally { if (Test-Path -LiteralPath $temporary) { Remove-Item -LiteralPath $temporary -Force } }
     }
 }
+# The app runtime is needed for bridge peer authorization; otherwise keep local telemetry.
+if (!$Mode -and $env:CODEX_APP_TOOLS_PIPE_PATH -and $env:CODEX_MCP_NODE_PATH -and [IO.Path]::IsPathRooted($env:CODEX_MCP_NODE_PATH) -and (Test-Path -LiteralPath $env:CODEX_MCP_NODE_PATH)) {
+    & $env:CODEX_MCP_NODE_PATH -e 'process.exit(Number(process.versions.node.split(".")[0])>=24?0:1)'
+    if ($LASTEXITCODE -eq 0) { $nodePath = $env:CODEX_MCP_NODE_PATH }
+}
 switch ($Mode) {
     'node-version' { $nodeArguments = '--version' }
     'install' { $nodeArguments = '"' + (Join-Path $pluginRoot 'server/dist/install.mjs') + '"' }

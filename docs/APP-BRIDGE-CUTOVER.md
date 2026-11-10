@@ -1,42 +1,63 @@
-# App bridge cutover: implementation status
+# App bridge cutover
 
-The cutover is **not complete or deployed**. The existing usage display and DEV
-probe behavior remain active. Do not treat the idle-chat continuation test as
-proof that interrupted work resumes.
+The display and continuation worker now share `BridgeUsage`, one cached account
+snapshot and one in-flight read per MCP process. The running plugin no longer
+launches a separate usage app-server. Local token/history collection, recorded
+usage fallback and installation/update CLI commands are unchanged. Failed bridge
+reads mark retained live data stale and back off; recorded data cannot authorize
+a continuation or near-limit offer.
 
-## Completed foundation
+## Settings and behavior
 
-- Shared `AppBridge` module; the DEV adapter re-exports it for compatibility.
-- Prepared shared `BridgeUsage` cache with in-flight deduplication, authenticated
-  caller binding, observation timestamps, failure backoff, and shutdown checks.
-  It is not yet wired to the display or worker.
-- Read-only comparison runner. Build first, then run from a desktop app session
-  with its bundled Node runtime:
+Open Settings and select **Continue this chat after usage reset**. It defaults
+to off, is scoped to account/host/chat, and stays enabled across restarts and
+successful continuations. Existing DEV probe permissions are not migrated.
+The panel offers the same setting at 90% five-hour usage. **Not now** dismisses
+that offer for the selected chat and reset window, including across reopenings.
+
+Only a latest failed turn with structured `usageLimitExceeded` evidence qualifies.
+Idle/completed chats, manual interruptions, unknown errors and transient rate
+limits never trigger continuation. The worker checks enabled chats every 15
+seconds, waits for known blocked-window resets plus five seconds, and requires a
+fresh capacity read and unchanged idle target immediately before dispatch.
+Weekly limits can delay it too. Disabling the setting or a new turn prevents a
+waiting dispatch. Archived/unavailable chats and account changes pause checks.
+
+Preferences and one-attempt-per-turn claims are stored in
+`~/.codex/token-monitor-dev/continuation.sqlite` for DEV, with separate release
+state. Waiting episodes recover on MCP startup. Dispatch is atomically marked
+uncertain before sending; ambiguous sends and interrupted dispatches are never
+replayed. The setting stays enabled for future interrupted turns. A final
+read/send race remains because the app has no atomic compare-and-send API.
+
+Keep Codex running and the computer awake. The worker runs while its MCP process
+is alive, including with the panel hidden; it cannot run while Codex is closed.
+The app bridge remains private and may change. Bridge availability is established
+by actual reads, not just the presence of an environment variable. Unix and
+Windows release launchers prefer the supplied app Node runtime when supported;
+the verified packaged runtime remains available for local telemetry otherwise.
+
+## Comparison gate and acceptance limits
+
+The old reader is isolated in `legacy-allowances.ts` for diagnostics and its
+existing tests. Production does not import or fall back to it. To compare live
+sources without changing the display or sending any messages:
 
 ```sh
-/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node plugins/token-monitor-embedded/scripts/build.mjs
 /Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node scripts/compare-usage.mjs CHAT_ID /tmp/tokenmonitor-usage-comparison.jsonl 1800
 ```
 
-The runner reads both sources every 30 seconds. Output excludes account identity,
-credits, diagnostics, and chat contents. Each sample records percentages, reset
-and window timestamps, buckets, ordinary-usage eligibility, completion time, and
-request duration. Missing required data is an error. Its summary cannot pass
-without 30 minutes, an observed reset, no read failures, and no discrepancy lasting
-at least one interval. Increase the duration to span the expected reset. Keep the
-app running and computer awake; this creates no automation or model turn.
+The runner polls every 30 seconds and records limit fields and timings, excluding
+account identity and chat contents. It cannot pass without 30 minutes, an observed
+reset, no errors, and no discrepancy lasting at least one interval. Increase the
+duration to span a reset. Prior live one-sample comparisons matched, but sustained
+comparison across a reset has **not** completed. This is a DEV cutover for testing,
+not acceptance evidence for a stable release.
 
-A live one-sample smoke check matched without errors. It correctly reported the
-acceptance gate as false. No sustained or real-reset comparison has completed.
-
-## Remaining implementation
-
-Wire the shared reader into display and worker with the caller context; retire
-the old subprocess only after its acceptance gate passes. Add persistent,
-account/host/chat-scoped continuation preferences defaulting to off; structured
-usage-failure eligibility; durable episode claims and restart recovery; Settings
-controls and the dismissible 90% offer. Update packaged runtime selection and
-MCP environment inheritance. Keep recorded usage display-only. Validate full
-restart, concurrent workers, genuine interrupted work, inaccessible and archived
-chats, ambiguous delivery, prompt accessibility, and narrow layouts. Install DEV
-only after these changes pass checks. Do not publish stable.
+Automated tests cover persistence, concurrent claims, restart recovery, confirmed
+failure eligibility, unknown reset/capacity, weekly blocking, cancellation,
+account changes, archive checks, uncertain sends, prompt dismissal and selection,
+shared reads/backoff, production isolation from legacy usage RPC, and Unix runtime
+selection. Live full-desktop restart and genuinely capped interrupted-work tests
+remain required before stable publication. Windows launcher execution has not
+been tested on Windows. No stable release is published by this change.

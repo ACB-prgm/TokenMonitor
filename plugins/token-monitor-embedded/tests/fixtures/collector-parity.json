@@ -431,7 +431,8 @@
         "unpricedCalls": 0,
         "verifiedAt": "2026-10-19"
       },
-      "version": 1
+      "version": 1,
+      "latestCompaction": "2026-10-19T12:00:02Z"
     }
   },
   {

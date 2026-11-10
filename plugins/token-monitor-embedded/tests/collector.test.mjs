@@ -70,7 +70,7 @@ test('collector is in-process and close releases all entries',async()=>{const f=
 test('collector recommendation uses current telemetry through frozen history, active imports and storage errors',async()=>{
  const f=fixture(),c=new Collector(f.home);
  let efficiency={comparisonReady:true,progress:{running:false},turns:{ready:true,other:[{model:'m',turns:20,calls:40}]},paybacks:[]},fail=false;
- c.store.snapshot=()=>({available:true,compactions:[{timestamp:'2026-10-01T00:00:00Z'}],latestPayback:{valid:true,breakEven:2,timestamp:'2026-10-01T00:00:00Z'},lastCall:new Date().toISOString(),turnStats:{epochCompleted:4,models:[{model:'m',turns:5,calls:20}]},compactionValue:{model:'m',status:'available',breakEvenCalls:6,completedCalls:20,horizonCalls:20,netSavingsUsd:.1,assumptions:{pricingAvailable:true,contextLimitKnown:true,growth:{source:'thread'},output:{fallback:false}}}});
+ c.store.snapshot=()=>({available:true,compactions:[],latestCompaction:'2026-10-01T00:00:00Z',latestPayback:{valid:true,breakEven:2,timestamp:'2026-10-01T00:00:00Z'},lastCall:new Date().toISOString(),turnStats:{epochCompleted:4,models:[{model:'m',turns:5,calls:20}]},compactionValue:{model:'m',status:'available',breakEvenCalls:6,completedCalls:20,horizonCalls:20,netSavingsUsd:.1,assumptions:{pricingAvailable:true,contextLimitKnown:true,growth:{source:'thread'},output:{fallback:false}}}});
  c.store.efficiency={snapshot:async()=>{if(fail)throw new Error('storage unavailable');return efficiency;},close(){}};
  try{
   const forecast=async()=>(await c.request('state',{taskId:f.id})).state.compactionTurnPayback;
@@ -79,5 +79,7 @@ test('collector recommendation uses current telemetry through frozen history, ac
   efficiency.comparisonReady=true;efficiency.progress.running=true;efficiency.turns.ready=false;assert.equal((await forecast()).status,'available');
   efficiency.progress.running=false;assert.equal((await forecast()).status,'available');
   fail=true;assert.equal((await forecast()).status,'available');
+  const snapshot=c.store.snapshot();delete snapshot.latestPayback;c.store.snapshot=()=>snapshot;
+  assert.match((await forecast()).reason,/latest compaction/);
  }finally{c.close();}
 });

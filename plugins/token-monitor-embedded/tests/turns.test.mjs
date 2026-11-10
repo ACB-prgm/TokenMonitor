@@ -46,9 +46,9 @@ test('turn conversion prefers 20 current calls independently and uses history on
  const f=args().forecast;assert.equal(estimateTurnPayback(args({forecast:{...f,breakEvenCalls:7}})).turns,3);
 });
 test('guidance gates require recent telemetry, observed forecasts and recovered prior compaction',()=>{
- const original=args();for(const extra of [{available:false},{ended:true},{lastCall:undefined},{lastCall:new Date(now-7200001).toISOString()},{lastCall:new Date(now+1).toISOString()},{isCompacting:true},{awaitingPostCompactionCall:true},{hasCompactions:true},{hasCompactions:true,latestPayback:{valid:true,breakEven:null}},{hasCompactions:true,latestPayback:{valid:false,breakEven:1}},{hasCompactions:true,latestCompaction:stamp,latestPayback:{valid:true,breakEven:1,timestamp:'older'}}])assert.equal(estimateTurnPayback(args(extra)).status,'unavailable',JSON.stringify(extra));
+ const original=args();for(const extra of [{available:false},{ended:true},{lastCall:undefined},{lastCall:new Date(now-7200001).toISOString()},{lastCall:new Date(now+1).toISOString()},{isCompacting:true},{awaitingPostCompactionCall:true},{latestCompaction:stamp},{latestCompaction:stamp,latestPayback:{valid:true,breakEven:null}},{latestCompaction:stamp,latestPayback:{valid:false,breakEven:1}},{latestCompaction:stamp,latestPayback:{valid:true,breakEven:1,timestamp:'older'}}])assert.equal(estimateTurnPayback(args(extra)).status,'unavailable',JSON.stringify(extra));
  for(const patch of [{status:'limited'},{breakEvenCalls:null},{breakEvenCalls:21},{breakEvenCalls:Infinity},{netSavingsUsd:0},{netSavingsUsd:-1},{netSavingsUsd:.0000009},{assumptions:{...original.forecast.assumptions,growth:{source:'default'}}},{assumptions:{...original.forecast.assumptions,growth:{}}},{assumptions:{...original.forecast.assumptions,output:{}}},{assumptions:{...original.forecast.assumptions,output:{fallback:true}}},{assumptions:{...original.forecast.assumptions,contextLimitKnown:false}}])assert.equal(estimateTurnPayback(args({forecast:{...original.forecast,...patch}})).status,'unavailable');
- assert.equal(estimateTurnPayback(args({hasCompactions:true,latestPayback:{valid:true,breakEven:2}})).status,'available');
+ assert.equal(estimateTurnPayback(args({latestCompaction:stamp,latestPayback:{valid:true,breakEven:2,timestamp:stamp}})).status,'available');
  assert.equal(estimateTurnPayback(args({forecast:{...original.forecast,netSavingsUsd:.000001}})).status,'available');
 });
 function records(id,count){let i=0;const rows=[{type:'session_meta',payload:{id}},{type:'turn_context',timestamp:stamp,payload:{model:'m'}}];for(let n=0;n<count;n++){rows.push(event('task_started',{turn_id:id+n,turn_attribution:{turn_trigger:'composer'}}));for(let j=0;j<2;j++)rows.push({type:'event_msg',timestamp:new Date(now+i++*1000).toISOString(),payload:{type:'token_count',info:{last_token_usage:{input_tokens:1000+i,cached_input_tokens:0,cache_write_input_tokens:0,output_tokens:1}}}});rows.push({...event('task_complete',{turn_id:id+n}),timestamp:new Date(now+i*1000).toISOString()});}return rows;}
@@ -68,4 +68,28 @@ test('versioned historical replay preserves totals, restart and other-chat-only 
 
 test('a second user message after calls without a fresh turn boundary is ambiguous',()=>{
  const c=new TurnCounter();start(c,'a');c.call('m');c.consume('event_msg',{type:'user_message'},new Date(now+1000).toISOString());end(c,'a');assert.equal(c.snapshot().epochCompleted,0);
+});
+
+test('lifetime compaction recovery still gates guidance after chart clipping and checkpoint restore',()=>{
+ for(const priorInput of [30000,200000]){
+  const p=new TelemetryParser();let clock=now-600000;
+  const consume=(type,payload)=>p.consume({type,timestamp:new Date(clock+=1000).toISOString(),payload});
+  consume('turn_context',{model:'gpt-6.1-sol'});
+  const call=(i,input)=>{
+   consume('event_msg',{type:'task_started',turn_id:'t'+i,turn_attribution:{turn_trigger:'composer'}});
+   consume('event_msg',{type:'token_count',info:{model_context_window:475000,last_token_usage:{input_tokens:input,cached_input_tokens:input-1000,cache_write_input_tokens:0,output_tokens:1000}}});
+   consume('event_msg',{type:'task_complete',turn_id:'t'+i});
+  };
+  call(0,priorInput);consume('compacted',{});for(let i=1;i<=121;i++)call(i,40000+i*1500);
+  const s=p.snapshot({id:'chat',title:'chat'},{},{},true,now);
+  assert.equal(s.compactions.length,0);assert.ok(s.latestCompaction);
+  const result=estimateTurnPayback({forecast:s.compactionValue,stats:s.turnStats,ready:false,available:true,lastCall:s.lastCall,now,latestPayback:s.latestPayback,latestCompaction:s.latestCompaction});
+  assert.equal(result.status,priorInput===30000?'unavailable':'available');
+  if(priorInput===30000)assert.match(result.reason,/latest compaction/);
+  const restored=new TelemetryParser();restored.restoreNumeric(p.numericCheckpoint());
+  const checkpoint=restored.snapshot({id:'chat',title:'chat'},{},{},true,now);
+  assert.equal(checkpoint.latestCompaction,s.latestCompaction);
+  // A checkpoint without lifetime payback evidence must not authorize guidance.
+  assert.equal(estimateTurnPayback(args({latestCompaction:checkpoint.latestCompaction})).status,'unavailable');
+ }
 });

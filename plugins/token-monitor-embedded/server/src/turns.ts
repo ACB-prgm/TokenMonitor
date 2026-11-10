@@ -41,14 +41,14 @@ export class TurnCounter {
  snapshot():TurnStats{return {models:[...this.groups.values()].map(g=>({...g})),epochCompleted:this.epochCompleted};}
 }
 export type TurnPayback={status:'available'|'unavailable';reason?:string;turns?:number;calls?:number;epochCompleted:number;threadTurns:number;historyTurns:number;threadMean?:number;historyMean?:number;bufferedMean?:number;source?:'thread'|'history';buffer:number;netSavingsUsd?:number};
-export function estimateTurnPayback(input:{forecast?:CompactionForecast;stats?:TurnStats;history?:TurnAggregate[];ready:boolean;available:boolean;lastCall?:string;now:number;isCompacting?:boolean;awaitingPostCompactionCall?:boolean;ended?:boolean;latestPayback?:{valid:boolean;breakEven:number|null;timestamp?:string};latestCompaction?:string;hasCompactions?:boolean}):TurnPayback {
+export function estimateTurnPayback(input:{forecast?:CompactionForecast;stats?:TurnStats;history?:TurnAggregate[];ready:boolean;available:boolean;lastCall?:string;now:number;isCompacting?:boolean;awaitingPostCompactionCall?:boolean;ended?:boolean;latestPayback?:{valid:boolean;breakEven:number|null;timestamp?:string};latestCompaction?:string}):TurnPayback {
  const f=input.forecast,model=f?.model,t=input.stats?.models.find(g=>g.model===model),h=input.history?.find(g=>g.model===model);
  const mean=(g?:TurnAggregate)=>g&&g.turns>0&&Number.isFinite(g.calls)&&g.calls>0?g.calls/g.turns:undefined;
  const result:TurnPayback={status:'unavailable',epochCompleted:input.stats?.epochCompleted??0,threadTurns:t?.turns??0,historyTurns:h?.turns??0,threadMean:mean(t),historyMean:mean(h),buffer:.75};
  const fail=(reason:string)=>({...result,reason});
  if(!input.available||input.ended||!date(input.lastCall)||input.now-Date.parse(input.lastCall!)>7200000||input.now<Date.parse(input.lastCall!))return fail('Current transcript or recent call unavailable');
  if(input.isCompacting||input.awaitingPostCompactionCall)return fail('Waiting for reliable post-compaction telemetry');
- if(input.hasCompactions&&(!input.latestPayback?.valid||input.latestPayback.breakEven==null||input.latestCompaction&&input.latestPayback.timestamp!==input.latestCompaction))return fail('The latest compaction has not demonstrably reached break-even');
+ if((input.latestCompaction||input.latestPayback)&&(!input.latestPayback?.valid||input.latestPayback.breakEven==null||input.latestCompaction&&input.latestPayback.timestamp!==input.latestCompaction))return fail('The latest compaction has not demonstrably reached break-even');
  if(!f||f.status!=='available'||!f.assumptions.pricingAvailable||!f.assumptions.contextLimitKnown||!f.assumptions.growth||!['thread','user'].includes(f.assumptions.growth.source)||f.assumptions.growth.fallback===true||!f.assumptions.output||f.assumptions.output.fallback!==false)return fail('Observed growth, output, context and pricing are required');
  if(f.breakEvenCalls==null||!Number.isFinite(f.breakEvenCalls)||f.breakEvenCalls<=0||f.breakEvenCalls>f.completedCalls||f.breakEvenCalls>f.horizonCalls||f.netSavingsUsd==null||!Number.isFinite(f.netSavingsUsd)||f.netSavingsUsd<.000001)return fail('No supported positive payback within the forecast horizon');
  const thread=!!t&&t.calls>=20&&result.threadMean!=null;

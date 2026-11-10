@@ -51,7 +51,7 @@ test('ambiguous send stays uncertain and is never automatically retried',async t
  const f=fixture(t);await f.probe.arm('target','source','test');f.state.failSend=true;f.advance(30000);await f.probe.tick();await f.probe.tick();assert.equal(f.state.sent.length,1);assert.equal(f.probe.status('target').request.phase,'uncertain');
 });
 test('persisted unique claim prevents duplicate arms across server instances',async t=>{
- const f=fixture(t),other=new ResumeProbe(f.root,f.bridge,()=>130000);t.after(()=>other.close());await f.probe.arm('target','source','test');await assert.rejects(other.arm('target','source','test'),/already has/);f.advance(30000);await Promise.all([f.probe.tick(),other.tick()]);assert.equal(f.state.sent.length,1);
+ const f=fixture(t),other=new ResumeProbe(f.root,f.bridge,()=>130000);try{await f.probe.arm('target','source','test');await assert.rejects(other.arm('target','source','test'),/already has/);f.advance(30000);await Promise.all([f.probe.tick(),other.tick()]);assert.equal(f.state.sent.length,1);}finally{other.close();}
 });
 test('closing cancels pending work and reopening does not replay it',async t=>{
  const f=fixture(t);await f.probe.arm('target','source','test');f.probe.close();const other=new ResumeProbe(f.root,f.bridge,()=>140000);try{await other.tick();assert.equal(other.status('target').request.phase,'cancelled');assert.equal(f.state.sent.length,0);}finally{other.close();}

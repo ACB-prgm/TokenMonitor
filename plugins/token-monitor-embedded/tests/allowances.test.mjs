@@ -6,7 +6,8 @@ import {mkdtempSync,writeFileSync,appendFileSync,rmSync,renameSync,chmodSync} fr
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
-import {AccountLimits,CatalogueAllowances,normalizeAllowances,liveAllowances,transcriptAllowances,chooseAllowances,resolveCodex} from '../server/dist/allowances.mjs';
+import {CatalogueAllowances,normalizeAllowances,liveAllowances,transcriptAllowances,chooseAllowances} from '../server/dist/allowances.mjs';
+import {AccountLimits,resolveCodex} from '../server/dist/legacy-allowances.mjs';
 import {Collector} from '../server/dist/collector.mjs';
 import {TelemetryParser} from '../server/dist/parser.mjs';
 const temp=mkdtempSync(path.join(tmpdir(),'tm-allowances-'));after(()=>rmSync(temp,{recursive:true,force:true}));

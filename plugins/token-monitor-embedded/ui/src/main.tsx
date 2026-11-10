@@ -7,6 +7,7 @@ import {installedVersion} from '../../shared/version.js';
 import {isDev,pluginName,serverDisplayName} from '../../shared/identity.js';
 import type {UpdateStatus} from '../../server/src/updates.js';
 import type {UpdateAction} from './updates.js';
+import type {ResumeView,ResumeAction} from './resume.js';
 
 const app = new App({ name: serverDisplayName, version: installedVersion });
 const layoutKey = isDev ? `${pluginName}-layout` : 'token-monitor-layout';
@@ -24,6 +25,19 @@ function Panel() {
   const [error,setError] = useState('');
   const [updates,setUpdates] = useState<UpdateStatus>();
   const [updateError,setUpdateError] = useState('');
+  const [resume,setResume]=useState<ResumeView>();
+  const [resumeBusy,setResumeBusy]=useState(false),[resumeError,setResumeError]=useState('');
+  const resumePending=useRef(false);
+  async function manageResume(action:ResumeAction){
+    if(resumePending.current)return;resumePending.current=true;setResumeBusy(true);setResumeError('');
+    const selected=current.current.selectedId;
+    try{
+      const result=await app.callServerTool({name:'manage_continuation',arguments:{panelId:current.current.panelId,threadId:selected,action}});
+      if(result.isError)throw Error((result._meta as any)?.error??'Unable to update continuation settings.');
+      if(active.current&&current.current.selectedId===selected)setResume((result._meta as any)?.resume);
+    }catch(e){if(active.current&&current.current.selectedId===selected)setResumeError(e instanceof Error?e.message:'Continuation settings failed.');}
+    finally{resumePending.current=false;if(active.current)setResumeBusy(false);}
+  }
   const openedPanel = useRef(''), updateSerial = useRef(0), updating = useRef(0);
   const current = useRef(state), active = useRef(true), serial = useRef(0), fetching = useRef(false);
   const retry = useRef({at:0,failures:0});
@@ -70,6 +84,8 @@ function Panel() {
       if (!next) throw new Error('The host did not return monitor data.');
       if (request !== serial.current || !active.current) return;
       if(!updating.current&&updateRequest===updateSerial.current&&(result._meta as any)?.updates)setUpdates((result._meta as any).updates);
+      if(!resumePending.current)setResume((result._meta as any)?.resume);
+      if(next.selectedId&&next.selectedId!==current.current.selectedId)setResumeError('');
       apply(next); setError('');
       retry.current = {at:0,failures:0};
     } catch (error) {
@@ -118,6 +134,7 @@ function Panel() {
     return ()=>{active.current=false;serial.current++;clearInterval(interval);document.removeEventListener('visibilitychange',visible);app.close();};
   },[]);
   return <MonitorView s={state} expanded={layout.expanded} scale={layout.scale} error={error}
+    resume={resume} resumeBusy={resumeBusy} resumeError={resumeError} onResume={!summary?manageResume:undefined}
     onStorage={summary?undefined:async()=>{const result=await app.callServerTool({name:'get_history_storage',arguments:{panelId:current.current.panelId}});if(result.isError||!(result._meta as any)?.storage)throw Error('Storage diagnostics unavailable.');return (result._meta as any).storage;}} updates={updates} onUpdate={summary?undefined:action=>void manageUpdate(action)} updateError={updateError}
     onFilter={summary?undefined:(query,includeArchived)=>{filters.current={query,includeArchived};pendingFilter.current=fetching.current;retry.current.at=0;void refresh();}}
     onAction={summary ? undefined : (action,id)=>{retry.current.at=0;void refresh(action,id);}} onLayout={changeLayout}

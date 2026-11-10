@@ -48,7 +48,7 @@ test('bounded suffix discards partial lines and never assigns unknown history to
  appendFileSync(a.file,'{"type":"event_msg"');
  assert.equal(h.read(()=>[a],model,[],now+5000).sampleCount,20);
 });
-test('collector uses archived personal history, switches at 20 thread intervals, and resets after compaction',()=>{
+test('collector uses archived personal history, switches at 20 thread calls, and resets after compaction',()=>{
  const history=file('archived-history',records(750));const active=file('active',[context(model),call(100,100000)]);
  const db=new DatabaseSync(path.join(home,'state_5.sqlite'));
  db.exec('CREATE TABLE threads(id TEXT,title TEXT,rollout_path TEXT,archived INTEGER,updated_at INTEGER)');
@@ -58,9 +58,9 @@ test('collector uses archived personal history, switches at 20 thread intervals,
  let growth=snapshot().assumptions.growth;
  assert.equal(growth.source,'user');assert.equal(growth.effective,750);assert.equal(growth.userSampleCount,20);
  assert.equal(store.tasks().length,1);
- appendFileSync(active.file,lines(Array.from({length:20},(_,i)=>call(101+i,100000+(i+1)*100))));
- growth=snapshot().assumptions.growth;assert.equal(growth.source,'thread');assert.equal(growth.effective,100);assert.equal(growth.sampleCount,20);
+ appendFileSync(active.file,lines(Array.from({length:19},(_,i)=>call(101+i,100000+(i+1)*100))));
+ growth=snapshot().assumptions.growth;assert.equal(growth.source,'thread');assert.ok(Math.abs(growth.effective-100)<1e-9);assert.equal(growth.sampleCount,19);
  appendFileSync(active.file,lines([{type:'compacted',timestamp:new Date(Date.UTC(2026,9,20,0,3)).toISOString(),payload:{}},call(181,40000)]));
- growth=snapshot().assumptions.growth;assert.equal(growth.source,'user');assert.equal(growth.sampleCount,0);assert.equal(growth.userSampleCount,40);assert.equal(growth.effective,425);
+ growth=snapshot().assumptions.growth;assert.equal(growth.source,'user');assert.equal(growth.sampleCount,0);assert.equal(growth.userSampleCount,39);assert.ok(Math.abs(growth.effective-(750*20+100*19)/39)<1e-9);
  store.close();assert.equal(store.activeCollectorCount,0);
 });

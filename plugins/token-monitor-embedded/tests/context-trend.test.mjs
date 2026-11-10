@@ -34,8 +34,8 @@ test('missing input prices are excluded; valid input counts even without output 
  const last=p.samples.at(-1);near(last.contextPerCall,(.091+inputCost(last))/2);assert.equal(last.contextPricedCalls,2);
 });
 const bundle=await build({entryPoints:[fileURLToPath(new URL('../ui/src/view.tsx',import.meta.url))],bundle:true,platform:'node',format:'cjs',write:false,external:['react']});
-function render(s,mode='Cost'){
- const mock={...React,useState:init=>[typeof init==='function'?init():init==='Cost'?mode:init,()=>{}]};
+function render(s,mode='Cost',selection){
+ const mock={...React,useState:init=>[typeof init==='function'?init():init==='Cost'?mode:selection&&init&&typeof init==='object'&&'hovered' in init?selection:init,()=>{}]};
  const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(name=>name==='react'?mock:require(name),mod,mod.exports);
  return renderToStaticMarkup(React.createElement(mod.exports.MonitorView,{s,expanded:true,scale:1}));
 }
@@ -83,4 +83,51 @@ test('smooth trend stays within adjacent values and breaks at unavailable calls'
  assert.equal(smoothLine([]),'');
  assert.equal(smoothLine([{x:0,y:20},{x:10,y:5},{x:20,y:30}]),'M0,20 C5,20 5,5 10,5 C15,5 15,30 20,30');
  assert.equal(smoothLine([{x:0,y:20},undefined,{x:20,y:30}]),'M0,20  M20,30');
+});
+
+test('compactions occupy separate gray slots in Cost and Tokens, with inspectable provenance',()=>{
+ const p=parser();p.consume(call(0));
+ const recorded={type:'compacted',timestamp:new Date(Date.UTC(2026,10,4,0,0,1)).toISOString(),payload:{compaction_response_id:'c1',latest_token_usage_record:{response_id:'c1',usage:{input_tokens:100000,cached_input_tokens:90000,cache_write_input_tokens:0,output_tokens:2000,reasoning_output_tokens:100}}}};
+ p.consume(recorded);p.consume({...recorded,timestamp:new Date(Date.UTC(2026,10,4,0,0,2)).toISOString(),payload:{}});
+ const s={...p.snapshot({id:'test',title:'Test'}),panelId:'test',status:'Monitoring'};
+ for(const mode of ['Cost','Tokens']){
+  const html=render(s,mode),chart=html.match(/<section class="history"[\s\S]*?<\/svg>/)[0];
+  assert.equal((chart.match(/class="compaction-bar"/g)??[]).length,2);assert.doesNotMatch(chart,/class="compaction-line"/);
+  const xs=[...chart.matchAll(/class="compaction-bar" x="([^"]+)"/g)].map(m=>m[1]);assert.notEqual(xs[0],xs[1]);
+  assert.match(html,/Partly estimated/);assert.match(html,/Estimated/);assert.match(html,/1 calls; 2 compactions/);assert.doesNotMatch(html,/NaN|Infinity/);
+  const selected=render(s,mode,{hovered:`compaction:${recorded.timestamp}`,focused:null,pinned:null,closing:false});
+  assert.match(selected,/Compaction details/);assert.match(selected,/Recorded usage/);assert.match(selected,/Replacement write \(estimated\)/);assert.match(selected,/API equivalent · total/);
+ }
+ for(const mode of ['Context','KPIs']){const html=render(s,mode);assert.match(html,/class="compaction-line"/);assert.doesNotMatch(html,/class="compaction-bar"/);}
+ const unknown=render({...s,compactions:s.compactions.map(c=>({...c,totalCost:undefined}))});assert.match(unknown,/compaction-unpriced/);assert.doesNotMatch(unknown,/NaN|Infinity/);
+ const only=render({...s,samples:[],callCount:0,compactions:[s.compactions[0]]});assert.match(only,/compaction-bar/);
+});
+
+test('payback diamonds mark the exact call in every mode and reuse call inspection',()=>{
+ const p=parser();for(let i=0;i<5;i++)p.consume(call(i));
+ const timestamp='2026-11-04T00:00:00.500Z';
+ const compaction={timestamp,callPosition:.5};
+ const payback={timestamp,valid:true,breakEven:2,calls:4,net:.1};
+ const s={...p.snapshot({id:'test',title:'Test'}),panelId:'test',status:'Monitoring',compactions:[compaction],efficiency:{thread:{calls:5,priced:0,inputPriced:0,cost:0,inputCost:0,overhead:0,evaluable:0,netSavings:0,paybackRate:null,costPerCall:null,contextPerCall:null},periods:{},progress:{running:false},paybacks:[payback],threadCompactions:[compaction]}};
+ const chart=html=>html.match(/<section class="history"[\s\S]*?<\/svg>/)[0];
+ for(const mode of ['Cost','Tokens','Context','KPIs']){
+  const html=render(s,mode),svg=chart(html);
+  assert.equal((svg.match(/class="payback-marker"/g)??[]).length,1);
+  // Five calls plus the compaction slot: the third call is at x=351.
+  assert.match(svg,/class="payback-marker" d="M351,126l4,4l-4,4l-4,-4z"/);
+  assert.match(svg,/aria-label="Call 3[^\"]*Compaction reached estimated break-even · 2 calls after compaction/);
+  assert.match(html,/◇: estimated compaction break-even/);
+  const selected=render(s,mode,{hovered:null,focused:`2:${s.samples[2].timestamp}`,pinned:null,closing:false});
+  assert.match(selected,/Estimated cumulative savings covered its cost at this call/);
+  assert.match(selected,/Later costs can still reduce savings/);
+ }
+ const cropped={...s,samples:s.samples.slice(2),compactions:[]};
+ assert.match(chart(render(cropped)),/class="payback-marker" d="M45,126/);
+ for(const change of [{valid:false},{breakEven:null},{breakEven:0},{breakEven:5}]){
+  assert.doesNotMatch(chart(render({...s,efficiency:{...s.efficiency,paybacks:[{...payback,...change}]}})),/class="payback-marker"/);
+ }
+ assert.doesNotMatch(chart(render({...s,samples:s.samples.slice(3)})),/class="payback-marker"/);
+ assert.doesNotMatch(chart(render({...s,compactions:[],efficiency:{...s.efficiency,threadCompactions:[]}})),/class="payback-marker"/);
+ const single=render({...s,efficiency:{...s.efficiency,paybacks:[{...payback,breakEven:1}]}});
+ assert.match(single,/1 call after compaction/);assert.doesNotMatch(single,/1 calls after compaction/);
 });

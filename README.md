@@ -2,7 +2,7 @@
 
 Portable, local Codex token telemetry in an embedded panel. A React interface and bundled Node/TypeScript server show usage without additional model turns or an external service.
 
-![TokenMonitor panel](docs/tokenmonitor-preview.png)
+![TokenMonitor panel](docs/assets/tokenmonitor-preview.png)
 
 ## What it shows
 
@@ -17,13 +17,13 @@ Costs are estimates using the bundled rate table, not invoices. Subscription all
 
 ## Platforms and installation
 
-Published 1.10.0 packages target macOS Apple silicon (`macos-arm64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Intel macOS and Linux packages are not published for this release. Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop rendering and trusted lifecycle delivery require separate verification.
+Published 1.11.0 packages target macOS Apple silicon (`macos-arm64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Intel macOS and Linux packages are not published for this release. Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop rendering and trusted lifecycle delivery require separate verification.
 
-Version 1.10.0 adds smooth Context / call and Cost / call trends in the Recent calls KPIs tab, a compaction progress indicator, and more reliable saved history and thread titles. **Update and install** is available in Settings → About. See the [release notes](docs/RELEASE-1.10.0.md) and [validation scope](docs/VALIDATION-1.10.0.md).
+Version 1.11.0 adds recorded compaction usage and gray history bars, focused compaction guidance, shared live account usage, and optional automatic continuation after a usage reset. **Update and install** is available in Settings → About. See the [release notes](docs/releases/1.11.0/notes.md) and [validation scope](docs/releases/1.11.0/validation.md).
 
 Download a complete `token-monitor-VERSION-TARGET.zip` and its `.sha256` companion from [Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Verify the checksum before extraction, then run the included macOS `install.sh` or Windows `install.ps1`. Restart Codex and review hook trust. The installer requires the existing Codex CLI, but uses the bundled Node runtime.
 
-See [installation, updating, recovery, rollback, and uninstall instructions](docs/INSTALL.md) for copy/paste commands. Keep previous extracted releases for rollback. Preferences, dismissals and historical telemetry remain outside the installation directory.
+See [installation, updating, recovery, rollback, and uninstall instructions](docs/guides/installation.md) for copy/paste commands. Keep previous extracted releases for rollback. Preferences, dismissals and historical telemetry remain outside the installation directory.
 
 The smaller `token-monitor-embedded-VERSION-TARGET.zip` is the plugin-only package for direct/account deployments. Update those through their original host entry. The development source marketplace lacks built assets and runtimes and is not a supported cross-platform Git installation. Its catalog is marked `NOT_AVAILABLE`; only complete generated release catalogs enable installation.
 
@@ -39,13 +39,17 @@ The server reads local Codex JSONL telemetry and schema-checked SQLite thread me
 
 UI refreshes do not request model turns or update model context. The optional first-prompt hook emits one startup instruction. Other lifecycle hooks record bounded metadata and do not launch a window. Diagnostics are off unless explicitly enabled locally.
 
+## Documentation
+
+Start with the [documentation index](docs/index.md) and [architecture guide](docs/architecture.md).
+
 ## Development
 
 For everyday local development, run `npm run dev` from the repository root. It
 builds and installs a separate **Token Monitor DEV** plugin alongside the release.
 Restart Codex, review DEV hook trust, then ask to open Token Monitor DEV. Run the
 same command after edits to rebuild and refresh the local installation. See
-[the DEV workflow](docs/DEVELOPMENT.md) for setup, build-only, and removal commands.
+[the DEV workflow](docs/guides/development.md) for setup, build-only, and removal commands.
 
 Use Node 24 LTS and Python 3.12+ for build-time archive extraction only. Run `npm ci` in `plugins/token-monitor-embedded`, followed by `node scripts/build-release.mjs --target macos-arm64` from the repository root. Supported local-build `--target` values are the three platform names above, `macos-x64`, and `all`. Archives and SHA-256 files are written to `dist/`.
 
@@ -57,12 +61,12 @@ See [Contributing](CONTRIBUTING.md) for tests and the staged release process. Th
 
 ## Historical efficiency
 
-An expandable KPI banner compares selected-thread lifetime cost/call, context/call and modeled compaction payback with imported local chats over 7 days, 30 days, or all history. Durable SQLite history retains 90 days of numeric detail and permanent daily summaries, including saved chats whose source files disappear. Existing lifecycle hooks collect without an open panel. See [calculations, local storage and limitations](docs/HISTORICAL-EFFICIENCY.md).
+An expandable KPI banner compares selected-thread lifetime cost/call, context/call and modeled compaction payback with imported local chats over 7 days, 30 days, or all history. Durable SQLite history retains 90 days of numeric detail and permanent daily summaries, including saved chats whose source files disappear. Existing lifecycle hooks collect without an open panel. See [calculations, local storage and limitations](docs/reference/efficiency-metrics.md).
 
 ## Compaction Value
 
-CV estimates net savings as a percentage of avoidable context-processing costs over 20 normal calls, including compaction overhead and per-call long-context pricing. It assumes 40K retained context and warm-prefix reuse. The panel shows observed growth/output or disclosed defaults, a consistent break-even, and context-capacity limitations. Cache temperature remains separate. These are API-equivalent estimates, not subscription charges; financial value does not guarantee context preservation. See [calculation and assumptions](docs/COMPACTION-VALUE.md).
+CV estimates net savings as a percentage of avoidable context-processing costs over 20 normal calls, including compaction overhead and per-call long-context pricing. It assumes 40K retained context and warm-prefix reuse. The panel shows observed growth/output or disclosed defaults, a consistent break-even, and context-capacity limitations. Cache temperature remains separate. These are API-equivalent estimates, not subscription charges; financial value does not guarantee context preservation. See [calculation and assumptions](docs/reference/compaction.md).
 
 ## Account allowances and call previews
 
-Five-hour and weekly allowances refresh from the signed-in Codex account every 30 seconds while the monitor is active, with the newest local catalogue telemetry as fallback. Each window’s hover help includes its source and observation time. Expired readings await refresh rather than assuming a reset. These account requests use the installed Codex CLI and existing authentication without model turns. Call previews switch instantly and dismiss after a short grace period and animation. See [sources, freshness and behavior](docs/ACCOUNT-ALLOWANCES.md).
+Five-hour and weekly allowances refresh from the signed-in Codex account every 30 seconds while the monitor is active, with the newest local catalogue telemetry as fallback. Each window’s hover help includes its source and observation time. Expired readings await refresh rather than assuming a reset. These account requests use the installed Codex CLI and existing authentication without model turns. Call previews switch instantly and dismiss after a short grace period and animation. See [sources, freshness and behavior](docs/reference/account-allowances.md).

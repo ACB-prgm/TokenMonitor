@@ -12,7 +12,7 @@ import {rates,price,cacheTemperature,health,AttributionEstimator,estimateTokens}
 const temp=mkdtempSync(path.join(tmpdir(),'tm-collector-'));after(()=>rmSync(temp,{recursive:true,force:true}));
 const normalized=x=>JSON.parse(JSON.stringify(x).replaceAll('.000Z','Z'));
 const fixtures=JSON.parse(readFileSync(new URL('fixtures/collector-parity.json',import.meta.url)));
-for(const f of fixtures)test('reference parity: '+f.id,()=>{const p=new TelemetryParser();for(const r of f.records)p.consume(r);const actual=p.snapshot(f.expected.task,{}, {},true,Date.UTC(2026,9,20));assert.deepEqual(normalized({...actual,samples:actual.samples.map(({contextPerCall,contextPricedCalls,costPerCall,costPricedCalls,...legacy})=>legacy)}),normalized({...f.expected,sessionEnded:false,turnStats:{models:[],epochCompleted:0}}));});
+for(const f of fixtures)test('reference parity: '+f.id,()=>{const p=new TelemetryParser();for(const r of f.records)p.consume(r);const actual=p.snapshot(f.expected.task,{}, {},true,Date.UTC(2026,9,20));assert.deepEqual(normalized({...actual,latestPayback:undefined,compactionCost:undefined,compactions:actual.compactions.map(({timestamp,callPosition})=>({timestamp,callPosition})),samples:actual.samples.map(({contextPerCall,contextPricedCalls,costPerCall,costPricedCalls,...legacy})=>legacy)}),normalized({...f.expected,sessionEnded:false,turnStats:{models:[],epochCompleted:0}}));});
 function fixture(id='task'){
  const home=mkdtempSync(path.join(temp,'home-')),file=path.join(home,id+'.jsonl');
  writeFileSync(file,JSON.stringify({type:'session_meta',payload:{id,source:'cli'}})+'\n');
@@ -67,3 +67,19 @@ test('attribution deduplicates text and rebuilds surviving compaction history',(
 });
 test('collector is in-process and close releases all entries',async()=>{const f=fixture(),c=new Collector(f.home);await c.request('state',{taskId:f.id});assert.equal(c.store.activeCollectorCount,1);assert.equal('child' in c,false);c.close();assert.equal(c.store.activeCollectorCount,0);});
 
+test('collector recommendation uses current telemetry through frozen history, active imports and storage errors',async()=>{
+ const f=fixture(),c=new Collector(f.home);
+ let efficiency={comparisonReady:true,progress:{running:false},turns:{ready:true,other:[{model:'m',turns:20,calls:40}]},paybacks:[]},fail=false;
+ c.store.snapshot=()=>({available:true,compactions:[],latestCompaction:'2026-10-01T00:00:00Z',latestPayback:{valid:true,breakEven:2,timestamp:'2026-10-01T00:00:00Z'},lastCall:new Date().toISOString(),turnStats:{epochCompleted:4,models:[{model:'m',turns:5,calls:20}]},compactionValue:{model:'m',status:'available',breakEvenCalls:6,completedCalls:20,horizonCalls:20,netSavingsUsd:.1,assumptions:{pricingAvailable:true,contextLimitKnown:true,growth:{source:'thread'},output:{fallback:false}}}});
+ c.store.efficiency={snapshot:async()=>{if(fail)throw new Error('storage unavailable');return efficiency;},close(){}};
+ try{
+  const forecast=async()=>(await c.request('state',{taskId:f.id})).state.compactionTurnPayback;
+  assert.equal((await forecast()).status,'available');
+  efficiency.comparisonReady=false;assert.equal((await forecast()).status,'available');
+  efficiency.comparisonReady=true;efficiency.progress.running=true;efficiency.turns.ready=false;assert.equal((await forecast()).status,'available');
+  efficiency.progress.running=false;assert.equal((await forecast()).status,'available');
+  fail=true;assert.equal((await forecast()).status,'available');
+  const snapshot=c.store.snapshot();delete snapshot.latestPayback;c.store.snapshot=()=>snapshot;
+  assert.match((await forecast()).reason,/latest compaction/);
+ }finally{c.close();}
+});

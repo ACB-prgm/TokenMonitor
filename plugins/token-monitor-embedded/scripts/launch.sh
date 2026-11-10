@@ -2,6 +2,14 @@
 # Resolve bundled files independently of the caller's working directory or PATH.
 set -eu
 plugin_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+# Use the app-supplied runtime for bridge peer authorization when available.
+if [ -z "${1:-}" ] && [ -n "${CODEX_APP_TOOLS_PIPE_PATH:-}" ]; then
+    case "${CODEX_MCP_NODE_PATH:-}" in
+        /*) if [ -x "$CODEX_MCP_NODE_PATH" ] && "$CODEX_MCP_NODE_PATH" -e 'process.exit(Number(process.versions.node.split(".")[0])>=24?0:1)' 2>/dev/null; then
+            exec "$CODEX_MCP_NODE_PATH" "$plugin_root/server/dist/index.mjs"
+        fi;;
+    esac
+fi
 node_path="$plugin_root/runtime/node"
 expected=$(/bin/cat "$plugin_root/runtime/node.sha256")
 case "$expected" in ''|*[!0-9a-f]*) exit 1;; esac

@@ -1,5 +1,6 @@
+import {BridgeUsage} from './bridge-usage.js';
 import {estimateTurnPayback} from './turns.js';
-import {AccountLimits,CatalogueAllowances,chooseAllowances} from './allowances.js';
+import {CatalogueAllowances,chooseAllowances} from './allowances.js';
 import {createHash,randomUUID} from 'node:crypto';
 import {readFileSync,readdirSync,lstatSync,existsSync} from 'node:fs';
 import path from 'node:path';
@@ -95,6 +96,7 @@ export class TelemetryStore {
     for(const id of [options.selectedId,options.hostId]){const e=id?items.get(id):undefined;if(e&&!tasks.some(t=>t.id===id))tasks.push(e);}
     return {tasks:tasks.map(({updated,...task})=>task),matchCount:matches.length,shownCount:Math.min(matches.length,100),discovery:{...this.discovery.status,targeting:this.discovery.targeting,index:this.indexStatus,readable:[...items.values()].filter(t=>(t as any).sourceAvailable!==false).length},hostMatched:!!options.hostId&&!!this.resolve(options.hostId),...(hook?{latestHook:{id:hook.session.session_id,sequence:hook.sequence,event:hook.session.hook_event_name??''}}:{})};
   }
+  continuationTargets(){return [...new Set([...this.metadata(undefined,true,true).filter(r=>!r.archived).map(r=>String(r.id)),...Array.from(this.discovery.entries.values()).filter(e=>!e.archived).map(e=>e.id)])];}
   taskMetadata(id:string){const s=this.resolve(id);return s?this.task(s,s.title??this.metadata(id)[0]?.title):this.saved.get(id);}
   async record(payload:unknown):Promise<boolean> {
     if(!payload||typeof payload!=='object')return false;const p=payload as RecordValue;
@@ -120,6 +122,8 @@ export class TelemetryStore {
     if(session)entry.session=session;entry.touched=now;let available=!!session;
     try{if(session)entry.tail.read(source,()=>entry!.parser=new TelemetryParser(),line=>entry!.parser.consume(line));}catch{available=false;}
     const metadata=this.metadata(id)[0]??{},s=entry.session,p=entry.parser;
+    const local=p.snapshot(this.task(s,cleanTitle(s.title)??cleanTitle(metadata.title)??p.title),s,metadata,available,now);
+    if(local.compactionValue.assumptions.growth?.source==='thread')return local;
     const personal=this.growthHistory.read(()=>[{id,file:source},...this.metadata(undefined,true).filter(row=>row.id!==id).map(row=>({id:row.id,file:row.rollout_path}))],p.lastCallModel,p.growthIntervals,now);
     return p.snapshot(this.task(s,cleanTitle(s.title)??cleanTitle(metadata.title)??p.title),s,metadata,available,now,personal);
   }
@@ -133,15 +137,15 @@ export class TelemetryStore {
 // stays stable so panel selection and revision handling do not change.
 export class Collector {
   readonly store:TelemetryStore;private lastHistory?:{id:string;value:Efficiency};private catalogue=new CatalogueAllowances();
-  readonly account:AccountLimits;constructor(home=codexHome(),account?:AccountLimits){this.store=new TelemetryStore(home);this.account=account??new AccountLimits(home);}
+  readonly account:BridgeUsage;constructor(home=codexHome(),account?:BridgeUsage){this.store=new TelemetryStore(home);this.account=account??new BridgeUsage();}
   async request(method:'catalog'|'state',params:Record<string,unknown>={}):Promise<any> {
     if(method==='catalog')return this.store.catalogue(params as any);
     if(typeof params.taskId!=='string'||!validID(params.taskId))return {unavailable:true};
     this.account.touch();
     const local=this.catalogue.read(()=>this.store.allowanceFiles(params.taskId as string));
     const snapshot=this.store.snapshot(params.taskId);let efficiency:Efficiency|undefined,historyError:string|undefined;try{efficiency=await this.store.efficiency?.snapshot(params.taskId);if(efficiency)this.lastHistory={id:params.taskId,value:efficiency};}catch{historyError='Historical storage is temporarily unavailable. Showing committed data where available; collection will retry automatically.';if(this.lastHistory?.id===params.taskId)efficiency=this.lastHistory.value;}
-    const fallback=!snapshot&&efficiency?{task:this.store.taskMetadata(params.taskId),callCount:efficiency.thread.calls,samples:efficiency.threadSamples?.map(s=>({...s,price:price(s)})),lastCall:efficiency.threadSamples?.at(-1)?.timestamp,status:'Saved history · source transcript unavailable',available:false}:undefined;
-    const state={...fallback,...snapshot,efficiency,historyError,compactionTurnPayback:estimateTurnPayback({forecast:snapshot?.compactionValue,stats:snapshot?.turnStats,history:efficiency?.turns?.other,ready:!historyError&&!!efficiency?.reference?.ready&&!efficiency.progress.running,available:snapshot?.available===true,lastCall:snapshot?.lastCall,now:Date.now(),isCompacting:snapshot?.isCompacting,awaitingPostCompactionCall:snapshot?.awaitingPostCompactionCall,ended:snapshot?.sessionEnded,latestPayback:efficiency?.paybacks.at(-1),latestCompaction:snapshot?.compactions.at(-1)?.timestamp,hasCompactions:!!(efficiency?.paybacks.length||snapshot?.compactions.length)})};
+    const fallback=!snapshot&&efficiency?{task:this.store.taskMetadata(params.taskId),callCount:efficiency.thread.calls,compactions:efficiency.threadCompactions?.filter(c=>c.callPosition>=efficiency.thread.calls-(efficiency.threadSamples?.length??0)),samples:efficiency.threadSamples?.map(s=>({...s,price:price(s)})),lastCall:efficiency.threadSamples?.at(-1)?.timestamp,status:'Saved history · source transcript unavailable',available:false}:undefined;
+    const state={...fallback,...snapshot,efficiency,historyError,compactionTurnPayback:estimateTurnPayback({forecast:snapshot?.compactionValue,stats:snapshot?.turnStats,history:efficiency?.turns?.other,ready:!historyError&&efficiency?.turns?.ready===true,available:snapshot?.available===true,lastCall:snapshot?.lastCall,now:Date.now(),isCompacting:snapshot?.isCompacting,awaitingPostCompactionCall:snapshot?.awaitingPostCompactionCall,ended:snapshot?.sessionEnded,latestPayback:snapshot?.latestPayback,latestCompaction:snapshot?.latestCompaction})};
     const allowances=chooseAllowances(this.account.snapshot(),local);
     state.fiveHour=allowances.fiveHour;state.weekly=allowances.weekly;
     const revision=createHash('sha256').update(JSON.stringify(state)).digest('hex');return params.revision===revision?{revision,unchanged:true}:{revision,state};

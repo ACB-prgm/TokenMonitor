@@ -12,6 +12,8 @@ import {AutoUpdater} from './auto-update.js';
 import {Updates, targets,compareVersions} from './updates.js';
 import { Panels } from './panels.js';
 import { Collector } from './collector.js';
+import {Continuation} from './continuation.js';
+import {stateRoot} from './platform.js';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const resourceUri = `ui://${pluginName}/panel-v${installedVersion}.html`;
@@ -20,6 +22,14 @@ const server = new McpServer({ name: pluginName, version: installedVersion });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 const collector = new Collector();
 const panels = new Panels(collector);
+let continuation:Continuation|undefined;
+const continuations=()=>continuation??=new Continuation(stateRoot(),collector.account,undefined,undefined,id=>!!collector.store.metadata(id,true)[0]?.archived,()=>collector.store.continuationTargets());
+try{continuations();}catch{/* Settings storage must not prevent local telemetry. */}
+const resumeState=async(panelId:string)=>{try{const {threadId,sourceThreadId}=panels.context(panelId);return threadId&&sourceThreadId?continuations().view(threadId,sourceThreadId):{available:false,enabled:false,offer:false,message:'Choose a chat.'};}catch{return {available:false,enabled:false,offer:false,message:'Continuation settings storage unavailable.'};}};
+process.on('exit',()=>continuation?.close());
+process.stdin.on('end',()=>continuation?.close());
+process.on('SIGTERM',()=>continuation?.close());
+process.on('SIGINT',()=>continuation?.close());
 const updates = new Updates(installedVersion);
 const installer = new AutoUpdater();
 const installationState = async()=>{const value=await installer.status();return value?.phase==='installed'&&compareVersions(installedVersion,value.version)>=0?undefined:value;};
@@ -71,13 +81,27 @@ server.registerTool('open_monitor', {
     startup: await startupState(hostID(extra)), metadataShape: metadataShape(extra._meta ?? {}) } } };
 });
 server.registerTool('get_monitor_state', {
-  title: 'Refresh monitor', description: 'Refresh local token metrics and account allowances without a model turn. Account limits may be fetched through the installed Codex CLI. Task IDs must be discovered locally.',
+  title: 'Refresh monitor', description: 'Refresh local token metrics and account allowances without a model turn. Account limits are read through the desktop app bridge. Task IDs must be discovered locally.',
   inputSchema: { panelId: z.string().uuid(), taskId: z.string().min(1).max(200).optional(),
     action: z.enum(['select','rescan']).optional(),query:z.string().max(200).optional(),includeArchived:z.boolean().optional(), revision: z.string().max(500).optional() },
   annotations: {...annotations,openWorldHint:true}, _meta: { ui: { visibility: ['app'] } },
 }, async (args, extra) => {
-  try { return { content: [], _meta: { monitor: await panels.state(args.panelId, args, hostID(extra)), updates: await updateState() } }; }
+  try { const monitor=await panels.state(args.panelId, args, hostID(extra));return { content: [], _meta: { monitor, updates: await updateState(),resume:await resumeState(args.panelId) } }; }
   catch { return { isError: true, content: [], _meta: { error: 'Task unavailable. Refresh the local task list.' } }; }
+});
+server.registerTool('manage_continuation',{
+  title:'Chat continuation settings',description:'Panel-only persistent permission to continue confirmed usage-interrupted work. Never retries an uncertain send.',
+  inputSchema:{panelId:z.string().uuid(),threadId:z.string().min(1).max(200),action:z.enum(['status','enable','enable_all','disable','dismiss'])},
+  annotations:{readOnlyHint:false,destructiveHint:true,openWorldHint:true},_meta:{ui:{visibility:['app']}},
+},async(args,extra)=>{
+  try{
+    await panels.state(args.panelId,{},hostID(extra));
+    const {sourceThreadId,threadId}=panels.context(args.panelId);
+    if(!sourceThreadId||!threadId)throw Error('Open Token Monitor from a recognized chat and choose a local chat first.');
+    if(threadId!==args.threadId)throw Error('The selected chat changed. Verify its title and try again.');
+    const resume=await continuations().view(threadId,sourceThreadId,args.action,()=>panels.context(args.panelId).threadId===threadId);
+    return {content:[],_meta:{resume}};
+  }catch(error){return {isError:true,content:[],_meta:{error:error instanceof Error?error.message:'Unable to update continuation settings.'}};}
 });
 server.registerTool('get_history_storage', {
  title:'Inspect local history storage',description:'Read aggregate local storage diagnostics on demand.',

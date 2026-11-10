@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+## 1.11.0
+
+- Account for verified recorded compaction usage, disclose remaining estimates, and show separate gray compaction bars with break-even markers.
+- Keep spending comparisons in the KPI container and focus insights on context capacity and evidence-backed compaction guidance.
+- Share live app-bridge account usage and add persistent Off, Current thread and All threads continuation settings for confirmed usage-limit interruptions.
+- Harden continuation capacity checks, atomic scope changes, offline revocation, uncertain delivery and restart recovery.
+- Count valid active compactions at break-even and retain recovery checks beyond the visible chart window.
+- Consolidate documentation into canonical guides, references and release records with checked navigation.
+
+- Count valid active compactions as paid back immediately when they reach break-even, while continuing to track savings and validity until the epoch closes.
+
+## 1.10.0
+
+- Add a **KPIs** tab to Recent calls with smooth Context / call and Cost / call USD trends, without data dots. Each point represents the running thread average through that call, including earlier calls outside the visible window. Cost / call includes compaction charges; the Cost tab retains its call cost bars.
+- Show compaction progress in the context ring.
+- Preserve queued history updates from concurrent panels and refresh saved history metadata independently of transcript changes.
+- Preserve saved thread titles when catalogue metadata is unavailable.
+- Avoid repeated remainder copies when reading JSONL records.
+
 ## 1.9.1
 
 - Display Context / call and Cost / call with four decimal places in both KPI rows and expanded calculation results.

@@ -126,11 +126,11 @@ test('compaction forecast shows observed estimates, finite-horizon break-even an
 
 test('historical KPI banner precedes Latest call, stays collapsed and explains both scopes',()=>{
  const summary={calls:10,priced:8,inputPriced:9,cost:.8,inputCost:.45,overhead:.08,costPerCall:.11,contextPerCall:.05,paybackRate:null,netSavings:0,evaluable:0,profitable:0,pending:1,excluded:0,inactivity:0};
- const data={activation:'2026-10-30T00:00:00Z',baseline:summary,baselineCalls:10,baselineProvisional:true,thread:summary,rolling:summary,threadRolling:summary,threadWeeks:[],threadModels:[],baselineModels:[],paybacks:[],periods:{7:{summary,models:[],weeks:[]}},progress:{processed:1,total:1,running:false,failed:0},pricingBasis:'fixture'};
+ const data={activation:'2026-10-30T00:00:00Z',comparisonReady:false,thread:summary,rolling:summary,threadRolling:summary,threadWeeks:[],paybacks:[],periods:{7:{summary,models:[],weeks:[]}},progress:{processed:1,total:1,running:false,failed:0},pricingBasis:'fixture'};
  const html=render({...latestFixture,efficiency:data});
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="latest-call"'));
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="history"'));
- assert.match(html,/kpi-row-label">Thread/);assert.match(html,/kpi-row-label">Comp/);assert.match(html,/\$0.11/);assert.match(html,/Compaction payback/);assert.doesNotMatch(html,/N\/A/);assert.match(html,/Provisional/);assert.match(html,/Total input cost ÷ calls with priceable input/);assert.match(html,/Share of completed, evaluable compactions/);assert.doesNotMatch(html,/<details class="efficiency" open/);
+ assert.match(html,/kpi-row-label">Thread/);assert.match(html,/kpi-row-label">Comp/);assert.match(html,/\$0.11/);assert.match(html,/Compaction payback/);assert.doesNotMatch(html,/N\/A/);assert.match(html,/Provisional/);assert.match(html,/Total input cost ÷ calls with priceable input/);assert.match(html,/Share of evaluable compactions/);assert.doesNotMatch(html,/<details class="efficiency" open/);
 });
 
 test('collapsed KPI summary has shared labels, three headers and no definitions',()=>{
@@ -180,13 +180,11 @@ test('thread allowance estimate leads account remaining in each group',()=>{
 
  test('provisional KPIs use asterisks with a disclosure explanation and badges in both scopes',()=>{
  const summary={calls:10,priced:10,inputPriced:10,cost:.274,inputCost:.218,overhead:0,costPerCall:.0274,contextPerCall:.0218,paybackRate:100,netSavings:.1,evaluable:2,profitable:2,pending:0,excluded:0,inactivity:0};
- const c={current:.0274,reference:.02,delta:37,currentCalls:10,baselineCalls:100,coverage:1,provisional:true,reason:'Fewer than 20 current calls'};
- const comparisons={cost:{...c,cohorts:[{model:'gpt-6.1-sol',effort:'high',currentCalls:10,referenceCalls:100}]},context:c,cache:c,referenceLabel:'All available calls from other chats; excludes the selected chat.'};
- const data={activation:'2026-10-30',baseline:summary,baselineCalls:100,baselineProvisional:false,thread:summary,rolling:summary,threadRolling:summary,threadWeeks:[],threadModels:[],baselineModels:[],paybacks:[],comparisons:{thread:comparisons,periods:{7:comparisons}},periods:{7:{summary,previousSummary:{...summary,costPerCall:.02,contextPerCall:.015,priced:100,inputPriced:100,calls:100},models:[],weeks:[]}},progress:{processed:1,total:1,running:false,failed:0},pricingBasis:'fixture'};
+ const data={activation:'2026-10-30',comparisonReady:true,thread:summary,rolling:summary,threadRolling:summary,threadWeeks:[],paybacks:[],periods:{7:{summary,previousSummary:{...summary,costPerCall:.02,contextPerCall:.015,priced:100,inputPriced:100,calls:100},models:[],weeks:[]}},progress:{processed:1,total:1,running:false,failed:0},pricingBasis:'fixture'};
  const html=render({...latestFixture,efficiency:data});const collapsed=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
  assert.equal((collapsed.match(/class="provisional-mark"/g)??[]).length,6);
  assert.equal((collapsed.match(/class="kpi-badge tone-neutral"/g)??[]).length,4);
- assert.doesNotMatch(collapsed,/>Provisional</);assert.match(html,/\* Provisional:<\/strong>/);assert.match(html,/20 current and 20 reference/);assert.match(html,/5 completed, evaluable events/);assert.match(html,/10 current \/ 10 reference calls/);assert.match(html,/Thread compares directly with the Comp row/);assert.match(html,/preceding equal-length period/);assert.doesNotMatch(html,/Fixed reference|Cost \/ context change/);
+ assert.doesNotMatch(collapsed,/>Provisional</);assert.match(html,/\* Provisional:<\/strong>/);assert.match(html,/20 current and 20 reference/);assert.match(html,/5 evaluable events/);assert.match(html,/10 current \/ 10 reference calls/);assert.match(html,/Thread compares directly with the Comp row/);assert.match(html,/preceding equal-length period/);assert.doesNotMatch(html,/Fixed reference|Cost \/ context change/);
  });
 
 test('expanded KPI guide has only three definitions, formulas and numeric substitutions',()=>{
@@ -196,7 +194,7 @@ test('expanded KPI guide has only three definitions, formulas and numeric substi
  assert.equal((guide.match(/<dt>/g)??[]).length,3);assert.match(guide,/Context \/ call <span>\(USD\)/);
  assert.match(guide,/fresh, cached and cache-write input/);assert.match(guide,/output and reasoning tokens are excluded/);
  assert.match(guide,/Thread: \$0.284 \/ 10 = \$0.0284/);assert.match(guide,/Thread: \$0.218 \/ 10 = \$0.0218/);assert.match(guide,/3 \/ 6 × 100 = 50%/);
- assert.match(guide,/Final net savings: Thread −\$0.001234/);assert.match(guide,/Exact numerator: 0.218 USD/);
+ assert.match(guide,/Net savings to date: Thread −\$0.001234/);assert.match(guide,/Exact numerator: 0.218 USD/);
  assert.doesNotMatch(guide,/<table|<details|Model breakdown|Weekly historical trend|Thread compaction results|historical reference/);
  assert.match(html,/Comparison period/);
  const loading=render({panelId:'p',status:'Waiting'});assert.match(loading,/Historical analytics are loading/);assert.doesNotMatch(loading,/NaN|undefined/);
@@ -205,7 +203,7 @@ test('expanded KPI guide has only three definitions, formulas and numeric substi
 
 test('KPI deltas equal the visible Thread and Comp values without cohort weighting',()=>{
  const base={calls:40,priced:40,inputPriced:40,cost:1.2,inputCost:.8,overhead:0,costPerCall:.03,contextPerCall:.02,paybackRate:50,netSavings:.1,evaluable:2,profitable:1,pending:1};
- const html=render({panelId:'p',status:'Monitoring',efficiency:{thread:{...base,costPerCall:.06,contextPerCall:.03},periods:{7:{summary:base,previousSummary:{...base,costPerCall:.02,contextPerCall:.01}}},progress:{running:false,failed:0},baselineProvisional:false}});
+ const html=render({panelId:'p',status:'Monitoring',efficiency:{thread:{...base,costPerCall:.06,contextPerCall:.03},periods:{7:{summary:base,previousSummary:{...base,costPerCall:.02,contextPerCall:.01}}},progress:{running:false,failed:0},comparisonReady:true}});
  const summary=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
  assert.ok(summary.indexOf('Context / call')<summary.indexOf('Cost / call'));
  assert.match(summary,/↑ 50.0/);assert.match(summary,/100.0/);
@@ -225,4 +223,10 @@ test('cache warmth sits between recorded cache share and savings with text, colo
 test('header leads with the searchable selector and keeps independently named actions without branding',()=>{
  const html=render({...latestFixture,tasks:[{id:'a',title:'A long selected chat'}],selectedId:'a'});const header=html.match(/<header[\s\S]*?<\/header>/)[0];
  assert.ok(header.indexOf('thread-selector')<header.indexOf('header-controls'));assert.doesNotMatch(header,/brand-logo|class="brand"/);assert.match(header,/aria-label="Rescan threads"/);assert.match(header,/aria-label="Refresh metrics"/);assert.match(header,/Dashboard settings/);
+});
+
+test('recent calls has no comparison overlay even with stale deprecated payload fields',()=>{
+ const html=render({...latestFixture,efficiency:{thread:{calls:1,priced:1,inputPriced:1,inputCost:1,cost:1,overhead:0,costPerCall:1,contextPerCall:1,netSavings:0,evaluable:0,profitable:0,paybackRate:null},periods:{},reference:{ready:true,buckets:[]}}});
+ assert.doesNotMatch(html,/chart-reference|Comparable \$/);
+ assert.match(html,/aria-label="Recent call history"/);assert.match(html,/aria-label="Call 1/);
 });

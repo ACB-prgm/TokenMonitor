@@ -12,6 +12,7 @@ export class Panels {
     this.panels.set(id, { hostId, source: 'waiting', touched: Date.now(), disconnected: false, hostMatched: false });
     return id;
   }
+  context(id:string){const panel=this.panels.get(id);return {sourceThreadId:panel?.hostId,threadId:panel?.selected};}
   private panel(id: string, hostId?: string) {
     // UI state may outlive an MCP restart. Recover selection from the exact
     // host ID or hooks.
@@ -28,6 +29,7 @@ export class Panels {
   }
   async tasks(id: string, hostId?: string, filters:{query?:string;includeArchived?:boolean;rescan?:boolean}={}) {
     const panel = this.panel(id, hostId);
+    if(panel.hostId)this.collector.account.bind(panel.hostId);
     return this.collector.request('catalog', { hostId: panel.hostId,selectedId:panel.selected,query:filters.query??panel.query,includeArchived:filters.includeArchived??panel.includeArchived,rescan:filters.rescan });
   }
   async state(id: string, input: { taskId?: string; action?: 'select'|'rescan'; query?:string;includeArchived?:boolean;revision?: string } = {}, hostId?: string) {
@@ -39,6 +41,7 @@ export class Panels {
   }
   private async stateNow(id: string, input: { taskId?: string; action?: 'select'|'rescan'; query?:string;includeArchived?:boolean;revision?: string }, hostId?: string) {
     const panel = this.panel(id, hostId);
+    if(panel.hostId)this.collector.account.bind(panel.hostId);
     const wasDisconnected = panel.disconnected;
     try {
       if(input.query!==undefined)panel.query=input.query;

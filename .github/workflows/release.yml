@@ -32,7 +32,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "$(git rev-parse "$RELEASE_TAG^{}")"
           git merge-base --is-ancestor HEAD origin/main
           test "$(git cat-file -t "$RELEASE_TAG")" = tag
-          test -f "docs/RELEASE-$(cat VERSION).md"
+          test -f "docs/releases/$(cat VERSION)/notes.md"
           echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
   packages:
     needs: source
@@ -117,4 +117,4 @@ jobs:
             echo 'Refusing to replace an existing release.' >&2
             exit 1
           fi
-          gh release create "$RELEASE_TAG" dist/*.zip dist/*.zip.sha256 --verify-tag --draft --title "TokenMonitor ${RELEASE_TAG#v}" --notes-file "docs/RELEASE-$(cat VERSION).md"
+          gh release create "$RELEASE_TAG" dist/*.zip dist/*.zip.sha256 --verify-tag --draft --title "TokenMonitor ${RELEASE_TAG#v}" --notes-file "docs/releases/$(cat VERSION)/notes.md"

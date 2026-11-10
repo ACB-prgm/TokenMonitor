@@ -39,7 +39,7 @@ export function importHistory(db:HistoryDatabase,home:string,f:HistoryFile,basis
    const builder=new HistoryBuilder();let currentTime=now;
    const parser=new TelemetryParser(e=>{
     if(e.kind==='activity'){currentTime=Date.parse(e.timestamp);builder.activity(e.timestamp);}
-    else if(e.kind==='compaction'){builder.compact(e.timestamp);db.boundary(target,offset,e.timestamp,'compaction',now);}
+    else if(e.kind==='compaction'){builder.compact(e.timestamp,e.usage,e.callPosition,e.reason);db.boundary(target,offset,e.timestamp,'compaction',now);}
     else if(e.kind==='retained'){builder.retainedContext(e.tokens);db.boundary(target,offset,new Date(currentTime).toISOString(),'retained',now,e.tokens);}
     else if(e.kind==='turn'){builder.turn(e.turn);db.addTurn(target,offset,e.timestamp??new Date(currentTime).toISOString(),e.turn.model,e.turn.calls,now);}
     else {builder.call(e.sample,e.contextLimit);db.addSample(target,offset,e.sample,now);db.boundary(target,offset,e.sample.timestamp,'context-limit',now,e.contextLimit);}
@@ -67,6 +67,7 @@ export function importHistory(db:HistoryDatabase,home:string,f:HistoryFile,basis
    const data=builder.finish(now,complete?f.end:undefined);
    for(const b of data.buckets)db.addBucket(target,b);
    for(const p of data.paybacks)db.updatePayback(target,p,p.timestamp===previousEpoch?.timestamp?previousEpoch:undefined);
+   for(const c of data.compactions??[])db.saveCompaction(target,offset,c,now);
    for(const b of data.charges){const oldCharge=db.statement('SELECT position FROM history_charges WHERE source=? AND timestamp=?').get(target,b.timestamp) as any;
     const pos=oldCharge?.position??offset;const fields=['cacheInput','cacheRead','input','cached','cacheWrite','output','calls','priced','inputPriced','inputCost','cost','overhead'] as const;
     if(b.timestamp.slice(0,10)>=new Date(now-89*864e5).toISOString().slice(0,10))db.statement(`INSERT OR REPLACE INTO history_charges VALUES(${Array(16).fill('?').join(',')})`).run(target,pos,db.dimension(b),b.timestamp,...fields.map(k=>b[k]));

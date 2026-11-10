@@ -27,7 +27,9 @@ export async function buildDev({marketplaceRoot=path.join(repo,'.build/tokenmoni
   await cp(path.join(repo,'plugins/token-monitor-embedded/assets'),path.join(pluginRoot,'assets'),{recursive:true});
   for(const name of ['LICENSE','NOTICE']) await cp(path.join(repo,name),path.join(pluginRoot,name));
   await writeJSON(path.join(pluginRoot,'.mcp.json'),{mcpServers:{[pluginName]:{
-    command:process.execPath,args:['./server/dist/index.mjs'],cwd:'.'
+    command:process.execPath,args:['./server/dist/index.mjs'],cwd:'.',
+    // Inherit the live app connection when Codex starts the server, not when DEV is built.
+    env_vars:['CODEX_APP_TOOLS_PIPE_PATH','CODEX_APP_TOOLS_CALLER_HOST_ID']
   }}});
   // Keep DEV metadata current without requesting a second automatic panel.
   const hookCommand=process.platform==='win32'
@@ -73,6 +75,6 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
   console.log(`Built Token Monitor DEV ${result.version}\n${result.pluginRoot}`);
   if(flags.includes('--install')) {
     await installDev(result);
-    console.log('Restart Codex, review DEV hook trust, then ask to open Token Monitor DEV.');
+    console.log('Reconnect Token Monitor DEV and reopen its panel. The bridge reconnects when Codex starts DEV; continuation preferences persist across restarts. Review DEV hook trust if prompted.');
   } else console.log('Run npm run dev to build and install locally.');
 }

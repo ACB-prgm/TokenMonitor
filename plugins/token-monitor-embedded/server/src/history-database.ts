@@ -1,3 +1,4 @@
+import type {CompactionDetail} from './compaction.js';
 import {DatabaseSync,type StatementSync} from 'node:sqlite';
 import {createHash} from 'node:crypto';
 import {chmodSync,existsSync,statSync} from 'node:fs';
@@ -13,7 +14,7 @@ export class HistoryDatabase {
  statement(sql:string){let s=this.statements.get(sql);if(!s){s=this.db.prepare(sql);this.statements.set(sql,s);}return s;}
  private bump(){this.db.exec("UPDATE meta SET value=CAST(value AS INTEGER)+1 WHERE key='history_revision'");}
  constructor(readonly file:string,options:{migrate?:boolean}={}){
-  const fresh=!existsSync(file);this.db=new DatabaseSync(file);const [major,minor,patch]=String(this.db.prepare('SELECT sqlite_version() AS version').get()!.version).split('.').map(Number);if(major<3||major===3&&(minor<51||minor===51&&patch<3)&&!(minor===50&&patch>=7)&&!(minor===44&&patch>=6)){this.db.close();throw Error('Durable history requires SQLite 3.51.3 or a fixed backport; use the bundled runtime');}if(Number(this.db.prepare('PRAGMA user_version').get()!.user_version)>3){this.db.close();throw Error('Historical database requires a newer TokenMonitor version');}chmodSync(file,0o600);
+  const fresh=!existsSync(file);this.db=new DatabaseSync(file);const [major,minor,patch]=String(this.db.prepare('SELECT sqlite_version() AS version').get()!.version).split('.').map(Number);if(major<3||major===3&&(minor<51||minor===51&&patch<3)&&!(minor===50&&patch>=7)&&!(minor===44&&patch>=6)){this.db.close();throw Error('Durable history requires SQLite 3.51.3 or a fixed backport; use the bundled runtime');}if(Number(this.db.prepare('PRAGMA user_version').get()!.user_version)>4){this.db.close();throw Error('Historical database requires a newer TokenMonitor version');}chmodSync(file,0o600);
   this.db.exec(`PRAGMA busy_timeout=100; ${fresh?'PRAGMA auto_vacuum=INCREMENTAL;':''} PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA wal_autocheckpoint=1000; PRAGMA journal_size_limit=4194304;
    CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT);
    CREATE TABLE IF NOT EXISTS threads(id TEXT PRIMARY KEY,signature TEXT,basis TEXT,data TEXT);
@@ -32,6 +33,7 @@ export class HistoryDatabase {
   const pageSize=Number(this.statement('PRAGMA page_size').get()!.page_size);this.db.exec(`PRAGMA wal_autocheckpoint=${Math.max(1,Math.floor(4194304/pageSize))}`);
   if(options.migrate!==false)this.migrate();
   this.upgrade();
+  this.db.exec(`CREATE TABLE IF NOT EXISTS history_compactions(source TEXT NOT NULL,timestamp TEXT NOT NULL,position INTEGER NOT NULL,data TEXT NOT NULL,PRIMARY KEY(source,timestamp));CREATE INDEX IF NOT EXISTS history_compactions_date ON history_compactions(timestamp); PRAGMA user_version=4;`);
  }
  internBasis(definition:string){const id=createHash('sha256').update(definition).digest('hex');this.statement('INSERT OR IGNORE INTO history_basis VALUES(?,?)').run(id,definition);return id;}
  dimension(b:Partial<Bucket>){const values=[b.model??null,b.effort??null,b.rateBand??null,b.serviceTier??null,b.regionalProcessing==null?null:Number(b.regionalProcessing)];const key=JSON.stringify(values);this.statement('INSERT OR IGNORE INTO history_dimensions(identity,model,effort,rateBand,serviceTier,regionalProcessing) VALUES(?,?,?,?,?,?)').run(key,...values);return Number(this.statement('SELECT id FROM history_dimensions WHERE identity=?').get(key)!.id);}
@@ -42,7 +44,6 @@ export class HistoryDatabase {
    const data=JSON.parse(row.data) as ThreadHistory;
    this.transaction(()=>{if(!this.statement('SELECT 1 FROM history_sources WHERE id=?').get(row.id))this.save(row.id,row.signature,row.basis,data);this.statement('DELETE FROM threads WHERE id=?').run(row.id);});
   }
-  const baseline=this.statement("SELECT value FROM meta WHERE key='baseline'").get()?.value;if(typeof baseline==='string'){try{const samples=JSON.parse(baseline);if(Array.isArray(samples)&&samples.every(s=>s&&typeof s.timestamp==='string'&&typeof s.input==='number')){const summary={samples:samples.length,start:samples[0]?.timestamp??null,end:samples.at(-1)?.timestamp??null,input:0,cached:0,cacheWrite:0,output:0,reasoning:0};for(const sample of samples)for(const key of ['input','cached','cacheWrite','output','reasoning'] as const)if(Number.isFinite(sample[key])&&sample[key]>=0)summary[key]+=sample[key];this.transaction(()=>{this.statement("INSERT OR REPLACE INTO meta VALUES('legacy_baseline_summary',?)").run(JSON.stringify(summary));this.statement("DELETE FROM meta WHERE key='baseline'").run();});}}catch{/* Preserve unrecognized metadata rather than treating it as numeric detail. */}}
  }
  private save(id:string,signature:string,basis:string,d:ThreadHistory,detail:NumericCall[]=[...d.first,...d.last]){
   for(const table of ['history_buckets','history_samples','history_paybacks','history_turns','history_charges'])this.statement(`DELETE FROM ${table} WHERE source=?`).run(id);
@@ -76,7 +77,7 @@ export class HistoryDatabase {
   return [...map.values()];
  }
  prune(now=Date.now()) {const cutoff=new Date(now-89*864e5).toISOString().slice(0,10);this.transaction(()=>{
-  let changed=false;for(const table of ['history_samples','history_turn_events','history_boundaries','history_charges']){this.statement(`DELETE FROM ${table} WHERE rowid IN (SELECT rowid FROM ${table} WHERE timestamp<? LIMIT 1000)`).run(cutoff);changed||=Number(this.statement('SELECT changes() AS n').get()!.n)>0;}
+  let changed=false;for(const table of ['history_samples','history_turn_events','history_boundaries','history_charges','history_compactions']){this.statement(`DELETE FROM ${table} WHERE rowid IN (SELECT rowid FROM ${table} WHERE timestamp<? LIMIT 1000)`).run(cutoff);changed||=Number(this.statement('SELECT changes() AS n').get()!.n)>0;}
   this.statement('DELETE FROM history_paybacks WHERE rowid IN (SELECT rowid FROM history_paybacks WHERE completed IS NOT NULL AND completed<? LIMIT 1000)').run(cutoff);changed||=Number(this.statement('SELECT changes() AS n').get()!.n)>0;
   this.statement('DELETE FROM history_replay WHERE (source,kind,digest) IN (SELECT source,kind,digest FROM history_replay WHERE timestamp<? LIMIT 1000)').run(cutoff);
   if(changed)this.bump();
@@ -156,13 +157,13 @@ export class HistoryDatabase {
   this.statement(`INSERT INTO history_turn_daily VALUES(?,?,?,1,?) ON CONFLICT(source,day,model) DO UPDATE SET turns=turns+1,calls=calls+excluded.calls`).run(id,timestamp.slice(0,10),model,calls);
   if(timestamp.slice(0,10)>=new Date(now-89*864e5).toISOString().slice(0,10))this.statement('INSERT OR IGNORE INTO history_turn_events VALUES(?,?,?,?,?)').run(id,position,timestamp,model,calls);
  }
- clearSource(id:string){for(const table of ['history_buckets','history_samples','history_paybacks','history_turns','history_charges','history_daily','history_outcomes','history_turn_events','history_boundaries','history_turn_daily','history_day_basis','history_replay'])this.statement(`DELETE FROM ${table} WHERE source=?`).run(id);this.statement('DELETE FROM history_totals WHERE source=?').run(id);this.statement('DELETE FROM history_sources WHERE id=?').run(id);}
+ clearSource(id:string){for(const table of ['history_buckets','history_samples','history_paybacks','history_turns','history_charges','history_daily','history_outcomes','history_turn_events','history_boundaries','history_turn_daily','history_day_basis','history_replay','history_compactions'])this.statement(`DELETE FROM ${table} WHERE source=?`).run(id);this.statement('DELETE FROM history_totals WHERE source=?').run(id);this.statement('DELETE FROM history_sources WHERE id=?').run(id);}
  publish(source:string,target:string){if(source===target)return;this.clearSource(source);
   // Totals' global rows deliberately exclude staging sources. Reinsert daily rows to activate them.
   const rows=this.statement('SELECT * FROM history_daily WHERE source=?').all(target) as any[];
   this.statement('DELETE FROM history_daily WHERE source=?').run(target);
   for(const r of rows)this.statement(`INSERT INTO history_daily VALUES(${Array(3+bucketNumbers.length).fill('?').join(',')})`).run(source,r.day,r.dimension,...bucketNumbers.map(k=>r[k]));
-  for(const table of ['history_buckets','history_samples','history_paybacks','history_turns','history_charges','history_outcomes','history_turn_events','history_boundaries','history_turn_daily','history_day_basis','history_replay'])this.statement(`UPDATE ${table} SET source=? WHERE source=?`).run(source,target);
+  for(const table of ['history_buckets','history_samples','history_paybacks','history_turns','history_charges','history_outcomes','history_turn_events','history_boundaries','history_turn_daily','history_day_basis','history_replay','history_compactions'])this.statement(`UPDATE ${table} SET source=? WHERE source=?`).run(source,target);
   this.statement('DELETE FROM history_totals WHERE source=?').run(target);this.statement('UPDATE history_sources SET id=? WHERE id=?').run(source,target);
  }
  buckets(source?:string,start?:string,end?:string,exclude?:string):Bucket[]{
@@ -178,12 +179,14 @@ export class HistoryDatabase {
  outcomes(source?:string,start?:string,end?:string,exclude?:string):Payback[]{const where=["source NOT LIKE '~%'",'events>0'],args:any[]=[];if(source){where.push('source=?');args.push(source);}if(exclude){where.push('source<>?');args.push(exclude);}if(start){where.push('day>=?');args.push(start);}if(end){where.push('day<?');args.push(end);}
   return (this.statement(`SELECT day,completed,valid,profitable,reason,SUM(events) AS events,SUM(net) AS net FROM history_outcomes WHERE ${where.join(' AND ')} GROUP BY day,completed,valid,profitable,reason`).all(...args) as any[]).map(r=>({timestamp:r.day,completed:r.completed?r.day:undefined,valid:!!r.valid,breakEven:r.profitable?1:null,reason:r.reason||undefined,calls:0,net:r.net,events:r.events}));
  }
+ saveCompaction(source:string,position:number,c:CompactionDetail,now:number){if(c.timestamp.slice(0,10)<new Date(now-89*864e5).toISOString().slice(0,10))return;this.statement('INSERT OR REPLACE INTO history_compactions VALUES(?,?,?,?)').run(source,c.timestamp,position,JSON.stringify(c));}
+ compactionDetails(source:string):CompactionDetail[]{return (this.statement('SELECT data FROM history_compactions WHERE source=? ORDER BY timestamp DESC LIMIT 120').all(source) as {data:string}[]).reverse().map(r=>JSON.parse(r.data));}
  recent(source?:string):NumericCall[]{const rows=this.statement(`SELECT t.*,d.model,d.effort,d.serviceTier,d.regionalProcessing FROM history_samples t JOIN history_dimensions d ON t.dimension=d.id WHERE ${source?'source=?':"source NOT LIKE '~%'"} ORDER BY timestamp DESC,position DESC LIMIT 100`).all(...(source?[source]:[])) as any[];return rows.reverse().map(r=>{const b:any={timestamp:r.timestamp};for(const k of sampleNumbers)if(r[k]!=null)b[k]=r[k];for(const k of flags)b[k]=!!r[k];for(const k of ['model','effort','serviceTier'])if(r[k]!=null)b[k]=r[k];if(r.regionalProcessing!=null)b.regionalProcessing=!!r.regionalProcessing;return b;});}
  turns(exclude?:string){return this.statement(`SELECT model,SUM(turns) AS turns,SUM(calls) AS calls FROM history_turns WHERE source NOT LIKE '~%' ${exclude?'AND source<>?':''} GROUP BY model`).all(...(exclude?[exclude]:[])) .map(r=>({...r})) as {model:string;turns:number;calls:number}[];}
  changed(){this.bump();}
  trimOldReplay(source:string,now:number){const cutoff=new Date(now-89*864e5).toISOString().slice(0,10);for(const kind of ['record','call','cumulative','turn-start','turn-message','turn-end']){const row=this.statement('SELECT sequence FROM history_replay WHERE source=? AND kind=? AND timestamp<? ORDER BY sequence DESC LIMIT 1 OFFSET 32767').get(source,kind,cutoff);if(row)this.statement('DELETE FROM history_replay WHERE source=? AND kind=? AND timestamp<? AND sequence<?').run(source,kind,cutoff,row.sequence);}}
  pruneReplay(source:string,now=Date.now()){const cutoff=new Date(now-89*864e5).toISOString().slice(0,10);this.statement('DELETE FROM history_replay WHERE (source,kind,digest) IN (SELECT source,kind,digest FROM history_replay INDEXED BY history_replay_date WHERE source=? AND timestamp<? LIMIT 1000)').run(source,cutoff);return Number(this.statement('SELECT changes() AS n').get()!.n);}
- hasExpired(now=Date.now()){const cutoff=new Date(now-89*864e5).toISOString().slice(0,10);return ['history_samples','history_turn_events','history_boundaries','history_charges','history_replay'].some(t=>!!this.statement(`SELECT 1 FROM ${t} WHERE timestamp<? LIMIT 1`).get(cutoff))||!!this.statement('SELECT 1 FROM history_paybacks WHERE completed<? LIMIT 1').get(cutoff);}
+ hasExpired(now=Date.now()){const cutoff=new Date(now-89*864e5).toISOString().slice(0,10);return ['history_samples','history_turn_events','history_boundaries','history_charges','history_compactions','history_replay'].some(t=>!!this.statement(`SELECT 1 FROM ${t} WHERE timestamp<? LIMIT 1`).get(cutoff))||!!this.statement('SELECT 1 FROM history_paybacks WHERE completed<? LIMIT 1').get(cutoff);}
  boundary(source:string,position:number,timestamp:string,kind:string,now:number,tokens?:number,model?:string,turnId?:string,user?:boolean){if(timestamp.slice(0,10)<new Date(now-89*864e5).toISOString().slice(0,10))return;this.statement('INSERT OR IGNORE INTO history_boundaries VALUES(?,?,?,?,?,?,?,?)').run(source,position,timestamp,kind,turnId??null,tokens??null,model??null,user==null?null:Number(user));}
  savedTasks(query='',includeArchived=false){const q='%'+query.trim().toLowerCase()+'%',where=`${includeArchived?'1':'c.archived=0'} AND (lower(COALESCE(c.title,'')) LIKE ? ESCAPE '\\' OR lower(c.source) LIKE ? ESCAPE '\\' OR lower(COALESCE(c.workspace,'')) LIKE ? ESCAPE '\\')`;
   const literal='%'+query.trim().toLowerCase().replace(/[\\%_]/g,'\\$&')+'%';const rows=this.statement(`SELECT c.source AS id,c.title,c.workspace,c.archived,c.available FROM history_catalogue c WHERE ${where} ORDER BY c.source LIMIT 100`).all(literal,literal,literal) as any[];

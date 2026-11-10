@@ -12,39 +12,62 @@ export class Continuation {
  constructor(root:string,private usage:BridgeUsage,private bridge:Pick<AppBridge,'call'|'available'>=new AppBridge(),private now=()=>Date.now(),private archived:(id:string)=>boolean=()=>false,private targets:()=>string[]=()=>[]){
   mkdirSync(root,{recursive:true});this.db=new DatabaseSync(path.join(root,'continuation.sqlite'));this.db.exec(`PRAGMA busy_timeout=3000;
  CREATE TABLE IF NOT EXISTS preferences(account TEXT,host TEXT,thread TEXT,source TEXT,enabled INTEGER NOT NULL,dismissed TEXT,message TEXT NOT NULL,PRIMARY KEY(account,host,thread));
+ CREATE TABLE IF NOT EXISTS contexts(source TEXT,thread TEXT,account TEXT NOT NULL,host TEXT NOT NULL,PRIMARY KEY(source,thread));
  CREATE TABLE IF NOT EXISTS episodes(account TEXT,host TEXT,thread TEXT,turn TEXT,phase TEXT NOT NULL,notBefore REAL NOT NULL,PRIMARY KEY(account,host,thread,turn));`);
   // An interrupted dispatch is never retried, even if the app did not acknowledge it.
   this.timer=setInterval(()=>void this.tick().catch(()=>{}),15000);this.timer.unref();void this.tick().catch(()=>{});
  }
  private key(p:any){return [p.account,p.host,p.thread];}
  private message(p:any,message:string){this.db.prepare('UPDATE preferences SET message=? WHERE account=? AND host=? AND thread=?').run(message,...this.key(p));}
+ private transaction(work:()=>void){
+  this.db.exec('BEGIN IMMEDIATE');try{work();this.db.exec('COMMIT');}catch(error){this.db.exec('ROLLBACK');throw error;}
+ }
+ private disable(account:string,host:string){
+  this.db.prepare("UPDATE preferences SET enabled=0,message='Off' WHERE account=? AND host=?").run(account,host);
+  this.db.prepare("UPDATE episodes SET phase='cancelled' WHERE account=? AND host=? AND phase='waiting'").run(account,host);
+ }
+ private preference(account:string,host:string,threadId:string){
+  const p=this.db.prepare('SELECT * FROM preferences WHERE account=? AND host=? AND thread=?').get(account,host,threadId) as any;
+  const all=!!this.db.prepare("SELECT 1 FROM preferences WHERE account=? AND host=? AND thread='*' AND enabled=1").get(account,host);
+  const enabled=all||!!p?.enabled,mode:ContinuationMode=all?'all':enabled?'current':'off';
+  return {p,all,enabled,mode};
+ }
  async view(threadId:string,source:string,action:'status'|'enable'|'enable_all'|'disable'|'dismiss'='status',selected=()=>true):Promise<ContinuationView>{
   this.usage.bind(source);
+  let u:any,info:any;
   try{
-   const u=await this.usage.read();const info=await this.bridge.call('read_thread',{threadId,turnLimit:1,maxOutputCharsPerItem:1},source),t=info?.thread;
-   if(t?.id!==threadId||t.kind!=='codex'||!t.hostId||t.archived||this.archived(threadId))throw Error('Choose an available local Codex chat.');
-   const keys=[u.accountId,t.hostId,threadId],q=this.usage.snapshot().fiveHour;
-   let p=this.db.prepare('SELECT * FROM preferences WHERE account=? AND host=? AND thread=?').get(...keys) as any;
+   u=await this.usage.read();info=await this.bridge.call('read_thread',{threadId,turnLimit:1,maxOutputCharsPerItem:1},source);
+  }catch(error){
+   const scope=this.db.prepare('SELECT account,host FROM contexts WHERE source=? AND thread=?').get(source,threadId) as {account:string;host:string}|undefined;
    if(action!=='status'){
+    if(action!=='disable')throw error;
     if(!selected())throw Error('Selected chat changed; try again.');
-    const enabled=action==='enable'?1:action==='disable'||action==='enable_all'?0:p?.enabled??0;
+    if(!scope)throw Error('App bridge unavailable; no validated account and host. The change cannot be confirmed.');
+    this.transaction(()=>this.disable(scope.account,scope.host));
+   }
+   const saved=scope?this.preference(scope.account,scope.host,threadId):undefined;
+   return {available:false,threadId,enabled:saved?.enabled??false,mode:saved?.mode??'off',offer:false,message:action==='disable'?'Off':scope?'App bridge unavailable; automatic continuation is paused.':'App bridge unavailable; continuation settings cannot be confirmed.'};
+  }
+  const t=info?.thread;
+  if(t?.id!==threadId||t.kind!=='codex'||!t.hostId||t.archived||this.archived(threadId))throw Error('Choose an available local Codex chat.');
+  this.db.prepare('INSERT INTO contexts VALUES(?,?,?,?) ON CONFLICT(source,thread) DO UPDATE SET account=excluded.account,host=excluded.host').run(source,threadId,u.accountId,t.hostId);
+  const keys=[u.accountId,t.hostId,threadId],q=this.usage.snapshot().fiveHour;
+  if(action!=='status'){
+   if(!selected())throw Error('Selected chat changed; try again.');
+   this.transaction(()=>{
+    const previous=this.preference(u.accountId,t.hostId,threadId).p;
     if(action!=='dismiss'){
      this.db.prepare('UPDATE preferences SET enabled=0 WHERE account=? AND host=?').run(u.accountId,t.hostId);
-     if(action==='enable_all')this.db.prepare(`INSERT INTO preferences VALUES(?,?,?, ?,1,NULL,'All threads') ON CONFLICT(account,host,thread) DO UPDATE SET source=excluded.source,enabled=1`).run(u.accountId,t.hostId,'*',source);
      if(action!=='enable_all')this.db.prepare("UPDATE episodes SET phase='cancelled' WHERE account=? AND host=? AND phase='waiting' AND (?='disable' OR thread<>?)").run(u.accountId,t.hostId,action,threadId);
+     if(action==='enable_all')this.db.prepare("INSERT INTO preferences VALUES(?,?,?, ?,1,NULL,'All threads') ON CONFLICT(account,host,thread) DO UPDATE SET source=excluded.source,enabled=1").run(u.accountId,t.hostId,'*',source);
     }
-    this.db.prepare(`INSERT INTO preferences VALUES(?,?,?,?,?,?,?) ON CONFLICT(account,host,thread) DO UPDATE SET source=excluded.source,enabled=excluded.enabled,dismissed=excluded.dismissed,message=excluded.message`).run(...keys,source,enabled,action==='dismiss'?q?.reset??null:p?.dismissed??null,enabled?'On: waiting for a confirmed usage-limit interruption.':'Off');
-    if(action==='disable')this.db.prepare("UPDATE episodes SET phase='cancelled' WHERE account=? AND host=? AND thread=? AND phase='waiting'").run(...keys);
-    p=this.db.prepare('SELECT * FROM preferences WHERE account=? AND host=? AND thread=?').get(...keys);
-   }
-   const all=!!this.db.prepare("SELECT 1 FROM preferences WHERE account=? AND host=? AND thread='*' AND enabled=1").get(u.accountId,t.hostId);
-   const enabled=all||!!p?.enabled,mode:ContinuationMode=all?'all':enabled?'current':'off';
-   const fresh=this.now()-this.usage.observedAt<=30000;
-   return {available:this.usage.available,threadId,enabled,mode,message:all?'All local threads: waiting for confirmed usage-limit interruptions.':p?.message??'Off',offer:!enabled&&fresh&&!!q&&q.used>=90&&!!q.reset&&Date.parse(q.reset)>this.now()&&p?.dismissed!==q.reset};
-  }catch(error){
-   const stored=this.db.prepare("SELECT * FROM preferences WHERE (thread=? OR thread='*') AND source=? AND enabled=1").all(threadId,source);
-   if(action==='disable'&&selected()){this.db.prepare('UPDATE preferences SET enabled=0,message=? WHERE source=?').run('Off',source);return {available:false,threadId,enabled:false,mode:'off',offer:false,message:'Off'};}
-   if(action!=='status')throw error;return {available:false,threadId,enabled:stored.length>0,mode:stored.some((p:any)=>p.thread==='*')?'all':stored.length?'current':'off',offer:false,message:'App bridge unavailable; automatic continuation is paused.'};}
+    const enabled=action==='enable'?1:action==='dismiss'?previous?.enabled??0:0;
+    this.db.prepare("INSERT INTO preferences VALUES(?,?,?,?,?,?,?) ON CONFLICT(account,host,thread) DO UPDATE SET source=excluded.source,enabled=excluded.enabled,dismissed=excluded.dismissed,message=excluded.message").run(...keys,source,enabled,action==='dismiss'?q?.reset??null:previous?.dismissed??null,action==='dismiss'?previous?.message??'Off':enabled?'On: waiting for a confirmed usage-limit interruption.':'Off');
+   });
+  }
+  const {p,all,enabled,mode}=this.preference(u.accountId,t.hostId,threadId);
+  const fresh=this.now()-this.usage.observedAt<=30000;
+  return {available:this.usage.available,threadId,enabled,mode,message:all?'All local threads: waiting for confirmed usage-limit interruptions.':p?.message??'Off',offer:!enabled&&fresh&&!!q&&q.used>=90&&!!q.reset&&Date.parse(q.reset)>this.now()&&p?.dismissed!==q.reset};
  }
  async tick(){
   if(this.running||this.stopped)return;this.running=true;

@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
+import {spawn} from 'node:child_process';
 import {Continuation} from '../server/dist/continuation.mjs';
 import {BridgeUsage} from '../server/dist/bridge-usage.mjs';
 function fixture(){
@@ -70,4 +72,64 @@ test('all threads discovers future local threads, persists, and current/off revo
 
 test('an unavailable returned bucket cannot authorize a continuation',async()=>{
  const f=fixture();try{await f.enable();failed(f);f.u.rateLimitsByLimitId={codex:f.u.rateLimits,other:null};await f.tick();assert.equal(f.sends,0);}finally{f.close();}
+});
+
+test('offline Off from another caller revokes the validated scope and waiting work',async()=>{
+ const f=fixture();try{
+  await f.all();failed(f);f.u.rateLimits.primary.usedPercent=100;await f.tick();
+  await f.worker.view('chat','source-b');f.usage.close();
+  const db=new DatabaseSync(path.join(f.root,'continuation.sqlite'));
+  db.prepare("INSERT INTO preferences VALUES('other-account','local','*','source-b',1,NULL,'All threads')").run();
+  db.prepare("INSERT INTO preferences VALUES('account','other-host','*','source-b',1,NULL,'All threads')").run();
+  assert.equal((await f.worker.view('chat','source-b')).mode,'all');
+  assert.equal((await f.worker.view('chat','source-b','disable')).mode,'off');
+  assert.equal(db.prepare("SELECT count(*) n FROM preferences WHERE account='account' AND host='local' AND enabled=1").get().n,0);
+  assert.equal(db.prepare("SELECT phase FROM episodes").get().phase,'cancelled');
+  assert.equal(db.prepare("SELECT enabled FROM preferences WHERE account='other-account'").get().enabled,1);
+  assert.equal(db.prepare("SELECT enabled FROM preferences WHERE host='other-host'").get().enabled,1);
+  db.close();f.restart();assert.equal((await f.worker.view('chat','source-b')).mode,'off');
+ }finally{f.close();}
+});
+test('offline mutations need validated scope and unchanged selection',async()=>{
+ const f=fixture();try{
+  await f.all();f.usage.close();
+  await assert.rejects(f.worker.view('chat','unknown-source','disable'),/cannot be confirmed/);
+  await assert.rejects(f.worker.view('chat','source','disable',()=>false),/Selected chat changed/);
+  assert.equal((await f.view()).mode,'all');
+ }finally{f.close();}
+});
+test('scope write failure rolls back permissions and waiting episode changes',async()=>{
+ const f=fixture();try{
+  await f.all();failed(f);f.u.rateLimits.primary.usedPercent=100;await f.tick();
+  const db=new DatabaseSync(path.join(f.root,'continuation.sqlite'));
+  db.exec("CREATE TRIGGER fail_scope BEFORE UPDATE OF source ON preferences BEGIN SELECT RAISE(ABORT,'injected failure'); END");
+  await assert.rejects(f.enable(),/injected failure/);
+  assert.equal((await f.view()).mode,'all');
+  assert.equal(db.prepare('SELECT phase FROM episodes').get().phase,'waiting');
+  db.exec('DROP TRIGGER fail_scope');f.usage.close();
+  db.exec("CREATE TRIGGER fail_off BEFORE UPDATE ON episodes BEGIN SELECT RAISE(ABORT,'offline failure'); END");
+  await assert.rejects(f.view('disable'),/offline failure/);
+  assert.equal((await f.view()).mode,'all');db.close();
+ }finally{f.close();}
+});
+test('separate processes changing Current thread leave exactly one scope enabled',async()=>{
+ const f=fixture();try{
+  const moduleURL=new URL('../server/dist/continuation.mjs',import.meta.url).href;
+  const usageURL=new URL('../server/dist/bridge-usage.mjs',import.meta.url).href;
+  const code=`
+   import {Continuation} from ${JSON.stringify(moduleURL)};
+   import {BridgeUsage} from ${JSON.stringify(usageURL)};
+   const [root,id]=process.argv.slice(1);
+   const bridge={available:true,async call(tool){return tool==='get_usage_limits'?{accountId:'account'}:{thread:{id,hostId:'local',kind:'codex'}};}};
+   const usage=new BridgeUsage(bridge);const worker=new Continuation(root,usage,bridge);
+   process.send('ready');process.once('message',async()=>{try{for(let i=0;i<30;i++)await worker.view(id,id,'enable');worker.close();usage.close();process.disconnect();}catch(e){console.error(e);process.exit(1);}});
+  `;
+  const children=['a','b'].map(id=>spawn(process.execPath,['--input-type=module','-e',code,f.root,id],{stdio:['ignore','ignore','pipe','ipc']}));
+  const exits=children.map(child=>new Promise((resolve,reject)=>{let errors='';child.stderr.on('data',d=>errors+=d);child.on('error',reject);child.on('exit',n=>n===0?resolve():reject(Error(errors)));}));
+  await Promise.all(children.map(child=>new Promise(resolve=>child.once('message',resolve))));
+  children.forEach(child=>child.send('go'));await Promise.all(exits);
+  const db=new DatabaseSync(path.join(f.root,'continuation.sqlite'));
+  const rows=db.prepare('SELECT thread FROM preferences WHERE enabled=1').all();db.close();
+  assert.equal(rows.length,1);assert.ok(['a','b'].includes(rows[0].thread));
+ }finally{f.close();}
 });

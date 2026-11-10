@@ -1,3 +1,4 @@
+import {checkDocs} from './check-docs.mjs';
 import {readFile,readdir} from 'node:fs/promises';import path from 'node:path';import {fileURLToPath} from 'node:url';import assert from 'node:assert/strict';
 const repo=fileURLToPath(new URL('..',import.meta.url)),plugin=path.join(repo,'plugins/token-monitor-embedded');
 const version=(await readFile(path.join(repo,'VERSION'),'utf8')).trim();assert.match(version,/^\d+\.\d+\.\d+$/);
@@ -9,5 +10,7 @@ assert.ok((await readFile(path.join(repo,'LICENSE'),'utf8')).startsWith('# PolyF
 const ignored=new Set(['.git','.build','build','dist','node_modules','runtime']);
 async function scan(dir){for(const f of await readdir(dir,{withFileTypes:true})){if(ignored.has(f.name))continue;assert.ok(!f.name.endsWith('.swift'),'Unexpected retired source '+f.name);assert.ok(f.name!=='Package.swift');if(f.isDirectory())await scan(path.join(dir,f.name));}}await scan(repo);
 assert.ok((await readFile(path.join(plugin,'shared/version.ts'),'utf8')).includes("import metadata from '../package.json'"));
-assert.ok((await readFile(path.join(repo,'docs',`RELEASE-${version}.md`),'utf8')).includes(`TokenMonitor ${version}`));
+assert.ok((await readFile(path.join(repo,'docs','releases',version,'notes.md'),'utf8')).includes(`TokenMonitor ${version}`));
 console.log('Release metadata, hooks, license and source inventory verified: '+version);
+
+await checkDocs(repo);

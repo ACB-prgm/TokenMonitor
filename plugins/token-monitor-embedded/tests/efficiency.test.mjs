@@ -91,3 +91,20 @@ test('older estimated calculation bases remain comparable only with matching pri
   }
  }finally{store?.close();rmSync(home,{recursive:true,force:true});}
 });
+test('active compactions count immediately at break-even and keep tracking validity and net savings',()=>{
+ const b=new HistoryBuilder();b.call(sample());b.compact(sample(1).timestamp);
+ let i=2;
+ while(b.data.paybacks[0].breakEven==null&&i<100){
+  assert.equal(summarize(b.data.buckets,b.data.paybacks).pending,1);
+  b.call(sample(i++,{input:40000,cached:40000}));
+ }
+ const epoch=b.data.paybacks[0];assert.ok(epoch.breakEven>0);assert.equal(epoch.completed,undefined);
+ const paid=summarize(b.data.buckets,b.data.paybacks);
+ assert.equal(paid.paybackRate,100);assert.equal(paid.evaluable,1);assert.equal(paid.profitable,1);assert.equal(paid.pending,0);assert.equal(paid.netSavings,epoch.net);
+ const restored=new HistoryBuilder();restored.restore(structuredClone(b.checkpoint()));
+ restored.call(sample(i++,{input:40000,cached:40000}));assert.ok(summarize([],restored.data.paybacks).netSavings>paid.netSavings);
+ restored.compact(sample(i++).timestamp);const closed=summarize([],restored.data.paybacks);
+ assert.equal(closed.evaluable,1);assert.equal(closed.profitable,1);assert.equal(closed.pending,1);
+ b.call(sample(i,{input:40000,cached:40000}),50000);
+ assert.equal(epoch.valid,false);assert.equal(summarize([],b.data.paybacks).paybackRate,null);
+});

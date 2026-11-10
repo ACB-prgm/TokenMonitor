@@ -1,4 +1,4 @@
-# Account subscription allowances
+# Account allowances
 
 The five-hour and weekly allowances describe the Codex account, independently of the selected chat. Context occupancy, call history, thread costs, and the calibrated thread allowance estimates still belong to the selected chat.
 
@@ -28,6 +28,7 @@ A live reading no more than 60 seconds old takes precedence. Otherwise, the newe
 
 When the reported reset time passes without a newer observation, the UI shows **Awaiting refresh**. It does not assume that the account is back to 100% or estimate consumption from thread cost.
 
-# Recent-call previews
 
-Call previews appear and switch immediately. The same details panel remains mounted across columns and chart gaps. Leaving the chart/details starts a 200 ms grace period, followed by a 140 ms fade and collapse. Entering another column or the details cancels dismissal. Keyboard focus and pinned selections preserve the panel. Clear selection and Escape dismiss it explicitly; old selections and timers are cleared on history eviction or chat change. Reduced-motion settings keep the grace period but omit the animation.
+## Source and tests
+
+[Implementation](../../plugins/token-monitor-embedded/server/src/allowances.ts) · [Regression tests](../../plugins/token-monitor-embedded/tests/allowances.test.mjs) · [Documentation index](../index.md)

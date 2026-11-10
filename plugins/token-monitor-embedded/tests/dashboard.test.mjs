@@ -130,7 +130,7 @@ test('historical KPI banner precedes Latest call, stays collapsed and explains b
  const html=render({...latestFixture,efficiency:data});
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="latest-call"'));
  assert.ok(html.indexOf('class="efficiency"')<html.indexOf('class="history"'));
- assert.match(html,/kpi-row-label">Thread/);assert.match(html,/kpi-row-label">Comp/);assert.match(html,/\$0.11/);assert.match(html,/Compaction payback/);assert.doesNotMatch(html,/N\/A/);assert.match(html,/Provisional/);assert.match(html,/Total input cost ÷ calls with priceable input/);assert.match(html,/Share of completed, evaluable compactions/);assert.doesNotMatch(html,/<details class="efficiency" open/);
+ assert.match(html,/kpi-row-label">Thread/);assert.match(html,/kpi-row-label">Comp/);assert.match(html,/\$0.11/);assert.match(html,/Compaction payback/);assert.doesNotMatch(html,/N\/A/);assert.match(html,/Provisional/);assert.match(html,/Total input cost ÷ calls with priceable input/);assert.match(html,/Share of evaluable compactions/);assert.doesNotMatch(html,/<details class="efficiency" open/);
 });
 
 test('collapsed KPI summary has shared labels, three headers and no definitions',()=>{
@@ -184,7 +184,7 @@ test('thread allowance estimate leads account remaining in each group',()=>{
  const html=render({...latestFixture,efficiency:data});const collapsed=html.match(/<details class="efficiency"><summary[\s\S]*?<\/summary>/)[0];
  assert.equal((collapsed.match(/class="provisional-mark"/g)??[]).length,6);
  assert.equal((collapsed.match(/class="kpi-badge tone-neutral"/g)??[]).length,4);
- assert.doesNotMatch(collapsed,/>Provisional</);assert.match(html,/\* Provisional:<\/strong>/);assert.match(html,/20 current and 20 reference/);assert.match(html,/5 completed, evaluable events/);assert.match(html,/10 current \/ 10 reference calls/);assert.match(html,/Thread compares directly with the Comp row/);assert.match(html,/preceding equal-length period/);assert.doesNotMatch(html,/Fixed reference|Cost \/ context change/);
+ assert.doesNotMatch(collapsed,/>Provisional</);assert.match(html,/\* Provisional:<\/strong>/);assert.match(html,/20 current and 20 reference/);assert.match(html,/5 evaluable events/);assert.match(html,/10 current \/ 10 reference calls/);assert.match(html,/Thread compares directly with the Comp row/);assert.match(html,/preceding equal-length period/);assert.doesNotMatch(html,/Fixed reference|Cost \/ context change/);
  });
 
 test('expanded KPI guide has only three definitions, formulas and numeric substitutions',()=>{
@@ -194,7 +194,7 @@ test('expanded KPI guide has only three definitions, formulas and numeric substi
  assert.equal((guide.match(/<dt>/g)??[]).length,3);assert.match(guide,/Context \/ call <span>\(USD\)/);
  assert.match(guide,/fresh, cached and cache-write input/);assert.match(guide,/output and reasoning tokens are excluded/);
  assert.match(guide,/Thread: \$0.284 \/ 10 = \$0.0284/);assert.match(guide,/Thread: \$0.218 \/ 10 = \$0.0218/);assert.match(guide,/3 \/ 6 × 100 = 50%/);
- assert.match(guide,/Final net savings: Thread −\$0.001234/);assert.match(guide,/Exact numerator: 0.218 USD/);
+ assert.match(guide,/Net savings to date: Thread −\$0.001234/);assert.match(guide,/Exact numerator: 0.218 USD/);
  assert.doesNotMatch(guide,/<table|<details|Model breakdown|Weekly historical trend|Thread compaction results|historical reference/);
  assert.match(html,/Comparison period/);
  const loading=render({panelId:'p',status:'Waiting'});assert.match(loading,/Historical analytics are loading/);assert.doesNotMatch(loading,/NaN|undefined/);

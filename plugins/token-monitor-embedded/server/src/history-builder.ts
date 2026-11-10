@@ -6,7 +6,17 @@ export type Bucket={timestamp:string;model?:string;effort?:string;rateBand?:stri
 export type Payback={events?:number;timestamp:string;completed?:string;reason?:string;calls:number;breakEven:number|null;net:number;valid:boolean};
 export type ThreadHistory={first:NumericCall[];last:NumericCall[];buckets:Bucket[];paybacks:Payback[];activity?:string;charges:Bucket[];compactions?:CompactionDetail[];turns?:TurnAggregate[]};
 export {inputCost} from './metrics.js';
-export function summarize(buckets:Bucket[],paybacks:Payback[]=[]){const total={calls:0,priced:0,inputPriced:0,cost:0,inputCost:0,overhead:0};for(const b of buckets)for(const k of Object.keys(total) as (keyof typeof total)[])total[k]+=b[k];const complete=paybacks.filter(p=>p.completed),valid=complete.filter(p=>p.valid);return {...total,costPerCall:total.priced?(total.cost+total.overhead)/total.priced:null,contextPerCall:total.inputPriced?total.inputCost/total.inputPriced:null,paybackRate:valid.length?valid.filter(p=>p.breakEven!=null).reduce((n,p)=>n+(p.events??1),0)/valid.reduce((n,p)=>n+(p.events??1),0)*100:null,netSavings:valid.reduce((s,p)=>s+p.net,0),evaluable:valid.reduce((n,p)=>n+(p.events??1),0),profitable:valid.filter(p=>p.breakEven!=null).reduce((n,p)=>n+(p.events??1),0),pending:paybacks.filter(p=>!p.completed).reduce((n,p)=>n+(p.events??1),0),excluded:complete.filter(p=>!p.valid).reduce((n,p)=>n+(p.events??1),0),inactivity:valid.filter(p=>p.reason==='inactivity').reduce((n,p)=>n+(p.events??1),0)};}
+export function summarize(buckets:Bucket[],paybacks:Payback[]=[]){
+ const total={calls:0,priced:0,inputPriced:0,cost:0,inputCost:0,overhead:0};
+ for(const b of buckets)for(const k of Object.keys(total) as (keyof typeof total)[])total[k]+=b[k];
+ // Break-even resolves payback immediately; closure still governs the epoch lifecycle.
+ const resolved=(p:Payback)=>!!p.completed||p.valid&&p.breakEven!=null;
+ const valid=paybacks.filter(p=>resolved(p)&&p.valid),profitable=valid.filter(p=>p.breakEven!=null);
+ const count=(ps:Payback[])=>ps.reduce((n,p)=>n+(p.events??1),0),evaluable=count(valid);
+ return {...total,costPerCall:total.priced?(total.cost+total.overhead)/total.priced:null,contextPerCall:total.inputPriced?total.inputCost/total.inputPriced:null,
+  paybackRate:evaluable?count(profitable)/evaluable*100:null,netSavings:valid.reduce((s,p)=>s+p.net,0),evaluable,profitable:count(profitable),
+  pending:count(paybacks.filter(p=>!resolved(p))),excluded:count(paybacks.filter(p=>p.completed&&!p.valid)),inactivity:count(valid.filter(p=>p.reason==='inactivity'))};
+}
 export type Summary=ReturnType<typeof summarize>;
 export function callBucket(s:NumericCall):Bucket{const c=inputCost(s),p=price(s);return {timestamp:s.timestamp,model:s.model,effort:s.effort,rateBand:JSON.stringify(rates(s.model,s.serviceTier,s.input,s.regionalProcessing)),cacheInput:c!=null?s.input:0,cacheRead:c!=null?s.cached:0,serviceTier:s.serviceTier,regionalProcessing:s.regionalProcessing,input:s.input,cached:s.cached,cacheWrite:s.cacheWrite,output:s.output,calls:1,priced:p.total!=null?1:0,inputPriced:c!=null?1:0,cost:p.total??0,inputCost:c??0,overhead:0};}
 export class HistoryBuilder {

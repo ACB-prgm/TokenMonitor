@@ -1,4 +1,4 @@
-# TokenMonitor 1.4.0
+# TokenMonitor 1.4.0 release notes
 
 TokenMonitor now uses a bundled Node/TypeScript collector inside its MCP server. This replaces the retired Swift application and collector while preserving the embedded React panel, task selection, metrics and automatic startup.
 

@@ -6,13 +6,7 @@ The header leads with the searchable local-thread selector, followed by Rescan t
 
 ## Efficiency comparisons
 
-The expandable KPI strip has Thread and Comp rows, ordered Context/call, Cost/call, Compaction payback. The always-visible “Compare with” selector shares its header and defaults to the last seven UTC calendar days, with 30 days and all history available. Thread deltas divide the displayed Thread average by the displayed Comp average. Comp includes all chats in the selected period, including this thread; its deltas compare against the immediately preceding equal-length period. All history has no preceding period and omits Comp deltas. Both cost metrics use spending-change badges; differences in models, effort and work can affect the aggregates. Zero or absent references produce no delta. Asterisks indicate fewer than 20 priced calls in either population, incomplete pricing, or incomplete import.
-
-Context/call is monetary input-processing cost, not token volume. The expanded guide contains the three definitions, formulas and numeric substitutions, final compaction net savings and concise comparison/asterisk notes. Exact numerators and averages remain in tooltips. Payback displays the fraction and percentage, such as 1/2 (50%), with pending counts shown only in the expanded compaction details. Pending events are excluded until completed; ending a session can therefore change the denominator. Missing values display a dash.
-
-Spending comparisons use only the displayed aggregate KPI values. They require at least 20 current and reference priced calls, complete pricing coverage, a completed import and compatible calculation bases with matching pricing metadata. Green means at least 10% below reference; amber means above +10%; red means above +30%. Other changes remain neutral, as do provisional comparisons. Compaction payback requires at least five completed evaluable epochs; zero final net savings is neutral, negative savings is red, and positive savings uses the existing 50%/80% payback boundaries.
-
-Threshold settings validate ordered boundaries, support reset, and persist as versioned local preferences with separate DEV/release keys. Blocked storage leaves preferences active in memory. Resource utilization warnings are separate: amber at 85%, red at 95%.
+See [efficiency metrics](efficiency-metrics.md) for definitions, thresholds and coverage.
 
 ## Insights and call history
 
@@ -64,13 +58,7 @@ KPI spacing and primary typography are tightened to keep deltas beside values at
 
 ## Actionable compaction guidance and cache warmth
 
-The existing inline Efficiency Insights disclosure can recommend compaction when conservative projected future payback turns are no greater than completed turns in this epoch (since the last compaction, or chat creation). Capacity pressure retains priority. The expanded recommendation distinguishes continuing work that needs this chat’s context from unrelated work better started in a new chat; it never infers context relevance automatically.
-
-Turn tracking uses explicit lifecycle IDs/completion evidence and user-message boundaries; model/tool calls do not independently create user turns. Aborted, incomplete, duplicate, ambiguous and mixed-model turns do not enter calls-per-turn aggregates. A completed turn spanning compaction may contribute to the lifetime same-model mean but is excluded from the new epoch count. Numeric aggregates are cached under analytics format v4, replayed through the existing history scan without retaining prompt/response text. Existing cost, token and compaction accounting remains unchanged.
-
-Calls per turn use this chat alone once completed same-model turns contain at least 20 calls. Below that threshold, completed historical turns with at least 20 same-model calls provide the fallback; their import must be ready. The two means are never blended. Multiply the selected mean by 0.75, then round projected break-even calls divided by that value upward. This buffer is a heuristic, not a confidence interval. Context growth similarly uses this context segment once it has 20 calls (19 valid intervals), retaining up to 20 recent intervals, and otherwise falls back to observed personal history. Current-chat guidance does not require historical comparison readiness, a completed global import, or historical storage availability. Previous compaction recovery is checked against the current transcript. The banner still requires observed growth/output, known context capacity and pricing, positive net savings of at least $0.000001, and break-even within the forecast horizon. It is suppressed for disconnected/unavailable/ended telemetry, calls older than two hours, compaction/post-compaction waiting, or an unrecovered latest compaction. Historical formats v3/v4 and v5 are comparable when all pricing metadata matches; preserved estimates remain estimates. Unknown formats or different pricing bases keep spending comparisons provisional. Source means, sample counts, conversion and assumptions are inspectable in details.
-
-The existing Cached % / Cache savings row now centers a focusable warmth label: green Warm (<30 minutes), amber Uncertain (30–120 minutes inclusive), red Presumed cold (>120 minutes), muted Unknown when unavailable. Invalid/future call times are unknown. Warmth estimates age-based availability and does not establish a cache hit/miss; Cached % still measures recorded cache reads. Hover/focus reveals the explanation and call age; Escape dismisses it without moving focus.
+See [compaction recommendations](compaction.md) for turn-based guidance and cache warmth.
 
 ## Deprecated comparison retirement validation
 

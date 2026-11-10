@@ -1,6 +1,6 @@
 # Install and update TokenMonitor
 
-Use the complete `token-monitor-VERSION-TARGET.zip` package from [GitHub Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Targets are `macos-arm64`, `macos-x64`, `windows-x64`, and `windows-arm64`. Choose the computer running the local Codex executor. Node, Python, compilers, and npm are not required by the installed plugin or installer. Codex's CLI must already be available on PATH; if necessary set `CODEX_CLI_PATH` to its existing native executable or installed `codex.js` entry point.
+Use the complete `token-monitor-VERSION-TARGET.zip` package from [GitHub Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Published 1.10.0 targets are `macos-arm64`, `windows-x64`, and `windows-arm64`. Intel macOS is supported only by local builds for this release. Choose the computer running the local Codex executor. Node, Python, compilers, and npm are not required by the installed plugin or installer. Codex's CLI must already be available on PATH; if necessary set `CODEX_CLI_PATH` to its existing native executable or installed `codex.js` entry point.
 
 ## macOS
 

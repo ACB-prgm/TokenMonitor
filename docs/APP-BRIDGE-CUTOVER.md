@@ -61,3 +61,17 @@ shared reads/backoff, production isolation from legacy usage RPC, and Unix runti
 selection. Live full-desktop restart and genuinely capped interrupted-work tests
 remain required before stable publication. Windows launcher execution has not
 been tested on Windows. No stable release is published by this change.
+
+## DEV deployment evidence
+
+Installed `1.10.0-dev.1794283247898.698867` from implementation commit `8e8d2c8`.
+All 304 plugin tests and six DEV/diagnostic tests passed; TypeScript, build,
+documentation links and diff checks passed. Local Chrome previews at 320px and
+600px had no horizontal overflow and the narrow preview was visually inspected.
+
+A read-only smoke test launched the installed MCP package using its actual
+runtime environment allowlist. It verified live five-hour and weekly usage,
+correct selected chat, default-off continuation settings, the new settings tool,
+and absence of the old probe tool and harmless-test UI. It sent no messages and
+enabled no preferences. Reconnect DEV and reopen its panel to replace an already
+running old MCP process. Stable was not published or reinstalled.

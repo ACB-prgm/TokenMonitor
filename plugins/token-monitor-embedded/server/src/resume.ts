@@ -10,7 +10,8 @@ export interface ResumeBridge{available:boolean;call(tool:'get_usage_limits'|'re
 const windows=(usage:any)=>{
   const map=usage?.rateLimitsByLimitId;
   const buckets=map!==undefined?(map&&typeof map==='object'&&!Array.isArray(map)?Object.values(map):[]):[usage?.rateLimits];
-  return buckets.flatMap((b:any)=>[b?.primary,b?.secondary]).filter(Boolean);
+  if(!buckets.length||buckets.some((b:any)=>!b||typeof b!=='object'||Array.isArray(b)||![b.primary,b.secondary].some(w=>w!=null)))return [];
+  return buckets.flatMap((b:any)=>[b.primary,b.secondary]).filter(w=>w!=null);
 };
 export function capacity(usage:any){
   const ws=windows(usage),known=ws.length>0&&ws.every((w:any)=>typeof w.usedPercent==='number'&&Number.isFinite(w.usedPercent)&&w.usedPercent>=0);

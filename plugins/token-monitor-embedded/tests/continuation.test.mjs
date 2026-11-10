@@ -67,3 +67,7 @@ test('all threads discovers future local threads, persists, and current/off revo
   f.thread.thread.id='other';f.thread.turns[0].id='other-turn';await f.tick();assert.equal(f.sends,1);
  }finally{f.close();}
 });
+
+test('an unavailable returned bucket cannot authorize a continuation',async()=>{
+ const f=fixture();try{await f.enable();failed(f);f.u.rateLimitsByLimitId={codex:f.u.rateLimits,other:null};await f.tick();assert.equal(f.sends,0);}finally{f.close();}
+});

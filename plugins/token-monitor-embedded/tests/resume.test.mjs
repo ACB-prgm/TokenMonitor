@@ -84,3 +84,15 @@ test('unknown reset time waits without dispatch and recovers when supplied',asyn
  assert.match(f.probe.status('target').request.message,/known usage reset/);assert.equal(f.state.sent.length,0);
  f.state.usage.rateLimitsByLimitId.codex.primary.resetsAt=150;await f.probe.tick();assert.equal(f.probe.status('target').request.waitingForLimit,false);
 });
+
+test('every returned bucket must supply known capacity',()=>{
+ const valid={primary:{usedPercent:2}};
+ for(const bad of [null,{},[],false,'unknown',{primary:{}},{primary:{usedPercent:'2'}},{primary:{usedPercent:NaN}}]){
+  assert.equal(capacity({ordinaryUsageAllowed:true,rateLimitsByLimitId:{codex:valid,other:bad}}).ready,false,JSON.stringify(bad));
+ }
+ for(const bucket of [valid,{secondary:{usedPercent:0}},{primary:{usedPercent:0},secondary:null}]){
+  assert.equal(capacity({ordinaryUsageAllowed:true,rateLimitsByLimitId:{codex:bucket}}).ready,true);
+ }
+ assert.equal(capacity({ordinaryUsageAllowed:true,rateLimitsByLimitId:{}}).ready,false);
+ assert.equal(capacity({ordinaryUsageAllowed:true,rateLimitsByLimitId:{codex:valid,weekly:{primary:{usedPercent:100}}}}).ready,false);
+});

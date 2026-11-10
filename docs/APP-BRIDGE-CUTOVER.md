@@ -84,3 +84,30 @@ The scope dropdown uses a native select with keyboard support and
 an accessible label. All-thread discovery reads the complete local metadata
 index plus discovered local transcripts, excludes archived chats and subagents,
 and retains the same structured-failure and one-attempt-per-turn requirements.
+
+## Review fixes (2026-11-10)
+
+Continuation now rejects any returned null, malformed, or empty usage bucket;
+an optional absent window is allowed only when its bucket has another valid
+window. Ordinary-usage eligibility and every known limit still gate dispatch.
+
+Settings retain a validated account/host context for each caller and selected
+chat. During an outage, Off revokes that exact scope, including All threads
+enabled from another caller, and cancels waiting episodes atomically. Without
+saved context the change fails explicitly. Existing installations acquire
+context on their next successful settings/status read; no permission is enabled
+or migrated. Scope changes use one immediate SQLite transaction so concurrent
+Current thread changes cannot leave multiple chats enabled. Database and
+selection errors do not fall through to offline mutation.
+
+The latest lifetime compaction timestamp and payback gate recommendations even
+after its chart event has scrolled out of the 120-call window. All threads mode
+shows selected-chat worker outcomes, including uncertain delivery, instead of
+hiding them behind a generic enabled message.
+
+All 316 plugin tests and four DEV tests pass, including separate-process scope
+races, injected transaction failures, offline revocation across callers,
+account/host isolation, long-chat compaction recovery and checkpoint restoration,
+and uncertain-delivery status/restart checks. TypeScript and documentation checks
+also pass. The live acceptance limits above remain open; these regression tests
+do not establish capped-work recovery or full desktop restart acceptance.

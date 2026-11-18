@@ -13,14 +13,17 @@ import {JSONLTail} from './tail.js';
 import {HistoryClient} from './history-client.js';
 import {HistoryDatabase} from './history-database.js';
 import {importHistory,type HistoryFile} from './history-import.js';
-import {historyBasis,type Efficiency} from './efficiency.js';
+import type {Efficiency} from './efficiency.js';
+import {PricingCache,type PricingSnapshot} from './pricing-cache.js';
 import {performance} from 'node:perf_hooks';
 import {PersonalGrowthHistory} from './growth-history.js';
 type Session={session_id:string;transcript_path:string;title?:string;cwd?:string;model?:string;turn_id?:string;hook_event_name?:string;ended?:boolean;updated_at?:string};
 type Hook={sequence:string;session:Session};
-type Entry={parser:TelemetryParser;tail:JSONLTail;path:string;session:Session;touched:number};
+type Entry={pricingBasis:string;parser:TelemetryParser;tail:JSONLTail;path:string;session:Session;touched:number};
 const events=new Set(['SessionStart','UserPromptSubmit','Stop','SessionEnd','PreCompact','PostCompact']);
 export class TelemetryStore {
+  private scannedPricingBasis?:string;
+  readonly pricing:PricingCache;
   private entries=new Map<string,Entry>();
   private growthHistory:PersonalGrowthHistory;
   efficiency?:HistoryClient;
@@ -30,7 +33,7 @@ export class TelemetryStore {
   private catalogueCache?:{key:string;rowsById:Map<any,RecordValue>;items:Map<string,{id:string;title:string;workspace?:string;archived?:boolean;updated:number}>};
   private saved=new Map<string,{id:string;title:string;workspace?:string}>();
   private indexed=new Map<string,RecordValue>();
-  constructor(readonly home=codexHome()){this.growthHistory=new PersonalGrowthHistory(home);this.discovery=new ThreadDiscovery(home);}
+  constructor(readonly home=codexHome()){this.pricing=new PricingCache(home);this.growthHistory=new PersonalGrowthHistory(home);this.discovery=new ThreadDiscovery(home);}
   private hookFile(id?:string){return id?path.join(stateRoot(this.home),'tasks',id+'.json'):path.join(stateRoot(this.home),'latest-hook.json');}
   hook(id?:string):Hook|undefined {if(id!=null&&!validID(id))return;try{
     const file=this.hookFile(id),s=lstatSync(file);if(!s.isFile()||s.size>=65536)return;
@@ -75,7 +78,8 @@ export class TelemetryStore {
       else if(hook?.session.session_id===id)await this.discovery.target(id,hook.session.transcript_path);
     }
     const cacheKey=JSON.stringify([this.discovery.entries.size,this.discovery.status.state,this.discovery.status.lastCompleted]);
-    const rebuild=!!options.rescan||!this.catalogueCache||this.catalogueCache.key!==cacheKey;
+    const pricingBasis=this.pricing.snapshot().basis;
+    const rebuild=this.scannedPricingBasis!==pricingBasis||!!options.rescan||!this.catalogueCache||this.catalogueCache.key!==cacheKey;
     if(rebuild){
      const rows=options.rescan||!this.catalogueRows?(this.catalogueRows=this.metadata(undefined,true,true)):this.catalogueRows,rowsById=new Map(rows.map(r=>[r.id,r])),items=new Map<string,{id:string;title:string;workspace?:string;archived?:boolean;updated:number}>();
      for(const e of this.discovery.entries.values())if(existsSync(e.file))items.set(e.id,{...this.task({session_id:e.id,transcript_path:e.file,cwd:e.cwd,title:e.title}),archived:e.archived,updated:e.updated});
@@ -88,7 +92,10 @@ export class TelemetryStore {
     if(options.hostId&&!items.has(options.hostId)){const session=this.resolve(options.hostId);if(session)items.set(options.hostId,{...this.task(session),updated:Date.now()});}
     const ids=rebuild?[...items.keys()]:[...new Set([options.selectedId,options.hostId,hook?.session.session_id].filter((id):id is string=>!!id))];
     const files:HistoryFile[]=ids.flatMap(id=>{const row=rowsById.get(id),entry=this.discovery.entries.get(id),session=hook?.session.session_id===id?hook.session:undefined;const file=session?.transcript_path??row?.rollout_path??entry?.file??this.resolve(id)?.transcript_path;const item=items.get(id);return typeof file==='string'?[{id,file,end:session?.ended?session.updated_at:undefined,title:cleanTitle(row?.title)??cleanTitle(entry?.title)??cleanTitle(session?.title),workspace:item?.workspace,archived:item?.archived}]:[]});
-    void this.efficiency?.scan(this.home,files,['complete','partial'].includes(this.discovery.status.state),rebuild).catch(()=>{});
+    this.scannedPricingBasis=pricingBasis;
+    void this.efficiency?.scan(this.home,files,['complete','partial'].includes(this.discovery.status.state),rebuild).catch(()=>{
+      if(this.scannedPricingBasis===pricingBasis)this.scannedPricingBasis=undefined;
+    });
     try{for(const task of await this.efficiency?.savedTasks(options.query,options.includeArchived)??[]){const path=rowsById.get(task.id)?.rollout_path??this.discovery.entries.get(task.id)?.file;if(path&&!existsSync(path))task.sourceAvailable=false;this.saved.set(task.id,task);items.set(task.id,{...items.get(task.id),...task,updated:items.get(task.id)?.updated??0});}while(this.saved.size>200)this.saved.delete(this.saved.keys().next().value!);}catch{/* Live catalogue remains available. */}
     const query=(options.query??'').trim().toLowerCase();
     const matches=[...items.values()].filter(t=>(options.includeArchived||!t.archived)&&(!query||[t.title,t.workspace,t.id].some(v=>v?.toLowerCase().includes(query)))).sort((a,b)=>b.updated-a.updated||a.id.localeCompare(b.id));
@@ -111,18 +118,25 @@ export class TelemetryStore {
       const hook={sequence:randomUUID(),session};if(Buffer.byteLength(JSON.stringify(hook))>=65536)return false;
       atomicJSON(this.hookFile(p.session_id),hook);atomicJSON(this.hookFile(),hook);return true;
     }))??false;
-    if(saved){const started=performance.now();let history:HistoryDatabase|undefined;try{const session=this.hook(p.session_id)?.session;if(session){history=new HistoryDatabase(path.join(stateRoot(this.home),'efficiency.sqlite'),{migrate:false});const remaining=500-(performance.now()-started);if(remaining>0)importHistory(history,this.home,{id:p.session_id,file:session.transcript_path,end:session.ended?session.updated_at:undefined,title:session.title,workspace:session.cwd?path.basename(session.cwd):undefined},historyBasis,{maxMs:remaining,maxBytes:4*1024*1024});}}catch{/* Collection is best effort and must not block the user's task. */}finally{history?.close();}}
+    if(saved){const started=performance.now();let history:HistoryDatabase|undefined;try{const session=this.hook(p.session_id)?.session;if(session){history=new HistoryDatabase(path.join(stateRoot(this.home),'efficiency.sqlite'),{migrate:false});const active=this.pricing.snapshot(),db=history;await this.pricing.write(active,()=>{const remaining=500-(performance.now()-started);if(remaining>0)importHistory(db,this.home,{id:p.session_id,file:session.transcript_path,end:session.ended?session.updated_at:undefined,title:session.title,workspace:session.cwd?path.basename(session.cwd):undefined},active.basis,{pricing:active.pricing,maxMs:remaining,maxBytes:4*1024*1024});});}}catch{/* Collection is best effort and must not block the user's task. */}finally{history?.close();}}
     return saved;
   }
   prune(now=Date.now()){for(const [id,e]of this.entries)if(now-e.touched>=60000)this.entries.delete(id);}
   get activeCollectorCount(){return this.entries.size;}
-  snapshot(id:string,now=Date.now()) {
+  snapshot(id:string,now=Date.now(),active:PricingSnapshot=this.pricing.snapshot()) {
     this.prune(now);const session=this.resolve(id),source=session?.transcript_path??this.entries.get(id)?.path;if(!source)return;
-    let entry=this.entries.get(id);if(!entry||entry.path!==source){if(this.entries.size>=64)this.entries.delete(this.entries.keys().next().value!);entry={parser:new TelemetryParser(),tail:new JSONLTail(),path:source,session:session!,touched:now};this.entries.set(id,entry);}
+    let entry=this.entries.get(id);if(!entry||entry.path!==source){if(this.entries.size>=64)this.entries.delete(this.entries.keys().next().value!);entry={pricingBasis:active.basis,parser:new TelemetryParser(undefined,{pricing:active.pricing}),tail:new JSONLTail(),path:source,session:session!,touched:now};this.entries.set(id,entry);}
     if(session)entry.session=session;entry.touched=now;let available=!!session;
-    try{if(session)entry.tail.read(source,()=>entry!.parser=new TelemetryParser(),line=>entry!.parser.consume(line));}catch{available=false;}
+    try{if(session){
+      if(entry.pricingBasis!==active.basis){
+        const parser=new TelemetryParser(undefined,{pricing:active.pricing}),tail=new JSONLTail();
+        tail.read(source,()=>{},line=>parser.consume(line));
+        Object.assign(entry,{parser,tail,pricingBasis:active.basis});
+      }else entry.tail.read(source,()=>entry!.parser=new TelemetryParser(undefined,{pricing:active.pricing}),line=>entry!.parser.consume(line));
+    }}catch{available=false;}
     const metadata=this.metadata(id)[0]??{},s=entry.session,p=entry.parser;
     const local=p.snapshot(this.task(s,cleanTitle(s.title)??cleanTitle(metadata.title)??p.title),s,metadata,available,now);
+    if(entry.pricingBasis===active.basis){local.usage.source=active.pricing.source;local.usage.verifiedAt=active.pricing.verifiedAt;}
     if(local.compactionValue.assumptions.growth?.source==='thread')return local;
     const personal=this.growthHistory.read(()=>[{id,file:source},...this.metadata(undefined,true).filter(row=>row.id!==id).map(row=>({id:row.id,file:row.rollout_path}))],p.lastCallModel,p.growthIntervals,now);
     return p.snapshot(this.task(s,cleanTitle(s.title)??cleanTitle(metadata.title)??p.title),s,metadata,available,now,personal);
@@ -131,20 +145,24 @@ export class TelemetryStore {
     const sessions=[this.resolve(id),this.hook()?.session,...this.metadata().map(row=>({session_id:row.id,transcript_path:row.rollout_path}))];
     return sessions.flatMap(s=>s&&acceptedTranscript(s.transcript_path,s.session_id,this.home)?[s.transcript_path]:[]);
   }
-  close(){this.efficiency?.close();this.entries.clear();this.discovery.close();this.growthHistory.close();}
+  close(){this.pricing.close();this.efficiency?.close();this.entries.clear();this.discovery.close();this.growthHistory.close();}
 }
 // In-process replacement for the former subprocess bridge. The request shape
 // stays stable so panel selection and revision handling do not change.
 export class Collector {
   readonly store:TelemetryStore;private lastHistory?:{id:string;value:Efficiency};private catalogue=new CatalogueAllowances();
   readonly account:BridgeUsage;constructor(home=codexHome(),account?:BridgeUsage){this.store=new TelemetryStore(home);this.account=account??new BridgeUsage();}
+  private pricingRefreshEnabled=false;
+  refreshPricing(){this.pricingRefreshEnabled=true;void this.store.pricing.refresh();}
   async request(method:'catalog'|'state',params:Record<string,unknown>={}):Promise<any> {
     if(method==='catalog')return this.store.catalogue(params as any);
     if(typeof params.taskId!=='string'||!validID(params.taskId))return {unavailable:true};
     this.account.touch();
     const local=this.catalogue.read(()=>this.store.allowanceFiles(params.taskId as string));
-    const snapshot=this.store.snapshot(params.taskId);let efficiency:Efficiency|undefined,historyError:string|undefined;try{efficiency=await this.store.efficiency?.snapshot(params.taskId);if(efficiency)this.lastHistory={id:params.taskId,value:efficiency};}catch{historyError='Historical storage is temporarily unavailable. Showing committed data where available; collection will retry automatically.';if(this.lastHistory?.id===params.taskId)efficiency=this.lastHistory.value;}
-    const fallback=!snapshot&&efficiency?{task:this.store.taskMetadata(params.taskId),callCount:efficiency.thread.calls,compactions:efficiency.threadCompactions?.filter(c=>c.callPosition>=efficiency.thread.calls-(efficiency.threadSamples?.length??0)),samples:efficiency.threadSamples?.map(s=>({...s,price:price(s)})),lastCall:efficiency.threadSamples?.at(-1)?.timestamp,status:'Saved history · source transcript unavailable',available:false}:undefined;
+    const active=this.store.pricing.snapshot(),snapshot=this.store.snapshot(params.taskId,Date.now(),active);
+    if(this.pricingRefreshEnabled&&snapshot?.available&&snapshot.model&&!active.pricing.hasModel(snapshot.model))this.refreshPricing();let efficiency:Efficiency|undefined,historyError:string|undefined;try{efficiency=await this.store.efficiency?.snapshot(params.taskId);if(efficiency)this.lastHistory={id:params.taskId,value:efficiency};}catch{historyError='Historical storage is temporarily unavailable. Showing committed data where available; collection will retry automatically.';if(this.lastHistory?.id===params.taskId)efficiency=this.lastHistory.value;}
+    if(efficiency&&efficiency.pricingRevision!==active.basis)efficiency={...efficiency,comparisonReady:false,threadPricingCurrent:false};
+    const fallback=!snapshot&&efficiency?{task:this.store.taskMetadata(params.taskId),callCount:efficiency.thread.calls,compactions:efficiency.threadCompactions?.filter(c=>c.callPosition>=efficiency.thread.calls-(efficiency.threadSamples?.length??0)),samples:efficiency.threadSamples?.map(s=>({...s,price:efficiency?.threadPricingCurrent?price(s,active.pricing):undefined})),lastCall:efficiency.threadSamples?.at(-1)?.timestamp,status:'Saved history · source transcript unavailable',available:false}:undefined;
     const state={...fallback,...snapshot,efficiency,historyError,compactionTurnPayback:estimateTurnPayback({forecast:snapshot?.compactionValue,stats:snapshot?.turnStats,history:efficiency?.turns?.other,ready:!historyError&&efficiency?.turns?.ready===true,available:snapshot?.available===true,lastCall:snapshot?.lastCall,now:Date.now(),isCompacting:snapshot?.isCompacting,awaitingPostCompactionCall:snapshot?.awaitingPostCompactionCall,ended:snapshot?.sessionEnded,latestPayback:snapshot?.latestPayback,latestCompaction:snapshot?.latestCompaction})};
     const allowances=chooseAllowances(this.account.snapshot(),local);
     state.fiveHour=allowances.fiveHour;state.weekly=allowances.weekly;

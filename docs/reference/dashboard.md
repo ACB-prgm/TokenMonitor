@@ -1,8 +1,8 @@
 # Dashboard redesign
 
-The dashboard now follows the decision order: consolidated Thread Usage (context capacity, account allowances and lifetime thread spending), efficiency comparisons, supported insights, latest-call diagnostics, and recent call history. Pricing/accounting formulas and monitoring behavior remain unchanged.
+The dashboard now follows the decision order: consolidated Thread Usage (context capacity, account allowances and lifetime thread spending), efficiency comparisons, supported insights, latest-call diagnostics, and recent call history. Spending uses the dated schedules in the [pricing catalog](efficiency-metrics.md#pricing-catalog).
 
-The header leads with the searchable local-thread selector, followed by Rescan threads, Refresh metrics and Settings. Redundant branding is removed; narrow layouts use accessible icon buttons. Refresh retrieves telemetry; Rescan discovers restored or newly available local transcripts. Search uses names, IDs and existing workspace filtering, with pending/results states inside the selector. Archived history remains part of analytics; an already-selected archived thread remains visible. Settings holds scale, About/version, update controls, and performance thresholds.
+The header leads with the searchable local-thread selector, followed by Rescan threads, Refresh metrics and Settings. Refresh and Settings use 32 px square controls with centered 16 px icons. Rescan matches their height and uses the same square icon control at widths up to 480 px. An undismissed release update fills the Settings button orange and adds “update available” to its accessible name. Refresh retrieves telemetry; Rescan discovers restored or newly available local transcripts. Search uses names, IDs and existing workspace filtering, with pending/results states inside the selector. Archived history remains part of analytics; an already-selected archived thread remains visible. Settings holds scale, About/version, update controls, and performance thresholds.
 
 ## Efficiency comparisons
 

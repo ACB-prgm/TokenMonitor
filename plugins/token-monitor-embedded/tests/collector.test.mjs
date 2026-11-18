@@ -11,8 +11,9 @@ import {contained,acceptedTranscript} from '../server/dist/platform.mjs';
 import {rates,price,cacheTemperature,health,AttributionEstimator,estimateTokens} from '../server/dist/metrics.mjs';
 const temp=mkdtempSync(path.join(tmpdir(),'tm-collector-'));after(()=>rmSync(temp,{recursive:true,force:true}));
 const normalized=x=>JSON.parse(JSON.stringify(x).replaceAll('.000Z','Z'));
-const fixtures=JSON.parse(readFileSync(new URL('fixtures/collector-parity.json',import.meta.url)));
-for(const f of fixtures)test('reference parity: '+f.id,()=>{const p=new TelemetryParser();for(const r of f.records)p.consume(r);const actual=p.snapshot(f.expected.task,{}, {},true,Date.UTC(2026,9,20));assert.deepEqual(normalized({...actual,latestPayback:undefined,compactionCost:undefined,compactions:actual.compactions.map(({timestamp,callPosition})=>({timestamp,callPosition})),samples:actual.samples.map(({contextPerCall,contextPricedCalls,costPerCall,costPricedCalls,...legacy})=>legacy)}),normalized({...f.expected,sessionEnded:false,turnStats:{models:[],epochCompleted:0}}));});
+// Replay the captured accounting cases inside the verified pricing window.
+const fixtures=JSON.parse(readFileSync(new URL('fixtures/collector-parity.json',import.meta.url),'utf8').replaceAll('2026-10-19','2026-11-19'));
+for(const f of fixtures)test('reference parity: '+f.id,()=>{const p=new TelemetryParser();for(const r of f.records)p.consume(r);const actual=p.snapshot(f.expected.task,{}, {},true,Date.UTC(2026,10,20));assert.deepEqual(normalized({...actual,latestPayback:undefined,compactionCost:undefined,compactions:actual.compactions.map(({timestamp,callPosition})=>({timestamp,callPosition})),samples:actual.samples.map(({contextPerCall,contextPricedCalls,costPerCall,costPricedCalls,...legacy})=>legacy)}),normalized({...f.expected,usage:{...f.expected.usage,verifiedAt:actual.usage.verifiedAt,configurationEffectiveDate:undefined},sessionEnded:false,turnStats:{models:[],epochCompleted:0}}));});
 function fixture(id='task'){
  const home=mkdtempSync(path.join(temp,'home-')),file=path.join(home,id+'.jsonl');
  writeFileSync(file,JSON.stringify({type:'session_meta',payload:{id,source:'cli'}})+'\n');
@@ -55,7 +56,7 @@ test('cumulative replay at another timestamp is not another call; incomplete cou
  const p=new TelemetryParser();const r=JSON.parse(usage());r.payload.info.total_token_usage={input_tokens:100,output_tokens:10};p.consume(r);r.timestamp='2026-10-19T01:00:01Z';p.consume(r);assert.equal(p.callCount,1);r.payload.info.total_token_usage={output_tokens:10};r.timestamp='2026-10-19T01:00:02Z';p.consume(r);assert.equal(p.callCount,2);
 });
 test('pricing categories, threshold, tier and unavailable accounting match baseline',()=>{
- const s={input:100000,cached:60000,cacheWrite:10000,output:10000,reasoning:4000,model:'gpt-6.1-sol',cachedRecorded:true,cacheWriteRecorded:true,outputRecorded:true,reasoningRecorded:true};
+ const s={timestamp:'2026-11-18T00:00:00Z',input:100000,cached:60000,cacheWrite:10000,output:10000,reasoning:4000,model:'gpt-6.1-sol',cachedRecorded:true,cacheWriteRecorded:true,outputRecorded:true,reasoningRecorded:true};
  assert.ok(Math.abs(price(s).total-.191)<1e-12);assert.ok(Math.abs(price(s).cacheSavings-.109)<1e-12);assert.equal(rates(s.model,'priority',272001).input,8);assert.equal(rates('gpt-5.5','fast',300000),undefined);assert.equal(price({...s,cacheWriteRecorded:false}).total,undefined);assert.equal(price({...s,model:'unknown'}).total,undefined);assert.equal(price({...s,reasoningRecorded:false}).categories[5],.1);
 });
 test('cache boundary parity',()=>{

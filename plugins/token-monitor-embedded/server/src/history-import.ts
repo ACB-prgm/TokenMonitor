@@ -1,3 +1,4 @@
+import {bundledPricing,type Pricing} from './pricing.js';
 import {createHash} from 'node:crypto';
 import {openSync,closeSync,readSync,fstatSync} from 'node:fs';
 import {performance} from 'node:perf_hooks';
@@ -11,7 +12,8 @@ type State={version:1;parser:ReturnType<TelemetryParser['numericCheckpoint']>;bu
 type Cursor={target:string;identity:string;offset:number;anchor:string;head:string;state:string;discard:number;complete:number};
 const hash=(b:Buffer|string)=>createHash('sha256').update(b).digest('hex');
 /** One bounded transaction. Its byte cursor and numeric contributions always commit together. */
-export function importHistory(db:HistoryDatabase,home:string,f:HistoryFile,basis:string,options:{now?:number;maxBytes?:number;maxMs?:number}={}):ImportResult{
+export function importHistory(db:HistoryDatabase,home:string,f:HistoryFile,basis:string,options:{now?:number;maxBytes?:number;maxMs?:number;pricing?:Pricing}={}):ImportResult{
+ const pricing=options.pricing??bundledPricing;
  const now=options.now??Date.now(),deadline=performance.now()+(options.maxMs??500),maxBytes=options.maxBytes??4*1024*1024;
  if(!acceptedTranscript(f.file,f.id,home)){db.syncCatalogue(f,false);return {bytes:0,complete:true,changed:false,unavailable:true};}
  const fd=openSync(f.file,'r');let result:ImportResult={bytes:0,complete:false,changed:false};
@@ -21,14 +23,14 @@ export function importHistory(db:HistoryDatabase,home:string,f:HistoryFile,basis
   const old=db.signature(f.id),cursor=db.statement('SELECT * FROM history_cursors WHERE source=?').get(f.id) as Cursor|undefined;
   // Stat-only fast path: no transcript body reads, transactions, or writes.
   if(old?.signature===signature&&old.basis===basis&&cursor?.complete)return {...result,complete:true};
-  if(cursor){const saved=JSON.parse(cursor.state);if(saved.observed===signature&&saved.waiting)return {...result,waiting:true};}
+  if(cursor){const saved=JSON.parse(cursor.state);if(saved.observed===signature&&saved.waiting&&db.signature(cursor.target)?.basis===basis)return {...result,waiting:true};}
   const read=(at:number,n:number)=>{const b=Buffer.alloc(n);return b.subarray(0,readSync(fd,b,0,n,at));};
   const head=hash(read(0,Math.min(128,st.size)));
   let reset=!cursor||cursor.identity!==identity||cursor.offset>st.size||cursor.head!==head;
   if(cursor?.complete&&old?.signature){try{const sig=JSON.parse(old.signature);if(st.size===cursor.offset&&(sig[3]!==st.mtimeMs||sig[5]!==st.ctimeMs))reset=true;}catch{reset=true;}}
   if(cursor&&!reset&&cursor.offset)reset=hash(read(Math.max(0,cursor.offset-128),Math.min(cursor.offset,128)))!==cursor.anchor;
   // A pricing/parser version change rebuilds from the source; missing sources keep frozen estimates.
-  if(old&&old.basis!==basis&&(!cursor||db.signature(cursor.target)?.basis!==basis))reset=true;
+  if(cursor&&db.signature(cursor.target)?.basis!==basis)reset=true;
   let offset=reset?0:cursor!.offset,discard=reset?false:!!cursor!.discard;
   let target=reset?(old?'~'+f.id:f.id):cursor!.target;
   db.transaction(()=>{
@@ -36,14 +38,14 @@ export function importHistory(db:HistoryDatabase,home:string,f:HistoryFile,basis
    const current=db.statement('SELECT offset,identity,state FROM history_cursors WHERE source=?').get(f.id) as any;
    if((current?.offset??null)!==(cursor?.offset??null)||(current?.identity??null)!==(cursor?.identity??null)||(current?.state??null)!==(cursor?.state??null))throw Error('History cursor changed; retry later');
    if(reset){db.clearSource(target);db.statement('INSERT INTO history_sources VALUES(?,?,?,NULL)').run(target,'',db.internBasis(basis));}
-   const builder=new HistoryBuilder();let currentTime=now;
+   const builder=new HistoryBuilder(pricing);let currentTime=now;
    const parser=new TelemetryParser(e=>{
     if(e.kind==='activity'){currentTime=Date.parse(e.timestamp);builder.activity(e.timestamp);}
     else if(e.kind==='compaction'){builder.compact(e.timestamp,e.usage,e.callPosition,e.reason);db.boundary(target,offset,e.timestamp,'compaction',now);}
     else if(e.kind==='retained'){builder.retainedContext(e.tokens);db.boundary(target,offset,new Date(currentTime).toISOString(),'retained',now,e.tokens);}
     else if(e.kind==='turn'){builder.turn(e.turn);db.addTurn(target,offset,e.timestamp??new Date(currentTime).toISOString(),e.turn.model,e.turn.calls,now);}
     else {builder.call(e.sample,e.contextLimit);db.addSample(target,offset,e.sample,now);db.boundary(target,offset,e.sample.timestamp,'context-limit',now,e.contextLimit);}
-   },{numericOnly:true,replay:(kind,key)=>{
+   },{numericOnly:true,pricing,replay:(kind,key)=>{
     const digest=hash(key);db.statement('INSERT OR IGNORE INTO history_replay(source,kind,digest,timestamp,sequence) VALUES(?,?,?,?,?)').run(target,kind,Buffer.from(digest,'hex'),new Date(currentTime).toISOString().slice(0,10),offset);return Number(db.statement('SELECT changes() AS n').get()!.n)>0;
    }});
    let previousEpoch:ReturnType<HistoryBuilder['checkpoint']>['epoch'];

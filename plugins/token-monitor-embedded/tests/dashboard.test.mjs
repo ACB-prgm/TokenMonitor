@@ -90,8 +90,9 @@ test('interactive refresh and task controls remain enabled and omit the global e
   const updates={installedVersion:'1.5.0',latestVersion:'1.6.0',status:'available',automatic:true,dismissed:false,checking:false,stale:false,downloadURL:'https://github.com/ACB-prgm/TokenMonitor/releases/download/v1.6.0/package.zip',checksumURL:'https://github.com/ACB-prgm/TokenMonitor/releases/download/v1.6.0/package.zip.sha256',releaseURL:'https://github.com/ACB-prgm/TokenMonitor/releases/tag/v1.6.0'};
   const html=render({panelId:'p',status:'Monitoring'},false,true,updates);
   assert.match(html,/<header[^>]*>[\s\S]*v1.6.0 available[\s\S]*<\/header>/);
+  assert.match(html,/class="update-available" aria-label="Dashboard settings, update available"/);assert.doesNotMatch(html,/update-badge/);
   assert.match(html,/Update and install/);assert.doesNotMatch(html,/Download Update|Download SHA-256/);assert.match(html,/Check at each panel opening/);assert.match(html,/Update package platform and architecture/);
-  const dismissed=render({panelId:'p',status:'Monitoring'},false,true,{...updates,dismissed:true});assert.doesNotMatch(dismissed,/has-update/);assert.match(dismissed,/Update dismissed/);
+  const dismissed=render({panelId:'p',status:'Monitoring'},false,true,{...updates,dismissed:true});assert.doesNotMatch(dismissed,/has-update|update-available/);assert.match(dismissed,/Update dismissed/);
   const unknown=render({panelId:'p',status:'Monitoring'},false,true,{...updates,status:'unknown',error:'Unable to check for updates.'});assert.match(unknown,/Unable to check/);assert.doesNotMatch(unknown,/Up to date/);
   const missing=render({panelId:'p',status:'Monitoring'},false,true,{...updates,downloadURL:undefined});assert.doesNotMatch(missing,/Update and install/);assert.match(missing,/No verified package/);
   const installing=render({panelId:'p',status:'Monitoring'},false,true,{...updates,installation:{phase:'installing',version:'1.6.0'}});assert.match(installing,/Installing update/);assert.match(installing,/disabled="">Updating/);

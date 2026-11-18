@@ -13,13 +13,13 @@ Portable, local Codex token telemetry in an embedded panel. A React interface an
 - Tool and skill attribution estimates, and API-equivalent costs with explicit coverage limitations.
 - Separate live-panel and inline-summary views, with independent task selection.
 
-Costs are estimates using the bundled rate table, not invoices. Subscription allowance estimates are calibrated approximations. Missing telemetry and unsupported pricing remain unavailable rather than displaying invented zeros.
+API-equivalent cost estimates use the public pricing catalog, with a bundled fallback for offline use. Subscription allowance estimates are calibrated approximations. Missing telemetry and unsupported pricing remain unavailable rather than displaying invented zeros.
 
 ## Platforms and installation
 
-Published 1.11.0 packages target macOS Apple silicon (`macos-arm64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Intel macOS and Linux packages are not published for this release. Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop rendering and trusted lifecycle delivery require separate verification.
+Published 1.12.0 packages target macOS Apple silicon (`macos-arm64`), Windows x64 (`windows-x64`), and Windows ARM64 (`windows-arm64`). Intel macOS and Linux packages are not published for this release. Use the package matching the machine running Codex. The runtime's minimum is macOS 13.5 or Windows 10 1809; Codex's own host requirements also apply. Windows desktop rendering and trusted lifecycle delivery require separate verification.
 
-Version 1.11.0 adds recorded compaction usage and gray history bars, focused compaction guidance, shared live account usage, and optional automatic continuation after a usage reset. **Update and install** is available in Settings → About. See the [release notes](docs/releases/1.11.0/notes.md) and [validation scope](docs/releases/1.11.0/validation.md).
+Version 1.12.0 adds live pricing updates with dated rates, reprices readable history after catalog changes, and highlights available updates in the Settings button. **Update and install** is available in Settings → About. See the [release notes](docs/releases/1.12.0/notes.md) and [validation scope](docs/releases/1.12.0/validation.md).
 
 Download a complete `token-monitor-VERSION-TARGET.zip` and its `.sha256` companion from [Releases](https://github.com/ACB-prgm/TokenMonitor/releases). Verify the checksum before extraction, then run the included macOS `install.sh` or Windows `install.ps1`. Restart Codex and review hook trust. The installer requires the existing Codex CLI, but uses the bundled Node runtime.
 
@@ -31,7 +31,7 @@ The smaller `token-monitor-embedded-VERSION-TARGET.zip` is the plugin-only packa
 
 Open update options from the existing version label. A background check runs at every live-panel opening by default; it never gates rendering or telemetry collection. Disable automatic checks or run a manual check from the menu. **Update and install** downloads the native package, verifies its checksum and inventory, and updates an existing local release marketplace installation through Codex. Progress appears in the panel; restart Codex when complete. Account and Git installations retain their original update mechanism. Release notes, architecture selection, and per-version dismissal remain available.
 
-Checks use only public GitHub release metadata, with a five-second timeout, bounded responses, caching and rate-limit backoff. Offline or failed checks report unknown status. Polls, lifecycle hooks and inline summary cards do not initiate checks; update discovery adds no model turns or model-context updates.
+Release checks use public GitHub release metadata with a five-second timeout, bounded responses, caching and rate-limit backoff. Offline or failed release checks report unknown status. The server also fetches the public pricing catalog in the background and keeps the last validated copy when offline. [Pricing catalog](docs/reference/efficiency-metrics.md#pricing-catalog)
 
 ## Privacy and behavior
 

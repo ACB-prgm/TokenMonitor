@@ -11,7 +11,7 @@ async function load(file){const b=await build({entryPoints:[fileURLToPath(new UR
 const {TurnCounter,estimateTurnPayback}=await load('../server/src/turns.ts');
 const {TelemetryParser}=await load('../server/src/parser.ts');
 const {EfficiencyStore}=await load('../server/src/efficiency.ts');
-const now=Date.parse('2026-11-01T12:00:00Z'),stamp=new Date(now).toISOString();
+const now=Date.parse('2026-11-18T12:00:00Z'),stamp=new Date(now).toISOString();
 const event=(t,p={})=>({type:'event_msg',timestamp:stamp,payload:{type:t,...p}});
 function start(c,id){c.consume('event_msg',{type:'task_started',turn_id:id,turn_attribution:{turn_trigger:'composer'}},stamp);}
 function end(c,id){c.consume('event_msg',{type:'task_complete',turn_id:id},stamp);}

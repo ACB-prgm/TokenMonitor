@@ -1,3 +1,4 @@
+import {bundledPricing,type Pricing} from './pricing.js';
 import {recordedCompaction,type CompactionDetail,type CompactionUsage} from './compaction.js';
 import {HistoryBuilder,summarize} from './history-builder.js';
 import {TurnCounter,type TurnAggregate} from './turns.js';
@@ -29,7 +30,9 @@ function fingerprint(value:any) {
 export type NumericEvent = {kind:"turn";turn:TurnAggregate;timestamp?:string}|{kind:"call";sample:Sample;contextLimit?:number}|{kind:"compaction";timestamp:string;usage?:CompactionUsage;callPosition:number;reason?:string}|{kind:"activity";timestamp:string}|{kind:"retained";tokens:number};
 export class TelemetryParser {
   readonly turns:TurnCounter;
-  constructor(private numericEvent?:(event:NumericEvent)=>void,private options:{numericOnly?:boolean;replay?:(group:string,key:string)=>boolean}={}){this.kpiHistory=options.numericOnly?undefined:new HistoryBuilder();this.turns=new TurnCounter((turn,timestamp)=>this.numericEvent?.({kind:"turn",turn,timestamp}),options.replay);}
+  private readonly pricing:Pricing;
+  readonly usage:ThreadUsage;
+  constructor(private numericEvent?:(event:NumericEvent)=>void,private options:{numericOnly?:boolean;pricing?:Pricing;replay?:(group:string,key:string)=>boolean}={}){this.pricing=options.pricing??bundledPricing;this.usage=new ThreadUsage(this.pricing);this.kpiHistory=options.numericOnly?undefined:new HistoryBuilder(this.pricing);this.turns=new TurnCounter((turn,timestamp)=>this.numericEvent?.({kind:"turn",turn,timestamp}),options.replay);}
   numericCheckpoint(){return {model:this.model,effort:this.effort,serviceTier:this.serviceTier,regionalProcessing:this.regionalProcessing,contextLimit:this.contextLimit,awaitingPostCompactionCall:this.awaitingPostCompactionCall,compactedContext:this.compactedContext,compactions:this.compactions.slice(-1),lastCallModel:this.lastCallModel,callCount:this.callCount,turns:this.turns.checkpoint()};}
   restoreNumeric(s:ReturnType<TelemetryParser['numericCheckpoint']>){this.model=s.model;this.effort=s.effort;this.serviceTier=s.serviceTier;this.regionalProcessing=s.regionalProcessing;this.contextLimit=s.contextLimit;this.awaitingPostCompactionCall=s.awaitingPostCompactionCall;this.compactedContext=s.compactedContext;this.compactions=s.compactions;this.lastCallModel=s.lastCallModel;this.callCount=s.callCount;this.turns.restore(s.turns);}
   private accept(group:string,key:string,set:BoundedSet){return this.options.replay?this.options.replay(group,key):set.add(key);}
@@ -42,7 +45,7 @@ export class TelemetryParser {
   readonly growthIntervals:GrowthInterval[]=[];
   private reportedOutput?:number; private reportedReasoning?:number; private summedOutput=0; private summedReasoning=0; private outputComplete=true;private reasoningComplete=true;
   readonly attribution=new AttributionEstimator(); contextAttribution=emptyAttribution(); private pendingAttribution?:Attribution;
-  readonly usage=new ThreadUsage(); private serviceTier?:string;private regionalProcessing?:boolean;
+  private serviceTier?:string;private regionalProcessing?:boolean;
   private seenIdentities=new BoundedSet();private seenRecords=new BoundedSet();private seenCumulativeCalls=new BoundedSet();
   get outputTotals(){return this.reportedOutput!=null?{total:this.reportedOutput,reasoning:this.reportedReasoning,source:'reported-cumulative'}:{total:this.callCount>0&&this.outputComplete?this.summedOutput:undefined,reasoning:this.callCount>0&&this.reasoningComplete?this.summedReasoning:undefined,source:'recorded-calls'};}
   consume(line:string|Buffer|RecordValue) {
@@ -93,7 +96,7 @@ export class TelemetryParser {
       outputRecorded:nonnegative(u.output_tokens),reasoningRecorded:nonnegative(u.reasoning_output_tokens)&&u.reasoning_output_tokens<=output,
       model:typeof info.model==='string'?info.model:this.model,serviceTier:typeof p.service_tier==='string'?p.service_tier:typeof info.service_tier==='string'?info.service_tier:this.serviceTier,regionalProcessing:this.regionalProcessing,
       cachedRecorded:nonnegative(u.cached_input_tokens),cacheWriteRecorded:nonnegative(u.cache_write_input_tokens)&&u.cache_write_input_tokens<=input-cached};
-    s.price=price(s);
+    s.price=price(s,this.pricing);
     if(!this.accept('call',fingerprint([r.timestamp,s.input,s.cached,s.output,s.total??-1]),this.seenIdentities))return;
     if(this.lastCallModel&&s.model!==this.lastCallModel&&!(integer(info.model_context_window)&&info.model_context_window>0))this.contextLimit=undefined;
     const activity=this.activity.take();if(activity)s.activity=activity;
@@ -124,7 +127,7 @@ export class TelemetryParser {
     const isCompacting=session.hook_event_name==='PreCompact'&&!!started&&!(completed&&completed>=started)&&!(last&&last.timestamp>started);
     const growth=rollingContextGrowth(this.forecastSamples.filter(s=>s.segment===this.contextSegment),personalGrowth),output=rollingTypicalOutput(this.samples,this.lastCallModel);
     const compactionValue=estimateCompactionValue({currentInput:isCompacting||this.awaitingPostCompactionCall?undefined:input,model:this.lastCallModel,
-      serviceTier:last?.serviceTier,regionalProcessing:last?.regionalProcessing,growthPerCall:growth.effective,typicalOutput:output.effective,contextLimit:this.contextLimit});
+      serviceTier:last?.serviceTier,regionalProcessing:last?.regionalProcessing,growthPerCall:growth.effective,typicalOutput:output.effective,contextLimit:this.contextLimit},this.pricing,now);
     compactionValue.observedGrowthPerCall=growth.observed;
     compactionValue.assumptions.growth=growth;compactionValue.assumptions.output=output;
     if(isCompacting||this.awaitingPostCompactionCall)compactionValue.limitation='Waiting for a reliable post-compaction call';

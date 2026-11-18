@@ -13,7 +13,7 @@ function fixture(){
  const thread={thread:{id:'chat',kind:'codex',hostId:'local',status:{activeFlags:[]}},turns:[{id:'turn',status:'completed',error:null}]};
  const bridge={available:true,async call(tool){if(tool==='get_usage_limits')return structuredClone(u);if(tool==='read_thread')return structuredClone(thread);if(tool==='send_message_to_thread'){sends++;if(failSend)throw Error('unknown');return {};}}};
  const usage=new BridgeUsage(bridge,()=>now);usage.bind('source');let worker=new Continuation(root,usage,bridge,()=>now,()=>archived,()=>[thread.thread.id]);
- return {u,thread,usage,root,get worker(){return worker;},get sends(){return sends;},advance(n=30000){now+=n;},fail(){failSend=true;},archive(){archived=true;},async all(){return worker.view('chat','source','enable_all');},async enable(){return worker.view('chat','source','enable');},async view(action='status',id='chat'){return worker.view(id,'source',action);},async tick(){await worker.tick();},restart(){worker.close();worker=new Continuation(root,usage,bridge,()=>now,()=>archived,()=>[thread.thread.id]);},close(){worker.close();usage.close();rmSync(root,{recursive:true,force:true});}};
+ return {u,thread,usage,root,get worker(){return worker;},get sends(){return sends;},advance(n=30000){now+=n;},fail(){failSend=true;},archive(){archived=true;},async all(){return worker.view('chat','source','enable_all');},async enable(){return worker.view('chat','source','enable');},async view(action='status',id='chat'){return worker.view(id,'source',action);},async tick(){await worker.tick();},restart(){worker.close();worker=new Continuation(root,usage,bridge,()=>now,()=>archived,()=>[thread.thread.id]);},close(){worker.close();usage.close();rmSync(root,{recursive:true,force:true,maxRetries:10,retryDelay:100});}};
 }
 const failed=f=>{f.thread.turns[0]={id:'turn',status:'failed',error:{codexErrorInfo:'usageLimitExceeded'}};};
 test('default off, per chat permission, prompt threshold and dismissal persist',async()=>{
@@ -125,7 +125,7 @@ test('separate processes changing Current thread leave exactly one scope enabled
    process.send('ready');process.once('message',async()=>{try{for(let i=0;i<30;i++)await worker.view(id,id,'enable');worker.close();usage.close();process.disconnect();}catch(e){console.error(e);process.exit(1);}});
   `;
   const children=['a','b'].map(id=>spawn(process.execPath,['--input-type=module','-e',code,f.root,id],{stdio:['ignore','ignore','pipe','ipc']}));
-  const exits=children.map(child=>new Promise((resolve,reject)=>{let errors='';child.stderr.on('data',d=>errors+=d);child.on('error',reject);child.on('exit',n=>n===0?resolve():reject(Error(errors)));}));
+  const exits=children.map(child=>new Promise((resolve,reject)=>{let errors='';child.stderr.on('data',d=>errors+=d);child.on('error',reject);child.on('close',n=>n===0?resolve():reject(Error(errors)));}));
   await Promise.all(children.map(child=>new Promise(resolve=>child.once('message',resolve))));
   children.forEach(child=>child.send('go'));await Promise.all(exits);
   const db=new DatabaseSync(path.join(f.root,'continuation.sqlite'));

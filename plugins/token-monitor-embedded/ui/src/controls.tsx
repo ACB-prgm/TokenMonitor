@@ -5,6 +5,15 @@ import {installedVersion} from '../../shared/version.js';
 import {UpdateMenu,type UpdateAction} from './updates.js';
 import type {UpdateStatus} from '../../server/src/updates.js';
 
+const iconPaths={
+ rescan:'M3 6a5.5 5.5 0 1 1 0 4m0-8v4h4',
+ refresh:'M12.9 6A5.5 5.5 0 1 0 13 10m0-8v4H9',
+ settings:'M6.5 2h3l.4 1.7 1.1.6 1.7-.5 1.5 2.6-1.3 1.2v.8l1.3 1.2-1.5 2.6-1.7-.5-1.1.6-.4 1.7h-3l-.4-1.7-1.1-.6-1.7.5-1.5-2.6 1.3-1.2v-.8L1.8 6.4l1.5-2.6 1.7.5 1.1-.6z M10 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z',
+};
+export function HeaderIcon({name}:{name:keyof typeof iconPaths}){
+ return <svg className="header-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d={iconPaths[name]}/></svg>;
+}
+
 export function ThreadPicker({s,onSelect,onFilter}:{s:Monitor;onSelect?:(id:string)=>void;onFilter?:(query:string,archived:boolean)=>void}) {
  const [open,setOpen]=useState(false),[query,setQuery]=useState(''),[active,setActive]=useState(0);
  const trigger=useRef<HTMLButtonElement>(null),input=useRef<HTMLInputElement>(null),filter=useRef(onFilter);filter.current=onFilter;
@@ -33,8 +42,9 @@ export function ThreadPicker({s,onSelect,onFilter}:{s:Monitor;onSelect?:(id:stri
  </div>;
 }
 export function Settings({expanded,scale,onLayout,updates,onUpdate,error,children}:{expanded:boolean;scale:number;onLayout?:(expanded:boolean,scale:number)=>void;updates?:UpdateStatus;onUpdate?:(a:UpdateAction)=>void;error?:string;children?:React.ReactNode}) {
+ const updateAvailable=updates?.status==='available'&&!updates.dismissed;
  return <details className="settings" onKeyDown={e=>{if(e.key==='Escape'){const d=e.currentTarget;d.open=false;d.querySelector('summary')?.focus();}}}>
-  <summary aria-label="Dashboard settings" title="Settings and About">⚙{updates?.status==='available'&&!updates.dismissed&&<span className="update-badge" aria-label="Update available">•</span>}</summary>
+  <summary className={updateAvailable?'update-available':undefined} aria-label={updateAvailable?'Dashboard settings, update available':'Dashboard settings'} title={updateAvailable?'Settings and About · Update available':'Settings and About'}><HeaderIcon name="settings"/></summary>
   <div className="settings-body"><h2>Settings</h2><label>Display scale <select aria-label="Layout scale" value={scale} onChange={e=>onLayout?.(expanded,Number(e.target.value))}><option value="0.85">85%</option><option value="1">100%</option><option value={1/.85}>118%</option><option value={1.15/.85}>135%</option></select></label>{children}
    <div className="about"><h2>About {displayName}</h2><p className="build-version">{installedVersion}</p><p>Local token monitoring. Costs are API-equivalent estimates, separate from subscription allowances.</p>{!isDev&&<UpdateMenu value={updates} onAction={onUpdate} error={error}/>}</div>
   </div>

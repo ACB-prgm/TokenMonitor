@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.12.0
+
+- Refresh the public pricing catalog in the background with a validated offline fallback.
+- Apply the published pricing schedule at the event time and reprice readable history when rates change.
+- Standardize the header icon controls and turn the Settings button orange when an update is available.
+
 ## 1.11.0
 
 - Account for verified recorded compaction usage, disclose remaining estimates, and show separate gray compaction bars with break-even markers.

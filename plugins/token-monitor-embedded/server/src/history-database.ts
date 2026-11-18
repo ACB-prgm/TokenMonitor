@@ -1,3 +1,4 @@
+import {compositionKeys} from './history-builder.js';
 import type {CompactionDetail} from './compaction.js';
 import {DatabaseSync,type StatementSync} from 'node:sqlite';
 import {createHash} from 'node:crypto';
@@ -5,6 +6,12 @@ import {chmodSync,existsSync,statSync} from 'node:fs';
 import type {Bucket,NumericCall,Payback,ThreadHistory} from './efficiency.js';
 
 export const bucketNumbers=['cacheInput','cacheRead','input','cached','cacheWrite','output','calls','priced','inputPriced','inputCost','cost','overhead'] as const;
+export type AnalyticsPeriod='all'|'7'|'30'|'90';
+const dailyNumbers=[...bucketNumbers,...compositionKeys];
+type AnalyticsRow={
+ kind:'trend'|'model';label:string;effort:string|null;
+ calls:number;priced:number;input:number;cached:number;output:number;cost:number;overhead:number;
+};
 const sampleNumbers=['input','cached','cacheWrite','output','reasoning','total','ordinal'] as const;
 const flags=['outputRecorded','reasoningRecorded','cachedRecorded','cacheWriteRecorded'] as const;
 /** Durable numeric history. SQL owns numeric facts; source availability never controls retention. */
@@ -14,7 +21,7 @@ export class HistoryDatabase {
  statement(sql:string){let s=this.statements.get(sql);if(!s){s=this.db.prepare(sql);this.statements.set(sql,s);}return s;}
  private bump(){this.db.exec("UPDATE meta SET value=CAST(value AS INTEGER)+1 WHERE key='history_revision'");}
  constructor(readonly file:string,options:{migrate?:boolean}={}){
-  const fresh=!existsSync(file);this.db=new DatabaseSync(file);const [major,minor,patch]=String(this.db.prepare('SELECT sqlite_version() AS version').get()!.version).split('.').map(Number);if(major<3||major===3&&(minor<51||minor===51&&patch<3)&&!(minor===50&&patch>=7)&&!(minor===44&&patch>=6)){this.db.close();throw Error('Durable history requires SQLite 3.51.3 or a fixed backport; use the bundled runtime');}if(Number(this.db.prepare('PRAGMA user_version').get()!.user_version)>4){this.db.close();throw Error('Historical database requires a newer TokenMonitor version');}chmodSync(file,0o600);
+  const fresh=!existsSync(file);this.db=new DatabaseSync(file);const [major,minor,patch]=String(this.db.prepare('SELECT sqlite_version() AS version').get()!.version).split('.').map(Number);if(major<3||major===3&&(minor<51||minor===51&&patch<3)&&!(minor===50&&patch>=7)&&!(minor===44&&patch>=6)){this.db.close();throw Error('Durable history requires SQLite 3.51.3 or a fixed backport; use the bundled runtime');}if(Number(this.db.prepare('PRAGMA user_version').get()!.user_version)>5){this.db.close();throw Error('Historical database requires a newer TokenMonitor version');}chmodSync(file,0o600);
   this.db.exec(`PRAGMA busy_timeout=100; ${fresh?'PRAGMA auto_vacuum=INCREMENTAL;':''} PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA wal_autocheckpoint=1000; PRAGMA journal_size_limit=4194304;
    CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY,value TEXT);
    CREATE TABLE IF NOT EXISTS threads(id TEXT PRIMARY KEY,signature TEXT,basis TEXT,data TEXT);
@@ -33,7 +40,12 @@ export class HistoryDatabase {
   const pageSize=Number(this.statement('PRAGMA page_size').get()!.page_size);this.db.exec(`PRAGMA wal_autocheckpoint=${Math.max(1,Math.floor(4194304/pageSize))}`);
   if(options.migrate!==false)this.migrate();
   this.upgrade();
-  this.db.exec(`CREATE TABLE IF NOT EXISTS history_compactions(source TEXT NOT NULL,timestamp TEXT NOT NULL,position INTEGER NOT NULL,data TEXT NOT NULL,PRIMARY KEY(source,timestamp));CREATE INDEX IF NOT EXISTS history_compactions_date ON history_compactions(timestamp); PRAGMA user_version=4;`);
+  if(Number(this.statement('PRAGMA user_version').get()!.user_version)<5)this.transaction(()=>{
+   const columns=new Set(this.statement('PRAGMA table_info(history_daily)').all().map(row=>row.name));
+   for(const key of compositionKeys)if(!columns.has(key))this.db.exec(`ALTER TABLE history_daily ADD COLUMN ${key} REAL NOT NULL DEFAULT 0`);
+   this.db.exec('PRAGMA user_version=5');
+  });
+  this.db.exec(`CREATE TABLE IF NOT EXISTS history_compactions(source TEXT NOT NULL,timestamp TEXT NOT NULL,position INTEGER NOT NULL,data TEXT NOT NULL,PRIMARY KEY(source,timestamp));CREATE INDEX IF NOT EXISTS history_compactions_date ON history_compactions(timestamp);`);
  }
  internBasis(definition:string){const id=createHash('sha256').update(definition).digest('hex');this.statement('INSERT OR IGNORE INTO history_basis VALUES(?,?)').run(id,definition);return id;}
  dimension(b:Partial<Bucket>){const values=[b.model??null,b.effort??null,b.rateBand??null,b.serviceTier??null,b.regionalProcessing==null?null:Number(b.regionalProcessing)];const key=JSON.stringify(values);this.statement('INSERT OR IGNORE INTO history_dimensions(identity,model,effort,rateBand,serviceTier,regionalProcessing) VALUES(?,?,?,?,?,?)').run(key,...values);return Number(this.statement('SELECT id FROM history_dimensions WHERE identity=?').get(key)!.id);}
@@ -137,11 +149,11 @@ export class HistoryDatabase {
  private rebuildRollups(id:string){
   this.statement('DELETE FROM history_daily WHERE source=?').run(id);
   const sum=bucketNumbers.map(k=>`SUM(${k})`).join(',');
-  this.statement(`INSERT INTO history_daily SELECT source,substr(timestamp,1,10),dimension,${sum} FROM history_buckets WHERE source=? GROUP BY source,substr(timestamp,1,10),dimension`).run(id);
+  this.statement(`INSERT INTO history_daily(source,day,dimension,${bucketNumbers.join(',')}) SELECT source,substr(timestamp,1,10),dimension,${sum} FROM history_buckets WHERE source=? GROUP BY source,substr(timestamp,1,10),dimension`).run(id);
   this.rebuildOutcomes(id);
  }
- addBucket(id:string,b:Bucket){this.statement('INSERT OR IGNORE INTO history_day_basis SELECT ?,?,basis FROM history_sources WHERE id=?').run(id,b.timestamp.slice(0,10),id);const dimension=this.dimension(b),columns=bucketNumbers.join(',');
-  this.statement(`INSERT INTO history_daily(source,day,dimension,${columns}) VALUES(${Array(3+bucketNumbers.length).fill('?').join(',')}) ON CONFLICT(source,day,dimension) DO UPDATE SET ${bucketNumbers.map(k=>`${k}=${k}+excluded.${k}`).join(',')}`).run(id,b.timestamp.slice(0,10),dimension,...bucketNumbers.map(k=>b[k]));
+ addBucket(id:string,b:Bucket){this.statement('INSERT OR IGNORE INTO history_day_basis SELECT ?,?,basis FROM history_sources WHERE id=?').run(id,b.timestamp.slice(0,10),id);const dimension=this.dimension(b),columns=dailyNumbers.join(',');
+  this.statement(`INSERT INTO history_daily(source,day,dimension,${columns}) VALUES(${Array(3+dailyNumbers.length).fill('?').join(',')}) ON CONFLICT(source,day,dimension) DO UPDATE SET ${dailyNumbers.map(k=>`${k}=${k}+excluded.${k}`).join(',')}`).run(id,b.timestamp.slice(0,10),dimension,...dailyNumbers.map(k=>b[k]??0));
  }
  addSample(id:string,position:number,s:NumericCall,now:number){if(s.timestamp.slice(0,10)<new Date(now-89*864e5).toISOString().slice(0,10))return;
   this.statement(`INSERT OR IGNORE INTO history_samples VALUES(${Array(4+sampleNumbers.length+flags.length).fill('?').join(',')})`).run(id,position,this.dimension(s),s.timestamp,...sampleNumbers.map(k=>s[k]??null),...flags.map(k=>Number(s[k]===true)));
@@ -162,7 +174,7 @@ export class HistoryDatabase {
   // Totals' global rows deliberately exclude staging sources. Reinsert daily rows to activate them.
   const rows=this.statement('SELECT * FROM history_daily WHERE source=?').all(target) as any[];
   this.statement('DELETE FROM history_daily WHERE source=?').run(target);
-  for(const r of rows)this.statement(`INSERT INTO history_daily VALUES(${Array(3+bucketNumbers.length).fill('?').join(',')})`).run(source,r.day,r.dimension,...bucketNumbers.map(k=>r[k]));
+  for(const r of rows)this.statement(`INSERT INTO history_daily VALUES(${Array(3+dailyNumbers.length).fill('?').join(',')})`).run(source,r.day,r.dimension,...dailyNumbers.map(k=>r[k]));
   for(const table of ['history_buckets','history_samples','history_paybacks','history_turns','history_charges','history_outcomes','history_turn_events','history_boundaries','history_turn_daily','history_day_basis','history_replay','history_compactions'])this.statement(`UPDATE ${table} SET source=? WHERE source=?`).run(source,target);
   this.statement('DELETE FROM history_totals WHERE source=?').run(target);this.statement('UPDATE history_sources SET id=? WHERE id=?').run(source,target);
  }
@@ -176,7 +188,24 @@ export class HistoryDatabase {
   if(!daily&&exclude){const own=this.buckets(exclude);for(const r of rows){const b=own.find(o=>JSON.stringify([o.model,o.effort,o.rateBand,o.serviceTier,o.regionalProcessing])===JSON.stringify([r.model??undefined,r.effort??undefined,r.rateBand??undefined,r.serviceTier??undefined,r.regionalProcessing==null?undefined:!!r.regionalProcessing]));if(b)for(const k of bucketNumbers)r[k]-=b[k];}}
   return rows.filter(r=>r.calls||r.overhead).map(r=>{const b:any={timestamp:start??''};for(const k of bucketNumbers)b[k]=r[k];for(const k of ['model','effort','rateBand','serviceTier'])if(r[k]!=null)b[k]=r[k];if(r.regionalProcessing!=null)b.regionalProcessing=!!r.regionalProcessing;return b;});
  }
- outcomes(source?:string,start?:string,end?:string,exclude?:string):Payback[]{const where=["source NOT LIKE '~%'",'events>0'],args:any[]=[];if(source){where.push('source=?');args.push(source);}if(exclude){where.push('source<>?');args.push(exclude);}if(start){where.push('day>=?');args.push(start);}if(end){where.push('day<?');args.push(end);}
+ analytics(period:AnalyticsPeriod,now=Date.now()){
+  const start=period==='all'?'':new Date(now-(Number(period)-1)*864e5).toISOString().slice(0,10);
+  const end=new Date(now).toISOString().slice(0,10);
+  const sums=['calls','priced','input','cached','output','cost','overhead'].map(k=>`SUM(t.${k}) AS ${k}`).join(',');
+  const where="t.source NOT LIKE '~%' AND t.day BETWEEN ?1 AND ?2";
+  const date=period==='all'?'substr(t.day,1,7)':'t.day';
+  // One statement gives both breakdowns the same snapshot while hooks import in parallel.
+  return this.statement(`
+    SELECT 'trend' AS kind,${date} AS label,NULL AS effort,${sums}
+    FROM history_daily t WHERE ${where} GROUP BY label HAVING calls<>0 OR overhead<>0
+    UNION ALL
+    SELECT 'model',COALESCE(d.model,'Unknown model'),d.effort,${sums}
+    FROM history_daily t JOIN history_dimensions d ON d.id=t.dimension
+    WHERE ${where} GROUP BY d.model,d.effort HAVING calls<>0 OR overhead<>0
+    ORDER BY kind,label,effort
+  `).all({'1':start,'2':end}) as unknown as AnalyticsRow[];
+ }
+ outcomes(source?:string,start?:string,end?:string,exclude?:string,workspace?:string):Payback[]{const where=["source NOT LIKE '~%'",'events>0'],args:any[]=[];if(workspace!==undefined){where.push("source IN (SELECT source FROM history_catalogue WHERE COALESCE(workspace,'')=?)");args.push(workspace);}if(source){where.push('source=?');args.push(source);}if(exclude){where.push('source<>?');args.push(exclude);}if(start){where.push('day>=?');args.push(start);}if(end){where.push('day<?');args.push(end);}
   return (this.statement(`SELECT day,completed,valid,profitable,reason,SUM(events) AS events,SUM(net) AS net FROM history_outcomes WHERE ${where.join(' AND ')} GROUP BY day,completed,valid,profitable,reason`).all(...args) as any[]).map(r=>({timestamp:r.day,completed:r.completed?r.day:undefined,valid:!!r.valid,breakEven:r.profitable?1:null,reason:r.reason||undefined,calls:0,net:r.net,events:r.events}));
  }
  saveCompaction(source:string,position:number,c:CompactionDetail,now:number){if(c.timestamp.slice(0,10)<new Date(now-89*864e5).toISOString().slice(0,10))return;this.statement('INSERT OR REPLACE INTO history_compactions VALUES(?,?,?,?)').run(source,c.timestamp,position,JSON.stringify(c));}
@@ -202,3 +231,4 @@ export class HistoryDatabase {
  syncAvailability(files:{id:string}[]){const ids=new Set(files.map(f=>f.id)),changed=this.statement('SELECT source,available FROM history_catalogue').all().filter(row=>row.available!==Number(ids.has(String(row.source))));if(changed.length)this.transaction(()=>{for(const row of changed)this.statement('UPDATE history_catalogue SET available=? WHERE source=?').run(Number(ids.has(String(row.source))),row.source);this.changed();});}
  close(){this.db.close();}
 }
+export type HistoryAnalytics=ReturnType<HistoryDatabase['analytics']>;

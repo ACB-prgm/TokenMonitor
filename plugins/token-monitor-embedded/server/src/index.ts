@@ -109,6 +109,25 @@ server.registerTool('get_history_storage', {
  title:'Inspect local history storage',description:'Read aggregate local storage diagnostics on demand.',
  inputSchema:{panelId:z.string().uuid()},annotations,_meta:{ui:{visibility:['app']}},
 },async()=>{try{return {content:[],_meta:{storage:await collector.store.efficiency?.diagnostics()}};}catch{return {isError:true,content:[],_meta:{error:'Local history storage is temporarily unavailable.'}};}});
+server.registerTool('get_history_analytics', {
+ title:'Read local usage analytics',description:'Read aggregate spending and token usage from imported local history.',
+ inputSchema:{period:z.enum(['all','7','30','90']),filters:z.object({model:z.string().max(512).optional(),effort:z.string().max(512).optional(),workspace:z.string().max(4096).optional()}).optional()},annotations,_meta:{ui:{visibility:['app']}},
+},async({period,filters})=>{
+ try{
+  if(!collector.store.efficiency)throw Error('History storage unavailable');
+  if(filters)return {content:[],_meta:{dashboard:await collector.store.efficiency.dashboard(period,filters)}};
+  return {content:[],_meta:{analytics:await collector.store.efficiency.analytics(period)}};
+ }catch{return {isError:true,content:[],_meta:{error:'Local usage analytics are temporarily unavailable.'}};}
+});
+server.registerTool('open_usage_analytics', {
+ title:`${serverDisplayName} Analytics`,
+ description:'Open the standalone local usage dashboard.',
+ inputSchema:{},annotations,
+ _meta:{ui:{resourceUri,visibility:['app']},'openai/ui':{entrypoints:[{type:'global'}]}},
+},async()=>{
+ const panelId=panels.create();
+ return {content:[],_meta:{monitor:await panels.state(panelId),analyticsHome:true}};
+});
 server.registerTool('manage_updates', {
   title: 'TokenMonitor updates', description: 'Panel-only release checks, preferences, and explicitly requested verified installation through Codex.',
   inputSchema: { action: z.enum(['opening','check','configure','dismiss','install']), automatic: z.boolean().optional(),

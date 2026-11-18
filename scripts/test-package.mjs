@@ -38,7 +38,12 @@ try{
   const request=(method,params)=>new Promise((resolve,reject)=>{const id=++counter,timer=setTimeout(()=>reject(new Error('MCP timeout '+method)),10000);pending.set(id,{resolve,reject,timer});child.stdin.write(JSON.stringify({jsonrpc:'2.0',id,method,params})+'\n');});
   try{
    const init=await request('initialize',{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'package-test',version:'1'}});assert.equal(init.serverInfo.version,version);child.stdin.write(JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})+'\n');
-   const tools=(await request('tools/list',{})).tools;assert.deepEqual(tools.map(t=>t.name).sort(),['get_history_storage','get_monitor_state','list_tasks','manage_continuation','manage_updates','open_monitor','show_turn_summary']);assert.deepEqual(tools.find(t=>t.name==='get_history_storage')._meta.ui.visibility,['app']);assert.deepEqual(tools.find(t=>t.name==='manage_updates')._meta.ui.visibility,['app']);assert.deepEqual(tools.find(t=>t.name==='manage_continuation')._meta.ui.visibility,['app']);
+   const tools=(await request('tools/list',{})).tools;
+   assert.deepEqual(tools.map(t=>t.name).sort(),['get_history_analytics','get_history_storage','get_monitor_state','list_tasks','manage_continuation','manage_updates','open_monitor','open_usage_analytics','show_turn_summary']);
+   for(const name of ['get_history_analytics','get_history_storage','manage_updates','manage_continuation','open_usage_analytics']){
+    assert.deepEqual(tools.find(t=>t.name===name)._meta.ui.visibility,['app']);
+   }
+   assert.deepEqual(tools.find(t=>t.name==='open_usage_analytics')._meta['openai/ui'].entrypoints,[{type:'global'}]);
    const result=await request('tools/call',{name:'open_monitor',arguments:{}});const s=result._meta.monitor;assert.equal(s.input,100000);assert.equal(s.usage.pricedCalls,1);assert.ok(Math.abs(s.usage.cost-.049)<1e-12);assert.match(s.status,/Session ended/);assert.deepEqual(result.content,[]);assert.doesNotMatch(JSON.stringify(result),/PRIVATE_PROMPT|transcript_path|\.jsonl/);
    let settled=s,next;const deadline=Date.now()+5000;
    do{
@@ -48,6 +53,10 @@ try{
     if(!next.unchanged)settled=next;
    }while(Date.now()<deadline);
    assert.equal(next.unchanged,true,'packaged background discovery and history must settle');
+   const analytics=await request('tools/call',{name:'open_usage_analytics',arguments:{}});
+   assert.equal(analytics._meta.analyticsHome,true);
+   const dashboard=await request('tools/call',{name:'get_history_analytics',arguments:{period:'all',filters:{model:'gpt-6.1-sol'}}});
+   assert.ok(Array.isArray(dashboard._meta.dashboard.models));
    const exited=new Promise(resolve=>child.once('exit',resolve));child.stdin.end();assert.equal(await Promise.race([exited,new Promise((_,reject)=>setTimeout(()=>reject(new Error('MCP did not exit after stdin closure')),5000))]),0);
   }finally{if(child.exitCode===null)child.kill();for(const item of pending.values())clearTimeout(item.timer);}
   // SIGTERM lifecycle on POSIX; Windows termination follows pipe closure above.

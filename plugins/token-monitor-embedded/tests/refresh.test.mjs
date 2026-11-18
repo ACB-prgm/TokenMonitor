@@ -9,7 +9,7 @@ const bundle=await build({entryPoints:[fileURLToPath(new URL('ui/src/main.tsx',r
 
 // Run the real panel controller with deterministic hooks and a deferred bridge.
 function panel(summary=false) {
- const slots=[],effects=[],calls=[];let cursor=0,component,poll,first=true;const opening=[];
+ const slots=[],effects=[],calls=[],links=[];let cursor=0,component,poll,first=true;const opening=[];
  const react={
   createElement:(type,props)=>({type,props}),
   useState(initial){const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>{slots[i]=value;}];},
@@ -20,6 +20,7 @@ function panel(summary=false) {
  class App {
   constructor(){bridge=this;}
   getHostContext(){return {};}
+  async openLink({url}){links.push(url);return {isError:true};}
   async connect(){}
   close(){}
   callServerTool(request){return new Promise(resolve=>calls.push({request,resolve}));}
@@ -30,10 +31,29 @@ function panel(summary=false) {
  new Function('require','document','window','sessionStorage','setInterval','clearInterval','setTimeout',bundle.outputFiles[0].text)(require,document,{}, {getItem:()=>null,setItem(){}},callback=>{poll=callback;return 1;},()=>{},callback=>{opening.push(callback);});
  const render=()=>{cursor=0;return component().props;};
  render();first=false;for(const effect of effects)effect();
- const deliver=state=>bridge.ontoolresult({_meta:{monitor:state}});
+ const deliver=(state,meta)=>bridge.ontoolresult({_meta:{monitor:state,...meta}});
  const settle=async(state,updates)=>{calls.at(-1).resolve({_meta:{monitor:state,updates}});await new Promise(resolve=>setImmediate(resolve));};
- return {render,deliver,settle,calls,opening,poll:()=>poll()};
+ return {render,deliver,settle,calls,opening,links,poll:()=>poll()};
 }
+
+test('analytics links to the global entry and falls back to the thread panel',async()=>{
+ const p=panel();
+ const state={panelId:'p',selectedId:'a',status:'Monitoring'};
+ p.deliver(state);await p.settle({...state,unchanged:true});
+ p.render().onAnalytics();
+ assert.deepEqual(p.links,['codex://plugins/token-monitor-embedded@tokenmonitor/app/open_usage_analytics']);
+ const {load,onBack}=p.render();
+ const request=load('all',{});
+ assert.deepEqual(p.calls.at(-1).request,{name:'get_history_analytics',arguments:{period:'all',filters:{}}});
+ p.calls.at(-1).resolve({_meta:{dashboard:{trend:[]}}});
+ assert.deepEqual(await request,{trend:[]});
+ onBack();assert.strictEqual(p.render().s,state);
+ const standalone=panel();
+ standalone.deliver(state,{analyticsHome:true});
+ assert.equal(typeof standalone.render().load,'function');
+ assert.equal(standalone.render().onBack,undefined);
+ assert.equal(standalone.opening.length,0);
+});
 
 test('polls retain unchanged views and queue selections made in flight',async()=>{
  const p=panel();

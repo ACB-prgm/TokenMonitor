@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {build} from 'esbuild';
 import {createRequire} from 'node:module';
-const bundle=await build({stdin:{resolveDir:fileURLToPath(new URL('..',import.meta.url)),contents:`export {HistoryDatabase} from './server/src/history-database';export {importHistory} from './server/src/history-import';export {HistoryBuilder,summarize,historyBasis,EfficiencyStore} from './server/src/efficiency';export {TelemetryParser} from './server/src/parser';`},bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);const {HistoryDatabase,importHistory,HistoryBuilder,summarize,historyBasis,TelemetryParser}=mod.exports;
+const bundle=await build({stdin:{resolveDir:fileURLToPath(new URL('..',import.meta.url)),contents:`export {readHistoryDashboard} from './server/src/history-dashboard';export {HistoryDatabase} from './server/src/history-database';export {importHistory} from './server/src/history-import';export {HistoryBuilder,summarize,historyBasis,EfficiencyStore} from './server/src/efficiency';export {TelemetryParser} from './server/src/parser';`},bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);const {HistoryDatabase,importHistory,HistoryBuilder,summarize,historyBasis,TelemetryParser}=mod.exports;
 const now=Date.now(),stamp=i=>new Date(now-100000+i*1000).toISOString();
 const call=(i,input=100000)=>({type:'event_msg',timestamp:stamp(i),payload:{type:'token_count',info:{model_context_window:475000,last_token_usage:{input_tokens:input,cached_input_tokens:Math.min(90000,input),cache_write_input_tokens:0,output_tokens:1000,reasoning_output_tokens:100}}}});
 const lines=rs=>rs.map(r=>JSON.stringify(r)).join('\n')+'\n';
@@ -76,6 +76,18 @@ test('retention preserves summaries, and missing source does not erase imported 
  const revision=db.revision();drain(db,home,f);assert.equal(db.recent().length,0);assert.equal(db.revision(),revision);
  rmSync(f.file);assert.equal(importHistory(db,home,f,historyBasis).unavailable,true);assert.equal(summarize(db.buckets()).calls,1);assert.equal(db.savedTasks()[0].sourceAvailable,false);
 }));
+test('analytics groups retained usage by UTC period and model effort, excluding staging',()=>fixture(({db})=>{
+ const bucket={model:'gpt-6.1-sol',effort:'high',calls:1,priced:1,inputPriced:1,input:100,cached:80,cacheWrite:0,cacheInput:100,cacheRead:80,output:10,cost:2,inputCost:1,overhead:0};
+ db.addBucket('archived',{...bucket,timestamp:'2026-01-03'});
+ db.addBucket('current',{...bucket,timestamp:'2026-10-19',effort:'low',cost:0,priced:0});
+ db.addBucket('current',{...bucket,timestamp:'2026-10-19',effort:'low',calls:0,priced:0,input:0,cached:0,output:0,cost:0,overhead:.5});
+ db.addBucket('~staging',{...bucket,timestamp:'2026-10-19',cost:99});
+ const date=Date.parse('2026-10-20T00:00:00Z');
+ const all=db.analytics('all',date);
+ assert.deepEqual(all.filter(r=>r.kind==='trend').map(r=>[r.label,r.calls,r.cost+r.overhead]),[['2026-01',1,2],['2026-10',1,.5]]);
+ assert.deepEqual(all.filter(r=>r.kind==='model').map(r=>[r.effort,r.priced,r.input,r.cached]),[['high',1,100,80],['low',0,100,80]]);
+ assert.deepEqual(db.analytics('30',date).filter(r=>r.kind==='trend').map(r=>r.label),['2026-10-19']);
+}));
 test('replayed cumulative records stay deduplicated across persisted checkpoints',()=>fixture(({home,f,db})=>{
  const first=call(1);first.payload.info.total_token_usage={input_tokens:100000,output_tokens:1000};writeFileSync(f.file,lines([header,context,first]));drain(db,home,f);
  const replay=structuredClone(first);replay.timestamp=stamp(2);appendFileSync(f.file,lines([replay,call(3)]));drain(db,home,f);assert.equal(summarize(db.buckets()).calls,2);
@@ -133,7 +145,7 @@ test('schema v3 upgrades without losing totals or relabeling legacy compactions 
  const b=new HistoryBuilder();b.call({timestamp:stamp(1),model:'gpt-6.1-sol',input:100000,cached:90000,cacheWrite:0,output:1000,reasoning:0,cachedRecorded:true,cacheWriteRecorded:true,outputRecorded:true,reasoningRecorded:true});b.compact(stamp(2));
  db.replace('legacy','old','legacy-basis',b.data);const overhead=summarize(db.buckets('legacy')).overhead;
  db.db.exec('DROP TABLE history_compactions; PRAGMA user_version=3');
- const upgraded=new HistoryDatabase(file);try{assert.equal(upgraded.statement('PRAGMA user_version').get().user_version,4);assert.equal(summarize(upgraded.buckets('legacy')).overhead,overhead);assert.deepEqual(upgraded.compactionDetails('legacy'),[]);}finally{upgraded.close();}
+ const upgraded=new HistoryDatabase(file);try{assert.equal(upgraded.statement('PRAGMA user_version').get().user_version,5);assert.equal(summarize(upgraded.buckets('legacy')).overhead,overhead);assert.deepEqual(upgraded.compactionDetails('legacy'),[]);}finally{upgraded.close();}
 }));
 
 test('recorded compaction usage reprices from numeric history after source loss',async()=>{
@@ -164,4 +176,54 @@ test('active payback survives incremental import, restart and closure without do
   appendFileSync(f.file,lines([{type:'compacted',timestamp:stamp(i++),payload:{}}]));drain(reopened,home,f);
   const closed=summarize([],reopened.outcomes());assert.equal(closed.profitable,1);assert.equal(closed.evaluable,1);assert.equal(closed.pending,1);
  }finally{reopened.close();}
+}));
+
+test('dashboard filters published history, reconciles cost categories and ranks comparable threads',()=>fixture(({db})=>{
+ const basis=db.internBasis(historyBasis);
+ const now=Date.parse('2026-11-18T00:00:00Z');
+ const add=(source,model,workspace,calls,unit,day='2026-11-16',covered=true,effort='high')=>{
+  db.statement('INSERT OR IGNORE INTO history_sources VALUES(?,?,?,NULL)').run(source,'',basis);
+  db.statement('INSERT OR IGNORE INTO history_catalogue(source,title,workspace) VALUES(?,?,?)').run(source,source,workspace);
+  db.addBucket(source,{timestamp:day,model,effort,calls,priced:calls,inputPriced:calls,
+   input:100*calls,cached:50*calls,output:calls,cacheInput:100*calls,cacheRead:50*calls,cacheWrite:0,
+   cost:calls*unit,inputCost:calls*unit/2,overhead:0,freshCost:covered?calls*unit/2:0,
+   reasoningCost:covered?calls*unit/2:0,splitCalls:covered?calls:0});
+ };
+ add('expensive','model-a','work',25,2);
+ add('ordinary','model-a','work',30,1);
+ add('old','model-a','work',20,1,'2026-11-08',false);
+ add('different','model-b','other',60,5);
+ add('different','model-b','other',10,3,undefined,true,'medium');
+ add('~staging','model-a','work',60,99);
+ const read=mod.exports.readHistoryDashboard;
+ const result=read(db,'7',{workspace:'work',model:'model-a'},now);
+ assert.equal(result.trend[0].calls,55);
+ assert.equal(result.trend[0].splitCalls,55);
+ assert.equal(result.trend[0].freshCost+result.trend[0].reasoningCost,result.trend[0].cost);
+ assert.equal(result.previous.calls,20);
+ assert.equal(result.high[0].delta,1);
+ assert.equal(result.low[0].delta,-.5);
+ assert.equal(result.context.title,'expensive');
+ assert.equal(result.effort.share,.5);
+ assert.deepEqual(result.models.map(({model,total,efforts})=>[model,total.input,total.cached,total.cost,efforts]),[
+  ['model-a',5500,2750,80,[{effort:'high',input:5500}]],
+ ]);
+ const {models}=read(db,'7',{},now);
+ assert.deepEqual(models.map(m=>[m.model,m.total.input]),[['model-b',7000],['model-a',5500]]);
+ assert.deepEqual(models[0].efforts,[{effort:'high',input:6000},{effort:'medium',input:1000}]);
+ assert.deepEqual(read(db,'7',{effort:'medium',workspace:'other'},now).models.map(m=>m.total.input),[1000]);
+ assert.equal(read(db,'90',{},now).trend.at(-1).label,'2026-11-16');
+ assert.equal(read(db,'all',{workspace:'work'},now).trend[0].splitCalls,55);
+ assert.equal(read(db,'7',{model:'missing'},now).trend.length,0);
+}));
+
+test('transcript import persists the exact priced call composition',()=>fixture(({db,home,f})=>{
+ const timestamp='2026-11-18T12:00:00.000Z',now=Date.parse(timestamp);
+ writeFileSync(f.file,lines([{...header,timestamp},{...context,timestamp},{...call(0),timestamp}]));
+ drain(db,home,f,{now});
+ const {trend:[row]}=mod.exports.readHistoryDashboard(db,'7',{},now);
+ assert.equal(row.priced,1);
+ assert.equal(row.splitCalls,1);
+ assert.ok(row.reasoningCost>0);
+ assert.ok(Math.abs(row.cost-row.freshCost-row.readCost-row.writeCost-row.reasoningCost-row.otherCost-row.unsplitCost)<1e-12);
 }));

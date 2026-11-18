@@ -1,3 +1,4 @@
+import {compositionKeys} from './history-builder.js';
 import type {CompactionDetail} from './compaction.js';
 import type {TurnAggregate} from './turns.js';
 import {HistoryDatabase} from './history-database.js';
@@ -9,7 +10,7 @@ import {bundledSnapshot,PricingCache,type PricingSnapshot} from './pricing-cache
 import {acceptedTranscript,privateDirectory,stateRoot} from './platform.js';
 export const historyBasis=bundledSnapshot.basis;
 function compatibleBasis(definition:string,expectedBasis:string):boolean {
- try{const {version,...basis}=JSON.parse(definition),{version:current,...expected}=JSON.parse(expectedBasis);return [3,4,current].includes(version)&&Object.keys(basis).length===Object.keys(expected).length&&Object.entries(expected).every(([key,value])=>basis[key]===value);}catch{return false;}
+ try{const {version,...basis}=JSON.parse(definition),{version:current,...expected}=JSON.parse(expectedBasis);return [3,4,5,6,current].includes(version)&&Object.keys(basis).length===Object.keys(expected).length&&Object.entries(expected).every(([key,value])=>basis[key]===value);}catch{return false;}
 }
 export {HistoryBuilder,summarize,callBucket,inputCost} from './history-builder.js';
 import {HistoryBuilder,summarize,callBucket,type NumericCall,type Bucket,type Payback,type ThreadHistory,type Summary} from './history-builder.js';
@@ -96,7 +97,7 @@ export class EfficiencyStore {
     if(db.statement("SELECT 1 FROM history_boundaries WHERE source=? AND kind='compaction' AND timestamp>=? AND timestamp<? LIMIT 1").get(row.id,day.day,new Date(Date.parse(day.day)+864e5).toISOString().slice(0,10)))continue;
     const revision=db.revision(),groups=new Map<string,Bucket>();let timestamp=day.day,position=-1,count=0;
     for(;;){const samples=db.statement(`SELECT t.*,d.model,d.effort,d.serviceTier,d.regionalProcessing FROM history_samples t JOIN history_dimensions d ON t.dimension=d.id WHERE source=? AND timestamp>=? AND timestamp<? AND (timestamp>? OR timestamp=? AND position>?) ORDER BY timestamp,position LIMIT 1000`).all(row.id,day.day,new Date(Date.parse(day.day)+864e5).toISOString().slice(0,10),timestamp,timestamp,position) as any[];
-     if(!samples.length)break;for(const raw of samples){const sample:NumericCall={...raw,model:raw.model??undefined,effort:raw.effort??undefined,serviceTier:raw.serviceTier??undefined,regionalProcessing:raw.regionalProcessing==null?undefined:!!raw.regionalProcessing,cachedRecorded:!!raw.cachedRecorded,cacheWriteRecorded:!!raw.cacheWriteRecorded,outputRecorded:!!raw.outputRecorded,reasoningRecorded:!!raw.reasoningRecorded};const b=callBucket(sample,this.active.pricing),key=JSON.stringify([b.model,b.effort,b.serviceTier,b.regionalProcessing,b.rateBand]),old=groups.get(key);if(old){for(const k of ['cacheInput','cacheRead','input','cached','cacheWrite','output','calls','priced','inputPriced','inputCost','cost','overhead'] as const)old[k]+=b[k];}else groups.set(key,b);count++;timestamp=raw.timestamp;position=raw.position;}
+     if(!samples.length)break;for(const raw of samples){const sample:NumericCall={...raw,model:raw.model??undefined,effort:raw.effort??undefined,serviceTier:raw.serviceTier??undefined,regionalProcessing:raw.regionalProcessing==null?undefined:!!raw.regionalProcessing,cachedRecorded:!!raw.cachedRecorded,cacheWriteRecorded:!!raw.cacheWriteRecorded,outputRecorded:!!raw.outputRecorded,reasoningRecorded:!!raw.reasoningRecorded};const b=callBucket(sample,this.active.pricing),key=JSON.stringify([b.model,b.effort,b.serviceTier,b.regionalProcessing,b.rateBand]),old=groups.get(key);if(old){for(const k of ['cacheInput','cacheRead','input','cached','cacheWrite','output','calls','priced','inputPriced','inputCost','cost','overhead'] as const)old[k]+=b[k];for(const k of compositionKeys)old[k]=(old[k]??0)+(b[k]??0);}else groups.set(key,b);count++;timestamp=raw.timestamp;position=raw.position;}
      await new Promise<void>(r=>setImmediate(r));if(this.closed)return;
     }
     if(count!==day.calls||db.revision()!==revision)continue;

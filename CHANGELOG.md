@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 1.13.0
+
+- Open Usage analytics from Codex's main navigation or the thread monitor's Settings. Explore all imported history or the last 7, 30 or 90 days with model, effort and project filters.
+- Follow four cost and cache KPIs over time, inspect cost composition, and compare threads against peers with comparable model, effort and pricing.
+- Rank models by input tokens, see the reasoning-effort breakdown and KPIs per model, and use measured context and reasoning costs to find changes worth trying.
+- Choose Compact, Comfortable or Large. The analytics layout resizes and reflows, and saves the scale independently of the thread monitor.
+
 ## 1.12.0
 
 - Refresh the public pricing catalog in the background with a validated offline fallback.

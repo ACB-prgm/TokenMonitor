@@ -43,10 +43,10 @@ test('analytics links to the global entry and falls back to the thread panel',as
  p.render().onAnalytics();
  assert.deepEqual(p.links,['codex://plugins/token-monitor-embedded@tokenmonitor/app/open_usage_analytics']);
  const {load,onBack}=p.render();
- const request=load('all');
- assert.deepEqual(p.calls.at(-1).request,{name:'get_history_analytics',arguments:{period:'all'}});
- p.calls.at(-1).resolve({_meta:{analytics:[]}});
- assert.deepEqual(await request,[]);
+ const request=load('all',{});
+ assert.deepEqual(p.calls.at(-1).request,{name:'get_history_analytics',arguments:{period:'all',filters:{}}});
+ p.calls.at(-1).resolve({_meta:{dashboard:{trend:[]}}});
+ assert.deepEqual(await request,{trend:[]});
  onBack();assert.strictEqual(p.render().s,state);
  const standalone=panel();
  standalone.deliver(state,{analyticsHome:true});

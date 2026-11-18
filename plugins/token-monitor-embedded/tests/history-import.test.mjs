@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {build} from 'esbuild';
 import {createRequire} from 'node:module';
-const bundle=await build({stdin:{resolveDir:fileURLToPath(new URL('..',import.meta.url)),contents:`export {HistoryDatabase} from './server/src/history-database';export {importHistory} from './server/src/history-import';export {HistoryBuilder,summarize,historyBasis,EfficiencyStore} from './server/src/efficiency';export {TelemetryParser} from './server/src/parser';`},bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);const {HistoryDatabase,importHistory,HistoryBuilder,summarize,historyBasis,TelemetryParser}=mod.exports;
+const bundle=await build({stdin:{resolveDir:fileURLToPath(new URL('..',import.meta.url)),contents:`export {readHistoryDashboard} from './server/src/history-dashboard';export {HistoryDatabase} from './server/src/history-database';export {importHistory} from './server/src/history-import';export {HistoryBuilder,summarize,historyBasis,EfficiencyStore} from './server/src/efficiency';export {TelemetryParser} from './server/src/parser';`},bundle:true,platform:'node',format:'cjs',write:false});const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);const {HistoryDatabase,importHistory,HistoryBuilder,summarize,historyBasis,TelemetryParser}=mod.exports;
 const now=Date.now(),stamp=i=>new Date(now-100000+i*1000).toISOString();
 const call=(i,input=100000)=>({type:'event_msg',timestamp:stamp(i),payload:{type:'token_count',info:{model_context_window:475000,last_token_usage:{input_tokens:input,cached_input_tokens:Math.min(90000,input),cache_write_input_tokens:0,output_tokens:1000,reasoning_output_tokens:100}}}});
 const lines=rs=>rs.map(r=>JSON.stringify(r)).join('\n')+'\n';
@@ -145,7 +145,7 @@ test('schema v3 upgrades without losing totals or relabeling legacy compactions 
  const b=new HistoryBuilder();b.call({timestamp:stamp(1),model:'gpt-6.1-sol',input:100000,cached:90000,cacheWrite:0,output:1000,reasoning:0,cachedRecorded:true,cacheWriteRecorded:true,outputRecorded:true,reasoningRecorded:true});b.compact(stamp(2));
  db.replace('legacy','old','legacy-basis',b.data);const overhead=summarize(db.buckets('legacy')).overhead;
  db.db.exec('DROP TABLE history_compactions; PRAGMA user_version=3');
- const upgraded=new HistoryDatabase(file);try{assert.equal(upgraded.statement('PRAGMA user_version').get().user_version,4);assert.equal(summarize(upgraded.buckets('legacy')).overhead,overhead);assert.deepEqual(upgraded.compactionDetails('legacy'),[]);}finally{upgraded.close();}
+ const upgraded=new HistoryDatabase(file);try{assert.equal(upgraded.statement('PRAGMA user_version').get().user_version,5);assert.equal(summarize(upgraded.buckets('legacy')).overhead,overhead);assert.deepEqual(upgraded.compactionDetails('legacy'),[]);}finally{upgraded.close();}
 }));
 
 test('recorded compaction usage reprices from numeric history after source loss',async()=>{
@@ -176,4 +176,35 @@ test('active payback survives incremental import, restart and closure without do
   appendFileSync(f.file,lines([{type:'compacted',timestamp:stamp(i++),payload:{}}]));drain(reopened,home,f);
   const closed=summarize([],reopened.outcomes());assert.equal(closed.profitable,1);assert.equal(closed.evaluable,1);assert.equal(closed.pending,1);
  }finally{reopened.close();}
+}));
+
+test('dashboard filters published history, reconciles cost categories and ranks comparable threads',()=>fixture(({db})=>{
+ const basis=db.internBasis(historyBasis);
+ const now=Date.parse('2026-11-18T00:00:00Z');
+ const add=(source,model,workspace,calls,unit,day='2026-11-16',covered=true)=>{
+  db.statement('INSERT OR IGNORE INTO history_sources VALUES(?,?,?,NULL)').run(source,'',basis);
+  db.statement('INSERT OR IGNORE INTO history_catalogue(source,title,workspace) VALUES(?,?,?)').run(source,source,workspace);
+  db.addBucket(source,{timestamp:day,model,effort:'high',calls,priced:calls,inputPriced:calls,
+   input:100*calls,cached:50*calls,output:calls,cacheInput:100*calls,cacheRead:50*calls,cacheWrite:0,
+   cost:calls*unit,inputCost:calls*unit/2,overhead:0,freshCost:covered?calls*unit/2:0,
+   reasoningCost:covered?calls*unit/2:0,splitCalls:covered?calls:0});
+ };
+ add('expensive','model-a','work',25,2);
+ add('ordinary','model-a','work',30,1);
+ add('old','model-a','work',20,1,'2026-11-08',false);
+ add('different','model-b','other',60,5);
+ add('~staging','model-a','work',60,99);
+ const read=mod.exports.readHistoryDashboard;
+ const result=read(db,'7',{workspace:'work',model:'model-a'},now);
+ assert.equal(result.trend[0].calls,55);
+ assert.equal(result.trend[0].splitCalls,55);
+ assert.equal(result.trend[0].freshCost+result.trend[0].reasoningCost,result.trend[0].cost);
+ assert.equal(result.previous.calls,20);
+ assert.equal(result.high[0].delta,1);
+ assert.equal(result.low[0].delta,-.5);
+ assert.equal(result.context.title,'expensive');
+ assert.equal(result.effort.share,.5);
+ assert.equal(read(db,'90',{},now).trend.at(-1).label,'2026-11-16');
+ assert.equal(read(db,'all',{workspace:'work'},now).trend[0].splitCalls,55);
+ assert.equal(read(db,'7',{model:'missing'},now).trend.length,0);
 }));

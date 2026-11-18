@@ -1,3 +1,4 @@
+import type {DashboardFilters,HistoryDashboard} from '../../server/src/history-dashboard.js';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@modelcontextprotocol/ext-apps';
@@ -8,17 +9,17 @@ import {isDev,pluginName,serverDisplayName} from '../../shared/identity.js';
 import type {UpdateStatus} from '../../server/src/updates.js';
 import type {UpdateAction} from './updates.js';
 import type {ResumeView,ResumeAction} from './resume.js';
-import type {AnalyticsPeriod,HistoryAnalytics} from '../../server/src/history-database.js';
+import type {AnalyticsPeriod} from '../../server/src/history-database.js';
 import {HistoryAnalyticsView} from './history-analytics.js';
 
 const app = new App({ name: serverDisplayName, version: installedVersion });
 const layoutKey = isDev ? `${pluginName}-layout` : 'token-monitor-layout';
 const analyticsURL=`codex://plugins/${pluginName}@${isDev?'tokenmonitor-dev':'tokenmonitor'}/app/open_usage_analytics`;
 const summary = document.documentElement.dataset.monitorView === 'summary';
-async function loadAnalytics(period:AnalyticsPeriod):Promise<HistoryAnalytics>{
-  const result=await app.callServerTool({name:'get_history_analytics',arguments:{period}});
-  if(result.isError||!Array.isArray(result._meta?.analytics))throw Error('History unavailable');
-  return result._meta.analytics as HistoryAnalytics;
+async function loadAnalytics(period:AnalyticsPeriod,filters:DashboardFilters):Promise<HistoryDashboard>{
+  const result=await app.callServerTool({name:'get_history_analytics',arguments:{period,filters}});
+  if(result.isError||!result._meta?.dashboard)throw Error('History unavailable');
+  return result._meta.dashboard as HistoryDashboard;
 }
 const legacy = () => (window as any).openai as {widgetState?: Layout; setWidgetState?: (s: Layout)=>void} | undefined;
 function savedLayout(): Layout {

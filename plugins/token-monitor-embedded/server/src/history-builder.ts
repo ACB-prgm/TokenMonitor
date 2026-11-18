@@ -3,7 +3,8 @@ import {compactionDetail,updateReplacement,updateTotal,type CompactionDetail,typ
 import type {TurnAggregate} from './turns.js';
 import {inputCost,price,COMPACTION_DEFAULTS as D,type Sample} from './metrics.js';
 export type NumericCall=Omit<Sample,'activity'|'price'>;
-export type Bucket={timestamp:string;model?:string;effort?:string;rateBand?:string;cacheInput:number;cacheRead:number;serviceTier?:string;regionalProcessing?:boolean;input:number;cached:number;cacheWrite:number;output:number;calls:number;priced:number;inputPriced:number;inputCost:number;cost:number;overhead:number};
+export const compositionKeys=['freshCost','readCost','writeCost','reasoningCost','otherCost','unsplitCost','splitCalls'] as const;
+export type Bucket={timestamp:string;model?:string;effort?:string;rateBand?:string;cacheInput:number;cacheRead:number;serviceTier?:string;regionalProcessing?:boolean;input:number;cached:number;cacheWrite:number;output:number;calls:number;priced:number;inputPriced:number;inputCost:number;cost:number;overhead:number}&Partial<Record<typeof compositionKeys[number],number>>;
 export type Payback={events?:number;timestamp:string;completed?:string;reason?:string;calls:number;breakEven:number|null;net:number;valid:boolean};
 export type ThreadHistory={first:NumericCall[];last:NumericCall[];buckets:Bucket[];paybacks:Payback[];activity?:string;charges:Bucket[];compactions?:CompactionDetail[];turns?:TurnAggregate[]};
 export {inputCost} from './metrics.js';
@@ -32,11 +33,11 @@ export class HistoryBuilder {
  if(this.epoch)this.epoch.completed=timestamp,this.epoch.reason='compaction';this.before=this.previous;this.retained=undefined;
  const detail=compactionDetail(timestamp,callPosition,this.before,usage,reason,this.pricing);this.compaction=detail;(this.data.compactions??=[]).push(detail);
  this.epoch={timestamp,calls:0,breakEven:null,net:-(detail.totalCost??0),valid:!!this.before&&detail.totalCost!=null};this.data.paybacks.push(this.epoch);this.overhead=detail.totalCost??0;this.originalRead=0;this.charge=undefined;this.overheadBucket=undefined;
- if(detail.totalCost!=null&&detail.usage){const b={...callBucket(detail.usage,this.pricing),timestamp,calls:0,priced:0,inputPriced:0,cost:0,inputCost:0,input:0,cached:0,cacheInput:0,cacheRead:0,cacheWrite:0,output:0,overhead:detail.totalCost};this.charge=b;this.data.charges.push(b);this.add(b);this.overheadBucket=this.groups.get(this.groupKey(b));}
+ if(detail.totalCost!=null&&detail.usage){const b={...callBucket(detail.usage,this.pricing),timestamp,calls:0,priced:0,inputPriced:0,cost:0,inputCost:0,input:0,cached:0,cacheInput:0,cacheRead:0,cacheWrite:0,output:0,...Object.fromEntries(compositionKeys.map(key=>[key,0])),overhead:detail.totalCost};this.charge=b;this.data.charges.push(b);this.add(b);this.overheadBucket=this.groups.get(this.groupKey(b));}
  return detail;
  }
  private groupKey(b:Bucket){return JSON.stringify([b.timestamp.slice(0,10),b.model,b.effort,b.serviceTier,b.regionalProcessing,b.rateBand]);}
- private add(b:Bucket){const key=this.groupKey(b);const old=this.groups.get(key);if(old){for(const k of ['calls','priced','inputPriced','cost','inputCost','overhead','input','cached','cacheWrite','output','cacheInput','cacheRead'] as const)old[k]+=b[k];}else {const copy={...b};this.groups.set(key,copy);this.data.buckets.push(copy);}}
+ private add(b:Bucket){const key=this.groupKey(b);const old=this.groups.get(key);if(old){for(const k of ['calls','priced','inputPriced','cost','inputCost','overhead','input','cached','cacheWrite','output','cacheInput','cacheRead'] as const)old[k]+=b[k];for(const k of compositionKeys)old[k]=(old[k]??0)+(b[k]??0);}else {const copy={...b};this.groups.set(key,copy);this.data.buckets.push(copy);}}
  call(s:NumericCall,limit?:number){if(this.data.first.length<100)this.data.first.push(s);this.data.last.push(s);if(this.data.last.length>100)this.data.last.shift();this.add(callBucket(s,this.pricing));
  if(this.epoch&&this.before){
   const e=this.epoch;e.calls++;this.retained??=D.POST_COMPACTION_TOKENS;

@@ -10,7 +10,13 @@ The header leads with the searchable local-thread selector, followed by Rescan t
 
 Open **Token Monitor Analytics** from Codex's main navigation to see all imported local chats, including archived chats and saved usage from missing transcripts. DEV labels the entry **Token Monitor DEV Analytics**. The conversation monitor's **Settings → Usage analytics** links to the same standalone app and keeps analytics available in the conversation pane if the host cannot open the link. **Thread monitor** returns to the current thread view within that pane.
 
-All time groups activity by UTC month. The 30- and 90-day views group by UTC day and include today. The trend switches between estimated cost, recorded normal-call input plus output tokens, and normal calls. Trend data and the model/effort breakdown show exact counts, input cache-read share, and pricing coverage. Estimated cost includes attributed compaction charges where available, and historical usage keeps the [stored calculation basis](history-storage.md). Use the analytics **Refresh** button to reread saved totals while a backfill is running.
+The standalone view starts at Last 30 days. Last 7 and 30 days group by UTC day, Last 90 days by UTC week starting Monday, and All time by UTC month. Periods include today. Model, effort and workspace filter the view. KPI cards switch the trend between estimated cost, cost per call, context cost per call and cached input share. Rolling windows compare with the preceding equal-length period. The cost breakdown can group by model, effort or workspace and its rows apply those filters.
+
+Cost composition reuses the thread monitor categories and shows normal-call dollars and share. Compaction charges appear separately and remain included in total estimated cost. The chart reports category coverage because older summaries and unpriced calls may lack a breakdown. A background replay fills categories from readable transcripts while keeping published totals available.
+
+Thread outliers compare the selected activity with other threads at the same model and effort and compatible recorded pricing basis. Expected cost weights each peer group by the thread's call mix. Rankings require fully priced data and at least 20 calls on each side. Total estimated cost mode also includes threads without a suitable peer baseline. Expand a row to see context, output, compaction, and cache share. How to improve highlights a material context cost gap or offers a lower-effort trial when measured high-effort reasoning cost is substantial. Compaction outcomes respect date and workspace across all models and efforts.
+
+Use analytics **Refresh** to reread saved totals while backfill is running.
 
 ## Efficiency comparisons
 

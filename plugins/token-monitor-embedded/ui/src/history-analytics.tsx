@@ -1,85 +1,211 @@
-import React, {useEffect, useRef, useState} from 'react';
-import type {AnalyticsPeriod,HistoryAnalytics} from '../../server/src/history-database.js';
+import React,{useEffect,useRef,useState} from 'react';
+import type {AnalyticsPeriod} from '../../server/src/history-database.js';
+import type {DashboardFilters,DashboardThread,DashboardTotals,HistoryDashboard} from '../../server/src/history-dashboard.js';
 import type {Efficiency} from '../../server/src/efficiency.js';
-import {exact,money,number,percent} from './analytics.js';
+import {categories,exact,money,percent} from './analytics.js';
 
-type Usage=HistoryAnalytics[number];
-const spend=(row:Usage)=>row.priced||row.overhead?money(row.cost+row.overhead):'—';
-const tokens=(row:Usage)=>row.input+row.output;
-const cache=(row:Usage)=>row.input?percent(row.cached/row.input*100):'—';
+const spend=(r:DashboardTotals)=>r.cost+r.overhead;
+const cached=(r:DashboardTotals)=>r.input?r.cached/r.input*100:null;
 const metrics={
- spend:{label:'Estimated cost',value:(row:Usage)=>row.cost+row.overhead,format:spend},
- tokens:{label:'Tokens',value:tokens,format:(row:Usage)=>exact(tokens(row))},
- calls:{label:'Calls',value:(row:Usage)=>row.calls,format:(row:Usage)=>exact(row.calls)},
+ spend:{label:'Estimated cost',value:(r:DashboardTotals)=>r.priced||r.overhead?spend(r):null,format:money},
+ call:{label:'Cost per call',value:(r:DashboardTotals)=>r.priced?spend(r)/r.priced:null,format:money},
+ context:{label:'Context cost per call',value:(r:DashboardTotals)=>r.inputPriced?r.inputCost/r.inputPriced:null,format:money},
+ cache:{label:'Cached input',value:cached,format:percent},
 };
+type Metric=keyof typeof metrics;
+type Display = {metric:Metric; group:keyof DashboardFilters; rank:string};
+const splitKeys=['freshCost','readCost','writeCost','reasoningCost','otherCost','unsplitCost'] as const;
+const filterLabels={model:'Model',effort:'Effort',workspace:'Workspace'};
+const unknownLabels={model:'Unknown model',effort:'Unknown effort',workspace:'No workspace'};
+const dimensions=Object.keys(filterLabels) as (keyof DashboardFilters)[];
+const periods={7:'Last 7 days',30:'Last 30 days',90:'Last 90 days',all:'All time'};
+const periodKeys=Object.keys(periods) as AnalyticsPeriod[];
+const signed=(value:number)=>`${value>0?'+':''}${Number(value.toFixed(1))}`;
+const labelFor=(key:keyof DashboardFilters,value:string)=>value||unknownLabels[key];
+const sumRows=(rows:DashboardTotals[]):DashboardTotals=>Object.fromEntries(
+ Object.keys(rows[0]).filter(k=>typeof rows[0][k as keyof DashboardTotals]==='number')
+  .map(key=>[key,rows.reduce((sum,row)=>sum+row[key as keyof DashboardTotals],0)])
+) as DashboardTotals;
 
-function UsageTable({rows,models=false}:{rows:HistoryAnalytics;models?:boolean}){
- return <div className="analytics-table" tabIndex={0} role="region" aria-label={models?'Model breakdown':'Trend data'}>
-  <table><thead><tr><th scope="col">{models?'Model':'UTC period'}</th>{models&&<th scope="col">Effort</th>}<th scope="col">Est. cost</th><th scope="col">Calls</th><th scope="col">Input</th><th scope="col">Output</th><th scope="col">Cached input</th><th scope="col">Priced calls</th></tr></thead>
-   <tbody>{rows.map(row=><tr key={JSON.stringify([row.label,row.effort])}><th scope="row">{row.label}</th>{models&&<td>{row.effort??'—'}</td>}<td>{spend(row)}</td><td>{exact(row.calls)}</td><td>{exact(row.input)}</td><td>{exact(row.output)}</td><td>{cache(row)}</td><td>{exact(row.priced)} / {exact(row.calls)}</td></tr>)}</tbody>
-  </table>
- </div>;
+function dateSeries(data:HistoryDashboard,period:AnalyticsPeriod){
+ if(!data.trend.length)return [];
+ const day=864e5, keys=new Map(data.trend.map(r=>[r.label,r]));
+ const first=data.start||data.trend[0].label;
+ const start=new Date((first.length===7?first+'-01':first)+'T00:00:00Z');
+ const end=new Date(data.end+'T00:00:00Z');
+ if(period==='all')start.setUTCDate(1);
+ if(period==='90')start.setUTCDate(start.getUTCDate()-(start.getUTCDay()+6)%7);
+ const rows=[];
+ for(const d=start;d<=end;period==='all'?d.setUTCMonth(d.getUTCMonth()+1):d.setTime(d.getTime()+(period==='90'?7:1)*day)){
+  const label=d.toISOString().slice(0,period==='all'?7:10);
+  rows.push({label,row:keys.get(label)});
+ }
+ return rows;
 }
 
-export function HistoryAnalyticsView({load,onBack,scale,efficiency}:{load:(period:AnalyticsPeriod)=>Promise<HistoryAnalytics>;onBack?:()=>void;scale:number;efficiency?:Efficiency}){
- const [period,setPeriod]=useState<AnalyticsPeriod>('all');
- const [metric,setMetric]=useState<keyof typeof metrics>('spend');
+function TrendMarks({values,metric,spark=false}:{values:(number|null)[];metric:Metric;spark?:boolean}){
+ const peak=Math.max(...values.map(n=>n??0),0);
+ const scale=!spark&&metric==='cache'?100:peak||1;
+ const step=1000/Math.max(values.length,1);
+ const x=(i:number)=>(i+.5)*step;
+ const y=(n:number)=>98-(n/scale)*94;
+ const path=values.map((value,i)=>value===null?'':`${i&&values[i-1]!==null?'L':'M'}${x(i)} ${y(value)}`).join(' ');
+ return <svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">
+  {!spark&&[4,51,98].map(n=><line key={n} x1="0" x2="1000" y1={n} y2={n} className="analytics-gridline" vectorEffect="non-scaling-stroke"/>)}
+  {metric==='spend'&&!spark?values.map((v,i)=>v!=null&&v>0&&<rect key={i} x={x(i)-step*.32} y={y(v)} width={step*.64} height={98-y(v)} rx={Math.min(step*.11,4)}/>)
+   :<><path d={path} fill="none" strokeWidth={spark?1.25:2} vectorEffect="non-scaling-stroke"/>
+    {!spark&&values.map((v,i)=>v!==null&&(i===0||values[i-1]===null)&&(i===values.length-1||values[i+1]===null)&&
+     <line key={i} x1={x(i)-3} x2={x(i)+3} y1={y(v)} y2={y(v)} strokeWidth="3" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>)}</>}
+ </svg>;
+}
+
+function Dashboard({data,period,onFilter,filters,display,setDisplay}:{data:HistoryDashboard;period:AnalyticsPeriod;
+ onFilter:(key:keyof DashboardFilters,value:string)=>void; filters:DashboardFilters;
+ display:Display; setDisplay:(next:Display)=>void}){
+ const {metric,group,rank}=display;
+ const [selection,setSelection]=useState<string>();
+ const series=dateSeries(data,period);
+ if(!series.length)return <p className="analytics-empty">No imported activity matches these filters.</p>;
+ const total=sumRows(data.trend);
+ const cost=metrics[metric];
+ const valuesFor=(key:Metric)=>series.map(({row})=>row?metrics[key].value(row):key==='spend'?0:null);
+ const values=valuesFor(metric);
+ const peak=metric==='cache'?100:Math.max(...values.map(v=>v??0));
+ const composition=splitKeys.map((key,i)=>({...categories[i],value:total[key]}));
+ const splitTotal=composition.reduce((n,part)=>n+part.value,0);
+ const mix=[...data.mix[group]].sort((a,b)=>spend(b)-spend(a)||b.calls-a.calls);
+ const active=(rank==='peer'?[...data.low,...data.high]:data.spend).find(t=>t.source===selection);
+ const rankings=(rows:DashboardThread[],heading?:string)=><div>{heading&&<h3>{heading}</h3>}
+  {rows.length?<ul className="analytics-rank-list">{rows.map(t=><li key={t.source}>
+   <button type="button" aria-expanded={active?.source===t.source} aria-controls="analytics-thread-detail" onClick={()=>setSelection(active?.source===t.source?undefined:t.source)}>
+    <strong>{t.title}</strong><b className={rank==='peer'?(t.delta!<0?'analytics-below':'analytics-above'):undefined}>{rank==='peer'?`${signed(t.delta!*100)}%`:money(spend(t))}</b>
+    <small>{exact(t.calls)} calls · {money(metrics.spend.value(t))} total</small><small>{money(metrics.call.value(t))} / call</small>
+   </button></li>)}</ul>:<p className="analytics-note">No eligible threads</p>}</div>;
+ return <>
+  <div className="analytics-metrics">{(Object.keys(metrics) as Metric[]).map(key=>{
+   const m=metrics[key], current=m.value(total), previous=data.previous?m.value(data.previous):null;
+   const change=current!==null&&previous?(key==='cache'?`${signed(current-previous)} pp`:`${signed((current/previous-1)*100)}%`):null;
+   return <button key={key} type="button" aria-pressed={metric===key} onClick={()=>setDisplay({...display,metric:key})}>
+    <span>{m.label}</span><strong>{m.format(current)}</strong><span className="analytics-spark"><TrendMarks metric={key} values={valuesFor(key)} spark/></span>
+    <small>{change?`${change} vs previous period`:period==='all'?'All imported history':'No prior comparison'}</small>
+   </button>;
+  })}</div>
+  <div className="analytics-scope analytics-note"><span>{exact(total.calls)} calls</span><span>{exact(data.active)} active threads</span>
+   <span>{exact(total.priced)} / {exact(total.calls)} calls priced</span>
+   <span>{data.start||data.trend[0].label} to {data.end} UTC · today in progress</span>
+  </div>
+
+  <section className="analytics-section">
+   <div className="analytics-section-heading"><h2>Cost composition</h2><span className="analytics-note">Compaction {money(total.overhead)} separately</span></div>
+   {splitTotal>0?<><div className="analytics-stack stack" aria-hidden="true">{composition.map(({label,color,value})=>value>0&&<span key={label} style={{width:`${value/splitTotal*100}%`,background:color}}/>)}</div>
+    <ul className="analytics-legend">{composition.filter(p=>p.value>0).map(({label,color,value})=><li key={label}>
+     <span style={{background:color}} aria-hidden="true"/><div>{label}<small>{money(value)} · {percent(value/splitTotal*100)}{label==='Reasoning output'&&total.splitCalls>0&&` · ${money(value/total.splitCalls)}/call`}</small></div>
+    </li>)}</ul></>:<p className="analytics-note">Cost categories unavailable for this selection.</p>}
+   {total.splitCalls<total.calls&&<p className="analytics-note">Composition covers {exact(total.splitCalls)} of {exact(total.calls)} calls. Historical or unpriced calls may lack category costs.</p>}
+  </section>
+
+  {(data.context||data.effort)&&<section className="analytics-section">
+   <h2>How to improve</h2>
+   <div className="analytics-actions">
+    {data.context&&<article><h3>Start fresh for unrelated work</h3>
+     <p className="analytics-note">{data.context.title} · {money(metrics.context.value(data.context))} context per call vs {money(data.context.contextExpected!/data.context.calls)} for peers</p>
+     <p>Bring over only what the new task needs. Compare context cost per call on similar work. For ongoing work, check the thread’s compaction forecast.</p>
+    </article>}
+    {data.effort&&<article><h3>Try lower effort on a routine task</h3>
+     <p className="analytics-note">{money(data.effort.perCall)} reasoning per call · {percent(data.effort.share*100)} of high-effort costs across {exact(data.effort.calls)} calls</p>
+     <p>Try one step lower. Compare reasoning cost per call on similar work and check the result.</p>
+    </article>}
+   </div>
+  </section>}
+
+  <div className="analytics-columns">
+   <section className="analytics-section">
+    <div className="analytics-section-heading"><h2>{cost.label} over time</h2><span className="analytics-note">{period==='all'?'Monthly':period==='90'?'Weekly':'Daily'} · UTC</span></div>
+    <div className="analytics-trend"><div className="analytics-axis analytics-note"><span>{cost.format(peak)}</span><span>{cost.format(peak/2)}</span><span>{cost.format(0)}</span></div>
+     <TrendMarks values={values} metric={metric}/>
+    </div>
+    <div className="analytics-dates analytics-note"><span>{series[0].label}</span><span>{series.at(-1)!.label}</span></div>
+    <details><summary>Exact trend values</summary><div className="analytics-table"><table><thead><tr><th scope="col">UTC bucket start</th><th scope="col">{cost.label}</th><th scope="col">Calls</th></tr></thead>
+     <tbody>{series.map(({label,row},i)=><tr key={label}><th scope="row">{label}</th><td>{cost.format(values[i])}</td><td>{exact(row?.calls??0)}</td></tr>)}</tbody>
+    </table></div></details>
+   </section>
+   <section className="analytics-section">
+    <div className="analytics-section-heading"><h2>Cost breakdown</h2>
+     <select aria-label="Group cost by" value={group} onChange={e=>setDisplay({...display,group:e.target.value as typeof group})}>{dimensions.map(k=><option key={k} value={k}>By {k}</option>)}</select>
+    </div>
+    <ul className="analytics-mix">{mix.map(r=><li key={r.label}>
+     <button type="button" aria-pressed={filters[group]===r.label} onClick={()=>onFilter(group,r.label)}>
+      <span><strong>{labelFor(group,r.label)}</strong><small>{money(metrics.spend.value(r))}{spend(total)>0&&` · ${percent(spend(r)/spend(total)*100)}`}</small></span>
+      <i aria-hidden="true" style={{width:`${spend(total)>0?spend(r)/spend(total)*100:0}%`}}/>
+     </button>
+    </li>)}</ul>
+   </section>
+  </div>
+
+  <section className="analytics-section">
+   <div className="analytics-section-heading"><div><h2>Thread outliers</h2><p className="analytics-note">{rank==='peer'?'Matched by model and effort · 20+ priced calls · comparable pricing':'Known charges in the selected period'}</p></div>
+    <select aria-label="Rank threads by" value={rank} onChange={e=>{setDisplay({...display,rank:e.target.value});setSelection(undefined);}}><option value="peer">Cost per call vs peers</option><option value="spend">Total estimated cost</option></select>
+   </div>
+   <div className="analytics-ranks">{rank==='peer'?<>{rankings(data.low,'Below peer cost')}{rankings(data.high,'Above peer cost')}</>:
+    <>{rankings(data.spend.slice(0,3))}{data.spend.length>3&&rankings(data.spend.slice(3))}</>}</div>
+   <div id="analytics-thread-detail" className="analytics-thread-detail" hidden={!active} aria-live="polite">{active&&<>
+    <h3>{active.title}</h3><div className="analytics-scope">
+     <span>{money(active.inputPriced?active.inputCost:null)} context</span><span>{money(active.splitCalls?active.reasoningCost+active.otherCost+active.unsplitCost:null)} output{active.splitCalls>0&&active.splitCalls<active.calls?' (covered calls)':''}</span>
+     <span>{money(active.overhead)} compaction</span><span>{percent(cached(active))} cached input</span>
+     {active.expected!==null&&<span>{money(active.expected/active.calls)} peer cost per call</span>}
+    </div></>}</div>
+  </section>
+  <details className="analytics-section"><summary>Compaction outcomes · {data.payback.evaluable?`${data.payback.profitable} / ${data.payback.evaluable} paid back`:'No evaluable events'}</summary>
+   <p className="analytics-note">Selected dates and workspace, across all models and efforts. {exact(data.payback.pending)} pending{data.payback.evaluable?` · ${money(data.payback.net)} estimated net savings`:''}.</p>
+  </details>
+ </>;
+}
+
+export function HistoryAnalyticsView({load,onBack,scale,efficiency}:{load:(period:AnalyticsPeriod,filters:DashboardFilters)=>Promise<HistoryDashboard>;onBack?:()=>void;scale:number;efficiency?:Efficiency}){
+ const [display,setDisplay]=useState<Display>({metric:'spend',group:'model',rank:'peer'});
+ const [period,setPeriod]=useState<AnalyticsPeriod>('30');
+ const [filters,setFilters]=useState<DashboardFilters>({});
+ const [loaded,setLoaded]=useState<{key:string;data:HistoryDashboard}>();
+ const data=loaded?.data;
  const [request,setRequest]=useState(0);
- const [rows,setRows]=useState<HistoryAnalytics>();
- const [error,setError]=useState('');
- const [loading,setLoading]=useState(true);
+ const [status,setStatus]=useState<'loading'|'ready'|'error'>('loading');
  const heading=useRef<HTMLHeadingElement>(null);
+ const cache=useRef(new Map<string,HistoryDashboard>());
+ const key=JSON.stringify([period,filters]);
  useEffect(()=>{heading.current?.focus();},[]);
  useEffect(()=>{
   let active=true;
-  load(period).then(data=>{if(active)setRows(data);},()=>{if(active)setError('Local history is unavailable. Try refreshing.');})
-   .finally(()=>{if(active)setLoading(false);});
+  const cached=cache.current.get(key);
+  if(cached){setLoaded({key,data:cached});setStatus('ready');}
+  load(period,filters).then(result=>{
+   if(!active)return;
+   if(cache.current.size>=12)cache.current.clear();
+   cache.current.set(key,result);setLoaded({key,data:result});setStatus('ready');
+  },()=>{if(active)setStatus('error');});
   return()=>{active=false;};
- },[period,request,load]);
-
- const trend=rows?.filter(row=>row.kind==='trend')??[];
- const models=rows?.filter(row=>row.kind==='model').sort((a,b)=>b.cost+b.overhead-a.cost-a.overhead||b.calls-a.calls)??[];
- const total=trend.reduce((sum,row)=>({...sum,calls:sum.calls+row.calls,priced:sum.priced+row.priced,
-  input:sum.input+row.input,cached:sum.cached+row.cached,output:sum.output+row.output,
-  cost:sum.cost+row.cost,overhead:sum.overhead+row.overhead}),
- {kind:'trend',label:'',effort:null,calls:0,priced:0,input:0,cached:0,output:0,cost:0,overhead:0} as Usage);
- const chart=metrics[metric];
- const peak=trend.reduce((max,row)=>Math.max(max,Math.abs(chart.value(row))),0);
+ },[key,period,filters,request,load]);
+ const filter=(k:keyof DashboardFilters,value?:string)=>{
+  setStatus('loading');
+  setFilters(current=>({...current,[k]:current[k]===value?undefined:value}));
+ };
  const progress=efficiency?.progress;
- const frozen=efficiency?.history?.frozenThreads;
- return <main className="analytics-page" style={{fontSize:`${scale*90}%`}}>
-  <header>
-   {onBack&&<button type="button" onClick={onBack}>‹ Thread monitor</button>}
-   <div><label>Period <select value={period} onChange={e=>{setRows(undefined);setError('');setLoading(true);setPeriod(e.target.value as AnalyticsPeriod);}}>
-    <option value="all">All time</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option>
-   </select></label><button type="button" disabled={loading} onClick={()=>{setLoading(true);setError('');setRequest(n=>n+1);}}>Refresh</button></div>
+ return <main className="analytics-page" style={{fontSize:`${scale*92}%`}}>
+  <header className="analytics-heading">
+   <div>{onBack&&<button type="button" onClick={onBack}>‹ Thread monitor</button>}
+    <h1 ref={heading} tabIndex={-1}>Usage analytics</h1><p className="analytics-note">Local Codex history · API-equivalent USD</p>
+   </div>
+   <button type="button" disabled={status==='loading'} onClick={()=>{cache.current.delete(key);setStatus('loading');setRequest(n=>n+1);}}>Refresh</button>
   </header>
-  <h1 ref={heading} tabIndex={-1}>Usage analytics</h1>
-  <p className="analytics-note">Imported local chats, including archived chats. Periods use UTC. Costs are API-equivalent estimates.</p>
-  {progress?.running&&<p role="status">Importing history · {progress.processed} of {progress.total} chats checked. Refresh for the latest totals.</p>}
-  {!!progress?.failed&&<p role="status">{exact(progress.failed)} chats could not be read during import.</p>}
-  {!!frozen&&<p className="analytics-note">{exact(frozen)} saved chats retain their original pricing estimates.</p>}
-  {loading&&<p role="status">Loading usage analytics…</p>}
-  {error&&<p role="status">{error}</p>}
-  {rows&&!trend.length&&<p>No imported activity in this period.</p>}
-  {!!trend.length&&<>
-   <dl className="analytics-metrics">
-    <div><dt>Estimated cost</dt><dd>{spend(total)}</dd><small>{total.overhead?money(total.overhead)+' attributed to compaction':'Includes priced compaction charges'}</small></div>
-    <div><dt>Tokens</dt><dd title={exact(tokens(total))}>{number(tokens(total))}</dd><small>{number(total.input)} input · {number(total.output)} output</small></div>
-    <div><dt>Calls</dt><dd>{exact(total.calls)}</dd><small>{exact(total.priced)} fully priced</small></div>
-    <div><dt>Cached input</dt><dd>{cache(total)}</dd><small>{number(total.cached)} cache-read tokens</small></div>
-   </dl>
-   {total.priced<total.calls&&<p className="analytics-note">Some calls lack full pricing. Estimated cost includes only known charges.</p>}
-   <section className="analytics-section">
-    <div className="analytics-section-heading"><h2>Usage over time</h2>
-     <label>Metric <select value={metric} onChange={e=>setMetric(e.target.value as keyof typeof metrics)}>{Object.entries(metrics).map(([key,value])=><option key={key} value={key}>{value.label}</option>)}</select></label>
-    </div>
-    <p className="analytics-note">Each bar shows one {period==='all'?'active month':'active day'}.</p>
-    <div className="analytics-chart" aria-hidden="true">{trend.map(row=><span key={row.label} title={`${row.label} · ${chart.format(row)}`} style={{height:`${peak?Math.abs(chart.value(row))/peak*100:0}%`}}/>)}</div>
-    <div className="analytics-chart-dates" aria-hidden="true"><span>{trend[0].label}</span>{trend.length>1&&<span>{trend.at(-1)!.label}</span>}</div>
-    <details><summary>Trend data</summary><UsageTable rows={trend}/></details>
-   </section>
-   <section className="analytics-section"><h2>By model and effort</h2><UsageTable rows={models} models/></section>
-  </>}
+  <div className="analytics-toolbar">
+   <div className="analytics-periods" role="group" aria-label="Date range">{periodKeys.map(k=><button key={k} type="button" aria-pressed={period===k} onClick={()=>{if(period!==k){setStatus('loading');setPeriod(k);}}}>{periods[k]}</button>)}</div>
+   <div className="analytics-filters">{dimensions.map(k=><select key={k} aria-label={filterLabels[k]} value={filters[k]===undefined?'all':`=${filters[k]}`} onChange={e=>filter(k,e.target.value==='all'?undefined:e.target.value.slice(1))}>
+    <option value="all">All {k}s</option>{data?.choices[k].map(v=><option key={v} value={`=${v}`}>{labelFor(k,v)}</option>)}
+   </select>)}</div>
+  </div>
+  {progress?.running&&<p className="analytics-note">Importing history · {progress.processed} of {progress.total} chats checked. Refresh for current totals.</p>}
+  {!!progress?.failed&&<p className="analytics-note">{exact(progress.failed)} chats could not be read.</p>}
+  {status==='loading'&&<p role="status" className="analytics-note">Loading usage analytics…</p>}
+  {status==='error'&&<p role="status">Local history is unavailable. Try refreshing.</p>}
+  {data&&loaded?.key===key&&status!=='loading'&&<Dashboard data={data} period={period} filters={filters} onFilter={filter} display={display} setDisplay={setDisplay}/>}
  </main>;
 }

@@ -111,10 +111,11 @@ server.registerTool('get_history_storage', {
 },async()=>{try{return {content:[],_meta:{storage:await collector.store.efficiency?.diagnostics()}};}catch{return {isError:true,content:[],_meta:{error:'Local history storage is temporarily unavailable.'}};}});
 server.registerTool('get_history_analytics', {
  title:'Read local usage analytics',description:'Read aggregate spending and token usage from imported local history.',
- inputSchema:{period:z.enum(['all','30','90'])},annotations,_meta:{ui:{visibility:['app']}},
-},async({period})=>{
+ inputSchema:{period:z.enum(['all','7','30','90']),filters:z.object({model:z.string().max(512).optional(),effort:z.string().max(512).optional(),workspace:z.string().max(4096).optional()}).optional()},annotations,_meta:{ui:{visibility:['app']}},
+},async({period,filters})=>{
  try{
   if(!collector.store.efficiency)throw Error('History storage unavailable');
+  if(filters)return {content:[],_meta:{dashboard:await collector.store.efficiency.dashboard(period,filters)}};
   return {content:[],_meta:{analytics:await collector.store.efficiency.analytics(period)}};
  }catch{return {isError:true,content:[],_meta:{error:'Local usage analytics are temporarily unavailable.'}};}
 });

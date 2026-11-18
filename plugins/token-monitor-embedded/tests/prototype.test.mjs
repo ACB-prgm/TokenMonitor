@@ -56,6 +56,9 @@ test('panel and inline summary are callable by the model; refresh tools remain a
     const result=await client.callTool({name:'get_history_analytics',arguments:{period:'all'}});
     assert.notEqual(result.isError,true);
     assert.ok(Array.isArray(result._meta.analytics));
+    const dashboard=await client.callTool({name:'get_history_analytics',arguments:{period:'7',filters:{}}});
+    assert.equal(dashboard.isError,undefined);
+    assert.ok(Array.isArray(dashboard._meta.dashboard.trend));
   } finally { await client.close(); }
 });
 

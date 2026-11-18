@@ -1,0 +1,898 @@
+{
+  "schemaVersion": 1,
+  "provider": "OpenAI",
+  "currency": "USD",
+  "tokensPerUnit": 1000000,
+  "source": "https://developers.openai.com/api/docs/pricing",
+  "verifiedAt": "2026-11-17",
+  "aliases": {
+    "gpt-5.6": "gpt-5.6-sol"
+  },
+  "models": {
+    "gpt-6.2-astra": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "published-start",
+        "dateSource": "https://developers.openai.com/api/docs/changelog#november-2026",
+        "tiers": {
+          "standard": {
+            "base": { "input": 8, "output": 40, "cachedInput": 0.4, "cacheWrite30m": 10, "cacheWrite12h": 20 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 16, "output": 60, "cachedInput": 0.8, "cacheWrite30m": 20, "cacheWrite12h": 40 }
+            }
+          },
+          "batch": {
+            "base": { "input": 4, "output": 20, "cachedInput": 0.2, "cacheWrite30m": 5, "cacheWrite12h": 10 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 8, "output": 30, "cachedInput": 0.4, "cacheWrite30m": 10, "cacheWrite12h": 20 }
+            }
+          },
+          "fast": {
+            "base": { "input": 16, "output": 80, "cachedInput": 0.8, "cacheWrite30m": 20, "cacheWrite12h": 40 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 32, "output": 120, "cachedInput": 1.6, "cacheWrite30m": 40, "cacheWrite12h": 80 }
+            }
+          },
+          "ultrafast": {
+            "base": { "input": 24, "output": 120, "cachedInput": 1.2, "cacheWrite30m": 30, "cacheWrite12h": 60 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 48, "output": 180, "cachedInput": 2.4, "cacheWrite30m": 60, "cacheWrite12h": 120 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1,
+        "backgroundCompletionWindowMultipliers": {
+          "2h": 0.7,
+          "8h": 0.6
+        }
+      },
+      {
+        "effectiveFrom": "2027-03-01T00:00:00-08:00",
+        "dateBasis": "published-start",
+        "dateSource": "https://developers.openai.com/api/docs/pricing",
+        "tiers": {
+          "standard": {
+            "base": { "input": 8, "output": 40, "cachedInput": 0.4, "cacheWrite30m": 10, "cacheWrite12h": 20 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 16, "output": 60, "cachedInput": 0.8, "cacheWrite30m": 20, "cacheWrite12h": 40 }
+            }
+          },
+          "batch": {
+            "base": { "input": 4, "output": 20, "cachedInput": 0.2, "cacheWrite30m": 5, "cacheWrite12h": 10 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 8, "output": 30, "cachedInput": 0.4, "cacheWrite30m": 10, "cacheWrite12h": 20 }
+            }
+          },
+          "fast": {
+            "base": { "input": 16, "output": 80, "cachedInput": 0.8, "cacheWrite30m": 20, "cacheWrite12h": 40 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 32, "output": 120, "cachedInput": 1.6, "cacheWrite30m": 40, "cacheWrite12h": 80 }
+            }
+          },
+          "ultrafast": {
+            "base": { "input": 48, "output": 240, "cachedInput": 2.4, "cacheWrite30m": 60, "cacheWrite12h": 120 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 96, "output": 360, "cachedInput": 4.8, "cacheWrite30m": 120, "cacheWrite12h": 240 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1,
+        "backgroundCompletionWindowMultipliers": {
+          "2h": 0.7,
+          "8h": 0.6
+        }
+      }
+    ],
+    "gpt-6.2-sol": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "published-start",
+        "dateSource": "https://developers.openai.com/api/docs/changelog#november-2026",
+        "tiers": {
+          "standard": {
+            "base": { "input": 2, "output": 10, "cachedInput": 0.1, "cacheWrite30m": 2.5, "cacheWrite12h": 5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 4, "output": 15, "cachedInput": 0.2, "cacheWrite30m": 5, "cacheWrite12h": 10 }
+            }
+          },
+          "batch": {
+            "base": { "input": 1, "output": 5, "cachedInput": 0.05, "cacheWrite30m": 1.25, "cacheWrite12h": 2.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 2, "output": 7.5, "cachedInput": 0.1, "cacheWrite30m": 2.5, "cacheWrite12h": 5 }
+            }
+          },
+          "fast": {
+            "base": { "input": 4, "output": 20, "cachedInput": 0.2, "cacheWrite30m": 5, "cacheWrite12h": 10 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 8, "output": 30, "cachedInput": 0.4, "cacheWrite30m": 10, "cacheWrite12h": 20 }
+            }
+          },
+          "ultrafast": {
+            "base": { "input": 6, "output": 30, "cachedInput": 0.3, "cacheWrite30m": 7.5, "cacheWrite12h": 15 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 12, "output": 45, "cachedInput": 0.6, "cacheWrite30m": 15, "cacheWrite12h": 30 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1,
+        "backgroundCompletionWindowMultipliers": {
+          "2h": 0.7,
+          "8h": 0.6
+        }
+      },
+      {
+        "effectiveFrom": "2027-03-01T00:00:00-08:00",
+        "dateBasis": "published-start",
+        "dateSource": "https://developers.openai.com/api/docs/pricing",
+        "tiers": {
+          "standard": {
+            "base": { "input": 2, "output": 10, "cachedInput": 0.1, "cacheWrite30m": 2.5, "cacheWrite12h": 5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 4, "output": 15, "cachedInput": 0.2, "cacheWrite30m": 5, "cacheWrite12h": 10 }
+            }
+          },
+          "batch": {
+            "base": { "input": 1, "output": 5, "cachedInput": 0.05, "cacheWrite30m": 1.25, "cacheWrite12h": 2.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 2, "output": 7.5, "cachedInput": 0.1, "cacheWrite30m": 2.5, "cacheWrite12h": 5 }
+            }
+          },
+          "fast": {
+            "base": { "input": 4, "output": 20, "cachedInput": 0.2, "cacheWrite30m": 5, "cacheWrite12h": 10 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 8, "output": 30, "cachedInput": 0.4, "cacheWrite30m": 10, "cacheWrite12h": 20 }
+            }
+          },
+          "ultrafast": {
+            "base": { "input": 12, "output": 60, "cachedInput": 0.6, "cacheWrite30m": 15, "cacheWrite12h": 30 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 24, "output": 90, "cachedInput": 1.2, "cacheWrite30m": 30, "cacheWrite12h": 60 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1,
+        "backgroundCompletionWindowMultipliers": {
+          "2h": 0.7,
+          "8h": 0.6
+        }
+      }
+    ],
+    "gpt-6-astra": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 10, "output": 50, "cachedInput": 1, "cacheWrite30m": 12.5, "cacheWrite12h": 25 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 20, "output": 75, "cachedInput": 2, "cacheWrite30m": 25, "cacheWrite12h": 50 }
+            }
+          },
+          "batch": {
+            "base": { "input": 5, "output": 25, "cachedInput": 0.5, "cacheWrite30m": 6.25, "cacheWrite12h": 12.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 10, "output": 37.5, "cachedInput": 1, "cacheWrite30m": 12.5, "cacheWrite12h": 25 }
+            }
+          },
+          "flex": {
+            "base": { "input": 5, "output": 25, "cachedInput": 0.5, "cacheWrite30m": 6.25, "cacheWrite12h": 12.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 10, "output": 37.5, "cachedInput": 1, "cacheWrite30m": 12.5, "cacheWrite12h": 25 }
+            }
+          },
+          "fast": {
+            "base": { "input": 20, "output": 100, "cachedInput": 2, "cacheWrite30m": 25, "cacheWrite12h": 50 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 40, "output": 150, "cachedInput": 4, "cacheWrite30m": 50, "cacheWrite12h": 100 }
+            }
+          },
+          "ultrafast": {
+            "base": { "input": 60, "output": 300, "cachedInput": 6, "cacheWrite30m": 75, "cacheWrite12h": 150 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 120, "output": 450, "cachedInput": 12, "cacheWrite30m": 150, "cacheWrite12h": 300 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1
+      }
+    ],
+    "gpt-6.1-sol": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 2, "output": 10, "cachedInput": 0.1, "cacheWrite30m": 2.5, "cacheWrite12h": 5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 4, "output": 15, "cachedInput": 0.2, "cacheWrite30m": 5, "cacheWrite12h": 10 }
+            }
+          },
+          "batch": {
+            "base": { "input": 1, "output": 5, "cachedInput": 0.05, "cacheWrite30m": 1.25, "cacheWrite12h": 2.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 2, "output": 7.5, "cachedInput": 0.1, "cacheWrite30m": 2.5, "cacheWrite12h": 5 }
+            }
+          },
+          "flex": {
+            "base": { "input": 1, "output": 5, "cachedInput": 0.05, "cacheWrite30m": 1.25, "cacheWrite12h": 2.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 2, "output": 7.5, "cachedInput": 0.1, "cacheWrite30m": 2.5, "cacheWrite12h": 5 }
+            }
+          },
+          "fast": {
+            "base": { "input": 4, "output": 20, "cachedInput": 0.2, "cacheWrite30m": 5, "cacheWrite12h": 10 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 8, "output": 30, "cachedInput": 0.4, "cacheWrite30m": 10, "cacheWrite12h": 20 }
+            }
+          },
+          "ultrafast": {
+            "base": { "input": 12, "output": 60, "cachedInput": 0.6, "cacheWrite30m": 15, "cacheWrite12h": 30 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 24, "output": 90, "cachedInput": 1.2, "cacheWrite30m": 30, "cacheWrite12h": 60 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1
+      }
+    ],
+    "gpt-6.1-terra": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 1, "output": 5, "cachedInput": 0.05, "cacheWrite30m": 1.25, "cacheWrite12h": 2.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 2, "output": 7.5, "cachedInput": 0.1, "cacheWrite30m": 2.5, "cacheWrite12h": 5 }
+            }
+          },
+          "batch": {
+            "base": { "input": 0.5, "output": 2.5, "cachedInput": 0.025, "cacheWrite30m": 0.625, "cacheWrite12h": 1.25 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 1, "output": 3.75, "cachedInput": 0.05, "cacheWrite30m": 1.25, "cacheWrite12h": 2.5 }
+            }
+          },
+          "flex": {
+            "base": { "input": 0.5, "output": 2.5, "cachedInput": 0.025, "cacheWrite30m": 0.625, "cacheWrite12h": 1.25 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 1, "output": 3.75, "cachedInput": 0.05, "cacheWrite30m": 1.25, "cacheWrite12h": 2.5 }
+            }
+          },
+          "fast": {
+            "base": { "input": 2, "output": 10, "cachedInput": 0.1, "cacheWrite30m": 2.5, "cacheWrite12h": 5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 4, "output": 15, "cachedInput": 0.2, "cacheWrite30m": 5, "cacheWrite12h": 10 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1,
+        "backgroundCompletionWindowMultipliers": {
+          "2h": 0.7,
+          "8h": 0.6
+        }
+      }
+    ],
+    "gpt-6-luna": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 0.1, "output": 0.5, "cachedInput": 0.01, "cacheWrite30m": 0.125, "cacheWrite12h": 0.25 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 0.2, "output": 0.75, "cachedInput": 0.02, "cacheWrite30m": 0.25, "cacheWrite12h": 0.5 }
+            }
+          },
+          "batch": {
+            "base": { "input": 0.05, "output": 0.25, "cachedInput": 0.005, "cacheWrite30m": 0.0625, "cacheWrite12h": 0.125 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 0.1, "output": 0.375, "cachedInput": 0.01, "cacheWrite30m": 0.125, "cacheWrite12h": 0.25 }
+            }
+          },
+          "flex": {
+            "base": { "input": 0.05, "output": 0.25, "cachedInput": 0.005, "cacheWrite30m": 0.0625, "cacheWrite12h": 0.125 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 0.1, "output": 0.375, "cachedInput": 0.01, "cacheWrite30m": 0.125, "cacheWrite12h": 0.25 }
+            }
+          },
+          "fast": {
+            "base": { "input": 0.2, "output": 1, "cachedInput": 0.02, "cacheWrite30m": 0.25, "cacheWrite12h": 0.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 0.4, "output": 1.5, "cachedInput": 0.04, "cacheWrite30m": 0.5, "cacheWrite12h": 1 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1,
+        "backgroundCompletionWindowMultipliers": {
+          "2h": 0.7,
+          "8h": 0.6
+        }
+      }
+    ],
+    "gpt-6-sol": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 2, "output": 10, "cachedInput": 0.2, "cacheWrite30m": 2.5, "cacheWrite12h": 5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 4, "output": 15, "cachedInput": 0.4, "cacheWrite30m": 5, "cacheWrite12h": 10 }
+            }
+          },
+          "batch": {
+            "base": { "input": 1, "output": 5, "cachedInput": 0.1, "cacheWrite30m": 1.25, "cacheWrite12h": 2.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 2, "output": 7.5, "cachedInput": 0.2, "cacheWrite30m": 2.5, "cacheWrite12h": 5 }
+            }
+          },
+          "flex": {
+            "base": { "input": 1, "output": 5, "cachedInput": 0.1, "cacheWrite30m": 1.25, "cacheWrite12h": 2.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 2, "output": 7.5, "cachedInput": 0.2, "cacheWrite30m": 2.5, "cacheWrite12h": 5 }
+            }
+          },
+          "fast": {
+            "base": { "input": 4, "output": 20, "cachedInput": 0.4, "cacheWrite30m": 5, "cacheWrite12h": 10 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 8, "output": 30, "cachedInput": 0.8, "cacheWrite30m": 10, "cacheWrite12h": 20 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1
+      }
+    ],
+    "gpt-5.6-sol": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 4, "output": 20, "cachedInput": 0.4, "cacheWrite30m": 5, "cacheWrite12h": 10 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 8, "output": 30, "cachedInput": 0.8, "cacheWrite30m": 10, "cacheWrite12h": 20 }
+            }
+          },
+          "batch": {
+            "base": { "input": 2, "output": 10, "cachedInput": 0.2, "cacheWrite30m": 2.5, "cacheWrite12h": 5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 4, "output": 15, "cachedInput": 0.4, "cacheWrite30m": 5, "cacheWrite12h": 10 }
+            }
+          },
+          "flex": {
+            "base": { "input": 2, "output": 10, "cachedInput": 0.2, "cacheWrite30m": 2.5, "cacheWrite12h": 5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 4, "output": 15, "cachedInput": 0.4, "cacheWrite30m": 5, "cacheWrite12h": 10 }
+            }
+          },
+          "fast": {
+            "base": { "input": 8, "output": 40, "cachedInput": 0.8, "cacheWrite30m": 10, "cacheWrite12h": 20 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 16, "output": 60, "cachedInput": 1.6, "cacheWrite30m": 20, "cacheWrite12h": 40 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1,
+        "promotionThrough": "2026-11-30"
+      }
+    ],
+    "gpt-5.6-terra": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 2, "output": 12, "cachedInput": 0.2, "cacheWrite30m": 2.5, "cacheWrite12h": 5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 4, "output": 18, "cachedInput": 0.4, "cacheWrite30m": 5, "cacheWrite12h": 10 }
+            }
+          },
+          "batch": {
+            "base": { "input": 1, "output": 6, "cachedInput": 0.1, "cacheWrite30m": 1.25, "cacheWrite12h": 2.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 2, "output": 9, "cachedInput": 0.2, "cacheWrite30m": 2.5, "cacheWrite12h": 5 }
+            }
+          },
+          "flex": {
+            "base": { "input": 1, "output": 6, "cachedInput": 0.1, "cacheWrite30m": 1.25, "cacheWrite12h": 2.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 2, "output": 9, "cachedInput": 0.2, "cacheWrite30m": 2.5, "cacheWrite12h": 5 }
+            }
+          },
+          "fast": {
+            "base": { "input": 4, "output": 24, "cachedInput": 0.4, "cacheWrite30m": 5, "cacheWrite12h": 10 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 8, "output": 36, "cachedInput": 0.8, "cacheWrite30m": 10, "cacheWrite12h": 20 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1
+      }
+    ],
+    "gpt-5.6-luna": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 0.2, "output": 1.2, "cachedInput": 0.02, "cacheWrite30m": 0.25, "cacheWrite12h": 0.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 0.4, "output": 1.8, "cachedInput": 0.04, "cacheWrite30m": 0.5, "cacheWrite12h": 1 }
+            }
+          },
+          "batch": {
+            "base": { "input": 0.1, "output": 0.6, "cachedInput": 0.01, "cacheWrite30m": 0.125, "cacheWrite12h": 0.25 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 0.2, "output": 0.9, "cachedInput": 0.02, "cacheWrite30m": 0.25, "cacheWrite12h": 0.5 }
+            }
+          },
+          "flex": {
+            "base": { "input": 0.1, "output": 0.6, "cachedInput": 0.01, "cacheWrite30m": 0.125, "cacheWrite12h": 0.25 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 0.2, "output": 0.9, "cachedInput": 0.02, "cacheWrite30m": 0.25, "cacheWrite12h": 0.5 }
+            }
+          },
+          "fast": {
+            "base": { "input": 0.4, "output": 2.4, "cachedInput": 0.04, "cacheWrite30m": 0.5, "cacheWrite12h": 1 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 0.8, "output": 3.6, "cachedInput": 0.08, "cacheWrite30m": 1, "cacheWrite12h": 2 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1
+      }
+    ],
+    "gpt-5.5": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 5, "output": 30, "cachedInput": 0.5 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 10, "output": 45, "cachedInput": 1 }
+            }
+          },
+          "batch": {
+            "base": { "input": 2.5, "output": 15, "cachedInput": 0.25 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 5, "output": 22.5, "cachedInput": 0.5 }
+            }
+          },
+          "flex": {
+            "base": { "input": 2.5, "output": 15, "cachedInput": 0.25 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 5, "output": 22.5, "cachedInput": 0.5 }
+            }
+          },
+          "fast": {
+            "base": { "input": 12.5, "output": 75, "cachedInput": 1.25 },
+            "baseInputTokensAtMost": 272000
+          }
+        },
+        "regionalMultiplier": 1.1
+      }
+    ],
+    "gpt-5.5-pro": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 30, "output": 180 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 60, "output": 270 }
+            }
+          },
+          "batch": {
+            "base": { "input": 15, "output": 90 },
+            "baseInputTokensAtMost": 272000
+          },
+          "flex": {
+            "base": { "input": 15, "output": 90 },
+            "baseInputTokensAtMost": 272000
+          }
+        },
+        "regionalMultiplier": 1.1
+      }
+    ],
+    "gpt-5.4": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 2.5, "output": 15, "cachedInput": 0.25 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 5, "output": 22.5, "cachedInput": 0.5 }
+            }
+          },
+          "batch": {
+            "base": { "input": 1.25, "output": 7.5, "cachedInput": 0.13 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 2.5, "output": 11.25, "cachedInput": 0.25 }
+            }
+          },
+          "flex": {
+            "base": { "input": 1.25, "output": 7.5, "cachedInput": 0.13 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 2.5, "output": 11.25, "cachedInput": 0.25 }
+            }
+          },
+          "fast": {
+            "base": { "input": 5, "output": 30, "cachedInput": 0.5 },
+            "baseInputTokensAtMost": 272000
+          }
+        },
+        "regionalMultiplier": 1.1
+      }
+    ],
+    "gpt-5.4-pro": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 30, "output": 180 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 60, "output": 270 }
+            }
+          },
+          "batch": {
+            "base": { "input": 15, "output": 90 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 30, "output": 135 }
+            }
+          },
+          "flex": {
+            "base": { "input": 15, "output": 90 },
+            "longContext": {
+              "inputTokensAbove": 272000,
+              "rates": { "input": 30, "output": 135 }
+            }
+          }
+        },
+        "regionalMultiplier": 1.1
+      }
+    ],
+    "gpt-5.4-mini": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 0.75, "output": 4.5, "cachedInput": 0.075 }
+          },
+          "batch": {
+            "base": { "input": 0.375, "output": 2.25, "cachedInput": 0.0375 }
+          },
+          "flex": {
+            "base": { "input": 0.375, "output": 2.25, "cachedInput": 0.0375 }
+          },
+          "fast": {
+            "base": { "input": 1.5, "output": 9, "cachedInput": 0.15 }
+          }
+        },
+        "regionalMultiplier": 1.1
+      }
+    ],
+    "gpt-5.4-nano": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 0.2, "output": 1.25, "cachedInput": 0.02 }
+          },
+          "batch": {
+            "base": { "input": 0.1, "output": 0.625, "cachedInput": 0.01 }
+          },
+          "flex": {
+            "base": { "input": 0.1, "output": 0.625, "cachedInput": 0.01 }
+          }
+        },
+        "regionalMultiplier": 1.1
+      }
+    ],
+    "gpt-5.2": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 1.75, "output": 14, "cachedInput": 0.175 }
+          },
+          "batch": {
+            "base": { "input": 0.875, "output": 7, "cachedInput": 0.0875 }
+          },
+          "flex": {
+            "base": { "input": 0.875, "output": 7, "cachedInput": 0.0875 }
+          },
+          "fast": {
+            "base": { "input": 3.5, "output": 28, "cachedInput": 0.35 }
+          }
+        }
+      }
+    ],
+    "gpt-5.2-pro": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 21, "output": 168 }
+          },
+          "batch": {
+            "base": { "input": 10.5, "output": 84 }
+          }
+        }
+      }
+    ],
+    "gpt-5.1": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 1.25, "output": 10, "cachedInput": 0.125 }
+          },
+          "batch": {
+            "base": { "input": 0.625, "output": 5, "cachedInput": 0.0625 }
+          },
+          "flex": {
+            "base": { "input": 0.625, "output": 5, "cachedInput": 0.0625 }
+          },
+          "fast": {
+            "base": { "input": 2.5, "output": 20, "cachedInput": 0.25 }
+          }
+        }
+      }
+    ],
+    "gpt-5": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 1.25, "output": 10, "cachedInput": 0.125 }
+          },
+          "batch": {
+            "base": { "input": 0.625, "output": 5, "cachedInput": 0.0625 }
+          },
+          "flex": {
+            "base": { "input": 0.625, "output": 5, "cachedInput": 0.0625 }
+          },
+          "fast": {
+            "base": { "input": 2.5, "output": 20, "cachedInput": 0.25 }
+          }
+        }
+      }
+    ],
+    "gpt-5-mini": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 0.25, "output": 2, "cachedInput": 0.025 }
+          },
+          "batch": {
+            "base": { "input": 0.125, "output": 1, "cachedInput": 0.0125 }
+          },
+          "flex": {
+            "base": { "input": 0.125, "output": 1, "cachedInput": 0.0125 }
+          },
+          "fast": {
+            "base": { "input": 0.45, "output": 3.6, "cachedInput": 0.045 }
+          }
+        }
+      }
+    ],
+    "gpt-5-nano": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 0.05, "output": 0.4, "cachedInput": 0.005 }
+          },
+          "batch": {
+            "base": { "input": 0.025, "output": 0.2, "cachedInput": 0.0025 }
+          },
+          "flex": {
+            "base": { "input": 0.025, "output": 0.2, "cachedInput": 0.0025 }
+          }
+        }
+      }
+    ],
+    "gpt-5-pro": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 15, "output": 120 }
+          },
+          "batch": {
+            "base": { "input": 7.5, "output": 60 }
+          }
+        }
+      }
+    ],
+    "gpt-4.1": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 2, "output": 8, "cachedInput": 0.5 }
+          },
+          "batch": {
+            "base": { "input": 1, "output": 4 }
+          },
+          "fast": {
+            "base": { "input": 3.5, "output": 14, "cachedInput": 0.875 }
+          }
+        }
+      }
+    ],
+    "gpt-4.1-mini": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 0.4, "output": 1.6, "cachedInput": 0.1 }
+          },
+          "batch": {
+            "base": { "input": 0.2, "output": 0.8 }
+          },
+          "fast": {
+            "base": { "input": 0.7, "output": 2.8, "cachedInput": 0.175 }
+          }
+        }
+      }
+    ],
+    "gpt-4o": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 2.5, "output": 10, "cachedInput": 1.25 }
+          },
+          "batch": {
+            "base": { "input": 1.25, "output": 5 }
+          },
+          "fast": {
+            "base": { "input": 4.25, "output": 17, "cachedInput": 2.125 }
+          }
+        }
+      }
+    ],
+    "gpt-4o-mini": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 0.15, "output": 0.6, "cachedInput": 0.075 }
+          },
+          "batch": {
+            "base": { "input": 0.075, "output": 0.3 }
+          },
+          "fast": {
+            "base": { "input": 0.25, "output": 1, "cachedInput": 0.125 }
+          }
+        }
+      }
+    ],
+    "o3-pro": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 20, "output": 80 }
+          },
+          "batch": {
+            "base": { "input": 10, "output": 40 }
+          }
+        }
+      }
+    ],
+    "o3": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 2, "output": 8, "cachedInput": 0.5 }
+          },
+          "batch": {
+            "base": { "input": 1, "output": 4 }
+          },
+          "flex": {
+            "base": { "input": 1, "output": 4, "cachedInput": 0.25 }
+          },
+          "fast": {
+            "base": { "input": 3.5, "output": 14, "cachedInput": 0.875 }
+          }
+        }
+      }
+    ],
+    "gpt-5.3-codex": [
+      {
+        "effectiveFrom": "2026-11-17",
+        "dateBasis": "verified-baseline",
+        "tiers": {
+          "standard": {
+            "base": { "input": 1.75, "output": 14, "cachedInput": 0.175 }
+          },
+          "fast": {
+            "base": { "input": 3.5, "output": 28, "cachedInput": 0.35 }
+          }
+        }
+      }
+    ]
+  }
+}

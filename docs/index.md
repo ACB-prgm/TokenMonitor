@@ -13,6 +13,7 @@ Current reference pages describe this checkout. Release records and evidence des
 | Quotas, allowances, freshness | [account-allowances](reference/account-allowances.md) | Quotas, allowances, freshness questions |
 | CV, compaction, payback, cache | [compaction](reference/compaction.md) | CV, compaction, payback, cache questions |
 | Costs, comparisons, coverage | [efficiency-metrics](reference/efficiency-metrics.md) | Costs, comparisons, coverage questions |
+| Model rates, effective dates | [pricing catalog](reference/efficiency-metrics.md#pricing-catalog) | Catalog coverage and how to record rate changes |
 | SQLite, retention, discovery, recovery | [history-storage](reference/history-storage.md) | SQLite, retention, discovery, recovery questions |
 | Historical releases | [index](releases/index.md) | Historical releases questions |
 

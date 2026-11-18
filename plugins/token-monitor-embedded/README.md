@@ -1,4 +1,4 @@
-# TokenMonitor Embedded 1.12.0
+# TokenMonitor Embedded 1.13.0
 
 Local Codex token telemetry with a React panel, TypeScript collector and bundled Node runtime. Open with `open_monitor` or the optional trusted startup hook. Polling adds no model turns. Costs are API-equivalent estimates, not invoices.
 

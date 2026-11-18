@@ -1,54 +1,32 @@
 // Bounded visible activity is separate from numeric telemetry.
 import type {CallActivity} from './activity.js';
+import {bundledPricing,type Pricing,type Rates} from './pricing.js';
+export type {Rates} from './pricing.js';
 export type RecordValue = Record<string, any>;
-export type Rates = {input: number; cached: number; write?: number; output: number};
 export type Sample = {costPerCall?:number; costPricedCalls?:number; contextPerCall?: number; contextPricedCalls?: number; effort?: string; activity?: CallActivity; timestamp: string; input: number; cached: number; cacheWrite: number; output: number; reasoning: number; total?: number; ordinal?: number; outputRecorded: boolean; reasoningRecorded: boolean; model?: string; serviceTier?: string; regionalProcessing?: boolean; cachedRecorded: boolean; cacheWriteRecorded: boolean; price?: ReturnType<typeof price>};
-const standard: Record<string, number[]> = {
-  'gpt-6.1-sol':[2,.1,2.5,10], 'gpt-6-astra':[10,1,12.5,50], 'gpt-6-sol':[2,.2,2.5,10], 'gpt-6-luna':[.1,.01,.125,.5],
-  'gpt-5.6-sol':[4,.4,5,20], 'gpt-5.6-terra':[2,.2,2.5,12], 'gpt-5.6-luna':[.2,.02,.25,1.2],
-  'gpt-5.5':[5,.5,NaN,30], 'gpt-5.4':[2.5,.25,NaN,15], 'gpt-5.4-mini':[.75,.075,NaN,4.5], 'gpt-5.4-nano':[.2,.02,NaN,1.25],
-  'gpt-5.3-codex':[1.75,.175,NaN,14], 'gpt-5.2':[1.75,.175,NaN,14], 'gpt-5.1':[1.25,.125,NaN,10], 'gpt-5':[1.25,.125,NaN,10],
-};
-export const pricingTableSignature=JSON.stringify(standard);
-export const pricingMetadata = {source:'https://developers.openai.com/api/docs/pricing', verifiedAt:'2026-10-19', configurationEffectiveDate:'2026-10-19'};
 export const integer = (n: unknown): n is number => Number.isSafeInteger(n);
 export const nonnegative = (n: unknown): n is number => integer(n) && n >= 0;
-export function rates(model: string | undefined, tier: string | undefined, input: number, regional = false): Rates | undefined {
-  if (!model || !Object.hasOwn(standard, model)) return;
-  let [i,c,w,o] = standard[model];
-  const modern = model.startsWith('gpt-6') || model.startsWith('gpt-5.6-');
-  let multiplier = 1;
-  tier ??= 'default';
-  if (['default','standard','auto'].includes(tier)) {} else if (['priority','fast'].includes(tier)) {
-    if (model === 'gpt-5.5') multiplier = 2.5;
-    else if (modern || ['gpt-5.4','gpt-5.4-mini','gpt-5.3-codex','gpt-5.2','gpt-5.1','gpt-5'].includes(model)) multiplier = 2;
-    else return;
-  } else if (['flex','batch'].includes(tier)) { if (!modern && model.startsWith('gpt-5.3')) return; multiplier = .5; }
-  else if (tier === 'ultrafast' && ['gpt-6.1-sol','gpt-6-astra'].includes(model)) multiplier = 6;
-  else return;
-  if (input > 272000 && (modern || ['gpt-5.5','gpt-5.4'].includes(model))) {
-    if (!modern && ['priority','fast'].includes(tier)) return;
-    i *= 2; c *= 2; w *= 2; o *= 1.5;
-  }
-  if (regional) { if (!modern && !['gpt-5.5','gpt-5.4','gpt-5.4-mini','gpt-5.4-nano'].includes(model)) return; multiplier *= 1.1; }
-  return {input:i*multiplier,cached:c*multiplier,...(Number.isFinite(w)?{write:w*multiplier}:{}),output:o*multiplier};
+export function rates(model:string|undefined,tier:string|undefined,input:number,regional=false,when:string|number=Date.now()):Rates|undefined {
+ return bundledPricing.rates(model,tier,input,regional,when);
 }
-export function price(s: Omit<Sample,'price'>): {total?: number; categories?: number[]; cacheSavings?: number; assumedTier: boolean; rates?: Rates; issue?: string} {
+export function price(s: Omit<Sample,'price'>, pricing=bundledPricing): {total?: number; categories?: number[]; cacheSavings?: number; assumedTier: boolean; rates?: Rates; issue?: string} {
   const assumedTier = s.serviceTier == null || s.serviceTier === 'auto';
-  const r = rates(s.model,s.serviceTier,s.input,s.regionalProcessing);
+  const r = pricing.rates(s.model,s.serviceTier,s.input,s.regionalProcessing??false,s.timestamp);
   if (!r) return {assumedTier,issue:'No verified rate for model/tier'};
-  if (!(s.input >= 0 && s.cached >= 0 && s.cached <= s.input && s.cachedRecorded !== false && s.cacheWriteRecorded !== false && s.cacheWrite >= 0 && s.cacheWrite <= s.input-s.cached && s.outputRecorded !== false && s.output >= 0 && (s.cacheWrite === 0 || r.write != null))) return {assumedTier,rates:r,issue:'Missing or invalid input/output/cache accounting'};
-  const ordinary=(s.input-s.cached-s.cacheWrite)*r.input/1e6, read=s.cached*r.cached/1e6, write=s.cacheWrite*(r.write??0)/1e6, output=s.output*r.output/1e6;
+  if (!(s.input >= 0 && s.cached >= 0 && s.cached <= s.input && s.cachedRecorded !== false && (s.cached === 0 || r.cached != null) && s.cacheWriteRecorded !== false && s.cacheWrite >= 0 && s.cacheWrite <= s.input-s.cached && s.outputRecorded !== false && s.output >= 0 && (s.cacheWrite === 0 || r.write != null))) return {assumedTier,rates:r,issue:'Missing or invalid input/output/cache accounting'};
+  const ordinary=(s.input-s.cached-s.cacheWrite)*r.input/1e6, read=s.cached*(r.cached??0)/1e6, write=s.cacheWrite*(r.write??0)/1e6, output=s.output*r.output/1e6;
   const reasoning=s.reasoningRecorded !== false && s.reasoning>=0 && s.reasoning<=s.output ? s.reasoning*r.output/1e6 : undefined;
   return {total:ordinary+read+write+output,categories:[ordinary,read,write,reasoning??0,reasoning==null?0:output-reasoning,reasoning==null?output:0],cacheSavings:s.input*r.input/1e6-ordinary-read-write,assumedTier,rates:r};
 }
-export function inputCost(s:Omit<Sample,'activity'|'price'>){const r=rates(s.model,s.serviceTier,s.input,s.regionalProcessing);if(!r||!s.cachedRecorded||!s.cacheWriteRecorded||s.cached<0||s.cacheWrite<0||s.cached+s.cacheWrite>s.input||s.cacheWrite>0&&r.write==null)return;return ((s.input-s.cached-s.cacheWrite)*r.input+s.cached*r.cached+s.cacheWrite*(r.write??0))/1e6;}
+export function inputCost(s:Omit<Sample,'activity'|'price'>,pricing=bundledPricing){const r=pricing.rates(s.model,s.serviceTier,s.input,s.regionalProcessing??false,s.timestamp);if(!r||!s.cachedRecorded||!s.cacheWriteRecorded||s.cached<0||s.cached>0&&r.cached==null||s.cacheWrite<0||s.cached+s.cacheWrite>s.input||s.cacheWrite>0&&r.write==null)return;return ((s.input-s.cached-s.cacheWrite)*r.input+s.cached*(r.cached??0)+s.cacheWrite*(r.write??0))/1e6;}
 export class ThreadUsage {
   input=0; cached=0; cacheWrite=0; output=0; reasoning=0;
   inputComplete=true; outputComplete=true; reasoningComplete=true; cacheComplete=true;
   pricedCalls=0; unpricedCalls=0; assumedTierCalls=0; cost=0; cacheSavings=0;
   costCategories=Array<number>(6).fill(0); models: string[]=[]; issues: string[]=[];
-  source=pricingMetadata.source; verifiedAt=pricingMetadata.verifiedAt; configurationEffectiveDate=pricingMetadata.configurationEffectiveDate;
+  source:string; verifiedAt:string;
+  #pricing:Pricing;
+  constructor(pricing:Pricing=bundledPricing){this.#pricing=pricing;this.source=pricing.source;this.verifiedAt=pricing.verifiedAt;}
   coverage='Recorded unique calls; historical completeness cannot be guaranteed'; cumulativeMismatch=false;
   add(s: Sample) {
     for (const [key,value] of [['input',s.input],['cached',s.cached],['cacheWrite',Math.max(0,s.cacheWrite)]] as const) { const next=this[key]+value; if (Number.isSafeInteger(next)) this[key]=next; else this.inputComplete=false; }
@@ -56,7 +34,7 @@ export class ThreadUsage {
     if (s.reasoningRecorded && Number.isSafeInteger(this.reasoning+s.reasoning)) this.reasoning+=s.reasoning; else this.reasoningComplete=false;
     this.cacheComplete &&= s.cachedRecorded && s.cacheWriteRecorded && s.cacheWrite>=0 && s.cacheWrite<=s.input-s.cached;
     const model=s.model??'Unknown model'; if(!this.models.includes(model)&&this.models.length<128) this.models.push(model);
-    const p=s.price??price(s); if(p.assumedTier) this.assumedTierCalls++;
+    const p=s.price??price(s,this.#pricing); if(p.assumedTier) this.assumedTierCalls++;
     if(p.total!=null) {this.pricedCalls++;this.cost+=p.total;this.cacheSavings+=p.cacheSavings??0;p.categories?.forEach((v,i)=>this.costCategories[i]+=v);}
     else {this.unpricedCalls++;const issue=`${model}: ${p.issue??'Unavailable'}`;if(!this.issues.includes(issue)&&this.issues.length<128)this.issues.push(issue);}
   }
@@ -150,7 +128,7 @@ export type CompactionForecast = {
 export function compactionCategory(score:number) {
   return score===0?'No projected economic benefit':score<=20?'Low':score<=40?'Moderate':score<=60?'High':score<=80?'Very high':'Exceptional';
 }
-export function estimateCompactionValue(input:CompactionForecastInput):CompactionForecast {
+export function estimateCompactionValue(input:CompactionForecastInput,pricing=bundledPricing,now=Date.now()):CompactionForecast {
   const {currentInput,model,serviceTier,regionalProcessing=false,growthPerCall,typicalOutput,contextLimit}=input;
   const result:CompactionForecast={status:'unavailable',score:null,category:'Unavailable',currentInput:finiteNonnegative(currentInput)?currentInput:undefined,estimatedInput:D.POST_COMPACTION_TOKENS,
     horizonCalls:D.FORECAST_CALLS,completedCalls:0,growthPerCall:finiteNonnegative(growthPerCall)?growthPerCall:undefined,typicalOutput:finiteNonnegative(typicalOutput)?typicalOutput:undefined,compactionOutput:D.COMPACTION_OUTPUT_TOKENS,
@@ -159,8 +137,8 @@ export function estimateCompactionValue(input:CompactionForecastInput):Compactio
     assumptions:{warmPrefixReuse:true,pricingAvailable:false,assumedTier:serviceTier==null||serviceTier==='auto',contextLimitKnown:contextLimit!=null}};
   const fail=(reason:string)=>({...result,limitation:reason});
   if(![currentInput,growthPerCall,typicalOutput].every(finiteNonnegative)||(contextLimit!=null&&(!finiteNonnegative(contextLimit)||contextLimit===0)))return fail('Missing or invalid forecast inputs');
-  const original=rates(model,serviceTier,currentInput!,regionalProcessing),replacement=rates(model,serviceTier,D.POST_COMPACTION_TOKENS,regionalProcessing);
-  if(!original||!replacement||replacement.write==null)return fail('Verified model/tier or replacement cache-write pricing unavailable');
+  const original=pricing.rates(model,serviceTier,currentInput!,regionalProcessing,now),replacement=pricing.rates(model,serviceTier,D.POST_COMPACTION_TOKENS,regionalProcessing,now);
+  if(original?.cached==null||replacement?.write==null)return fail('Verified model/tier or replacement cache-write pricing unavailable');
   result.assumptions.pricingAvailable=true;
   const overhead=(D.COMPACTION_OUTPUT_TOKENS*original.output+D.POST_COMPACTION_TOKENS*replacement.write)/1e6;
   if(!Number.isFinite(overhead))return fail('Forecast exceeds finite numeric range');
@@ -176,8 +154,8 @@ export function estimateCompactionValue(input:CompactionForecastInput):Compactio
       result.status='limited';result.category='Forecast limited';
       return fail(`${a>contextLimit?'Un-compacted':'Compacted'} path exceeds reported context window at call ${j+1}; 20-call financial score unavailable`);
     }
-    const ar=rates(model,serviceTier,a,regionalProcessing),br=rates(model,serviceTier,b,regionalProcessing);
-    if(!ar||!br)return fail('Verified projected model/tier pricing unavailable');
+    const ar=pricing.rates(model,serviceTier,a,regionalProcessing,now),br=pricing.rates(model,serviceTier,b,regionalProcessing,now);
+    if(ar?.cached==null||br?.cached==null)return fail('Verified projected model/tier pricing unavailable');
     baseline+=(a*ar.cached+typicalOutput*ar.output)/1e6;
     compacted+=((j===0?0:b*br.cached)+typicalOutput*br.output)/1e6;
     // Exclude common output costs and the original read common to both paths.

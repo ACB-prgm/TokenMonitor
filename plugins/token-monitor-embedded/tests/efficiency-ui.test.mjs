@@ -85,7 +85,7 @@ test('Comp arrows use previous aggregates and All history omits them',()=>{
 test('mixed models and efforts use aggregate pricing including compaction charges',()=>{
  const mod={exports:{}};new Function('require','module','exports',bundle.outputFiles[0].text)(require,mod,mod.exports);
  const {callBucket,summarize}=mod.exports;
- const call={timestamp:'2026-11-09',model:'gpt-6.1-sol',effort:'high',input:100000,cached:90000,cacheWrite:0,output:1000,cachedRecorded:true,cacheWriteRecorded:true,outputRecorded:true};
+ const call={timestamp:'2026-11-18',model:'gpt-6.1-sol',effort:'high',input:100000,cached:90000,cacheWrite:0,output:1000,cachedRecorded:true,cacheWriteRecorded:true,outputRecorded:true};
  const buckets=Array.from({length:40},(_,i)=>callBucket({...call,model:i%2?'gpt-6-astra':call.model,effort:i%2?undefined:'high'}));
  const reference=summarize(buckets),thread=summarize([...buckets,{...buckets[0],calls:0,priced:0,inputPriced:0,inputCost:0,cost:0,overhead:reference.cost}]);
  const html=banner({thread,periods:{7:{summary:reference}}}).render();

@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 const built=await build({stdin:{resolveDir:fileURLToPath(new URL('..',import.meta.url)),contents:`export {TelemetryParser} from './server/src/parser';export {HistoryBuilder,summarize} from './server/src/history-builder';export {price,rates} from './server/src/metrics';export {recordedCompaction,compactionLabel} from './server/src/compaction';`},bundle:true,platform:'node',format:'cjs',write:false});
 const mod={exports:{}};new Function('require','module','exports',built.outputFiles[0].text)(createRequire(import.meta.url),mod,mod.exports);
 const {TelemetryParser,HistoryBuilder,summarize,price,rates,recordedCompaction,compactionLabel}=mod.exports;
-const time=i=>new Date(Date.UTC(2026,10,7,0,0,i)).toISOString();
+const time=i=>new Date(Date.UTC(2026,10,18,0,0,i)).toISOString();
 const usage={input_tokens:111991,cached_input_tokens:111744,cache_write_input_tokens:0,output_tokens:2664,reasoning_output_tokens:100};
 const compact=(i=2,u=usage,extra={})=>({type:'compacted',timestamp:time(i),payload:{compaction_response_id:'compact-1',latest_token_usage_record:{response_id:'compact-1',usage:u},...extra}});
 const call=(i=1,input=120000,cacheWrite=0)=>({type:'event_msg',timestamp:time(i),payload:{type:'token_count',info:{last_token_usage:{input_tokens:input,cached_input_tokens:input-cacheWrite,cache_write_input_tokens:cacheWrite,output_tokens:1000,reasoning_output_tokens:0}}}});

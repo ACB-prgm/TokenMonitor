@@ -7,13 +7,13 @@ import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url),React=require('react');
 const {renderToStaticMarkup}=require('react-dom/server');
-const call=(i,input=100000,extra={})=>({type:'event_msg',timestamp:new Date(Date.UTC(2026,10,4,0,0,i)).toISOString(),payload:{type:'token_count',info:{last_token_usage:{input_tokens:input,cached_input_tokens:60000,cache_write_input_tokens:10000,output_tokens:5000,...extra}}}});
+const call=(i,input=100000,extra={})=>({type:'event_msg',timestamp:new Date(Date.UTC(2026,10,18,0,0,i)).toISOString(),payload:{type:'token_count',info:{last_token_usage:{input_tokens:input,cached_input_tokens:60000,cache_write_input_tokens:10000,output_tokens:5000,...extra}}}});
 const parser=()=>{const p=new TelemetryParser();p.consume({type:'turn_context',payload:{model:'gpt-6.1-sol'}});return p;};
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-12,`${a} != ${b}`);
 test('running context cost includes evicted calls and survives compaction, with duplicate calls excluded',()=>{
  const p=parser();let cost=0;
  for(let i=0;i<125;i++){
-  if(i===100)p.consume({type:'compacted',timestamp:new Date(Date.UTC(2026,10,4,0,0,i)-1).toISOString(),payload:{}});
+  if(i===100)p.consume({type:'compacted',timestamp:new Date(Date.UTC(2026,10,18,0,0,i)-1).toISOString(),payload:{}});
   const r=call(i,100000+i*1000);p.consume(r);p.consume(r);
   const sample=p.samples.at(-1);cost+=inputCost(sample);
   near(sample.contextPerCall,cost/(i+1));assert.equal(sample.contextPricedCalls,i+1);
@@ -66,7 +66,7 @@ test('cost trend matches the KPI accounting through compaction and retained cont
  p.consume({type:'turn_context',payload:{model:'gpt-6.1-sol'}});
  for(let i=0;i<125;i++){
   if(i===100){
-   p.consume({type:'compacted',timestamp:new Date(Date.UTC(2026,10,4,0,0,i)-2).toISOString(),payload:{}});
+   p.consume({type:'compacted',timestamp:new Date(Date.UTC(2026,10,18,0,0,i)-2).toISOString(),payload:{}});
    p.consume(call(i-.001,0,{cached_input_tokens:0,cache_write_input_tokens:0,output_tokens:0,total_tokens:30000}));
   }
   const r=call(i,100000+i*1000);p.consume(r);p.consume(r);
@@ -87,8 +87,8 @@ test('smooth trend stays within adjacent values and breaks at unavailable calls'
 
 test('compactions occupy separate gray slots in Cost and Tokens, with inspectable provenance',()=>{
  const p=parser();p.consume(call(0));
- const recorded={type:'compacted',timestamp:new Date(Date.UTC(2026,10,4,0,0,1)).toISOString(),payload:{compaction_response_id:'c1',latest_token_usage_record:{response_id:'c1',usage:{input_tokens:100000,cached_input_tokens:90000,cache_write_input_tokens:0,output_tokens:2000,reasoning_output_tokens:100}}}};
- p.consume(recorded);p.consume({...recorded,timestamp:new Date(Date.UTC(2026,10,4,0,0,2)).toISOString(),payload:{}});
+ const recorded={type:'compacted',timestamp:new Date(Date.UTC(2026,10,18,0,0,1)).toISOString(),payload:{compaction_response_id:'c1',latest_token_usage_record:{response_id:'c1',usage:{input_tokens:100000,cached_input_tokens:90000,cache_write_input_tokens:0,output_tokens:2000,reasoning_output_tokens:100}}}};
+ p.consume(recorded);p.consume({...recorded,timestamp:new Date(Date.UTC(2026,10,18,0,0,2)).toISOString(),payload:{}});
  const s={...p.snapshot({id:'test',title:'Test'}),panelId:'test',status:'Monitoring'};
  for(const mode of ['Cost','Tokens']){
   const html=render(s,mode),chart=html.match(/<section class="history"[\s\S]*?<\/svg>/)[0];
@@ -105,7 +105,7 @@ test('compactions occupy separate gray slots in Cost and Tokens, with inspectabl
 
 test('payback diamonds mark the exact call in every mode and reuse call inspection',()=>{
  const p=parser();for(let i=0;i<5;i++)p.consume(call(i));
- const timestamp='2026-11-04T00:00:00.500Z';
+ const timestamp='2026-11-18T00:00:00.500Z';
  const compaction={timestamp,callPosition:.5};
  const payback={timestamp,valid:true,breakEven:2,calls:4,net:.1};
  const s={...p.snapshot({id:'test',title:'Test'}),panelId:'test',status:'Monitoring',compactions:[compaction],efficiency:{thread:{calls:5,priced:0,inputPriced:0,cost:0,inputCost:0,overhead:0,evaluable:0,netSavings:0,paybackRate:null,costPerCall:null,contextPerCall:null},periods:{},progress:{running:false},paybacks:[payback],threadCompactions:[compaction]}};

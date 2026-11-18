@@ -21,6 +21,7 @@ const summaryUri = `ui://${pluginName}/turn-summary-v${installedVersion}.html`;
 const server = new McpServer({ name: pluginName, version: installedVersion });
 const annotations = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
 const collector = new Collector();
+collector.refreshPricing();
 const panels = new Panels(collector);
 let continuation:Continuation|undefined;
 const continuations=()=>continuation??=new Continuation(stateRoot(),collector.account,undefined,undefined,id=>!!collector.store.metadata(id,true)[0]?.archived,()=>collector.store.continuationTargets());
@@ -74,6 +75,7 @@ server.registerTool('open_monitor', {
   _meta: { ui: { resourceUri, visibility: ['model', 'app'] },
     'openai/ui': { entrypoints: [{ type: 'thread' }], preferredModelDisplayMode: 'fullscreen' } },
 }, async (args, extra) => {
+  collector.refreshPricing();
   await recordRouting('open_monitor', args, extra);
   await acknowledgeStartup(extra._meta?.threadId).catch(() => {});
   const panelId = panels.create(hostID(extra));

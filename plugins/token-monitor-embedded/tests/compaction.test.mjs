@@ -4,7 +4,7 @@ import {estimateCompactionValue as estimate,rollingContextGrowth as growth,rolli
 import {TelemetryParser} from '../server/dist/parser.mjs';
 const base={currentInput:168000,model:'gpt-6.1-sol',growthPerCall:2000,typicalOutput:3000};
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-12,`${a} != ${b}`);
-const samples=(inputs,outputs=inputs.map(()=>3000))=>inputs.map((input,i)=>({timestamp:new Date(Date.UTC(2026,9,20,0,0,i)).toISOString(),input,output:outputs[i],outputRecorded:true,model:base.model}));
+const samples=(inputs,outputs=inputs.map(()=>3000))=>inputs.map((input,i)=>({timestamp:new Date(Date.UTC(2026,10,20,0,0,i)).toISOString(),input,output:outputs[i],outputRecorded:true,model:base.model}));
 test('growth uses current context at 20 calls, retaining an unclamped latest-20 interval mean',()=>{
  const personal={observed:1750,sampleCount:500};
  const zero=samples(Array(21).fill(10000));
@@ -83,20 +83,20 @@ test('capacity stops simulation and numerical failures stay unavailable',()=>{
  assert.equal(estimate({...base,growthPerCall:Number.MAX_VALUE}).status,'unavailable');
  for(let currentInput=0;currentInput<1000000;currentInput+=7919){const r=estimate({...base,currentInput});assert.ok(Number.isInteger(r.score)&&r.score>=0&&r.score<=100);}
 });
-const call=(i,input,extra={})=>({type:'event_msg',timestamp:new Date(Date.UTC(2026,9,20,0,0,i)).toISOString(),payload:{type:'token_count',info:{last_token_usage:{input_tokens:input,cached_input_tokens:0,output_tokens:6000,reasoning_output_tokens:5000,...extra}}}});
+const call=(i,input,extra={})=>({type:'event_msg',timestamp:new Date(Date.UTC(2026,10,20,0,0,i)).toISOString(),payload:{type:'token_count',info:{last_token_usage:{input_tokens:input,cached_input_tokens:0,output_tokens:6000,reasoning_output_tokens:5000,...extra}}}});
 const snapshot=p=>p.snapshot({id:'a',title:'A'});
 test('parser forecasts unique per-thread calls including reasoning; cache age does not change CV',()=>{
  const p=new TelemetryParser();p.consume({type:'turn_context',payload:{model:base.model,service_tier:'priority',regional_processing:true}});
  for(let i=0;i<4;i++){p.consume(call(i,100000+i*4000));p.consume(call(i,100000+i*4000));}
  const r=snapshot(p).compactionValue;assert.equal(r.observedGrowthPerCall,4000);assert.equal(r.typicalOutput,6000);assert.equal(r.assumptions.growth.sampleCount,3);assert.equal(r.serviceTier,'priority');assert.equal(r.regionalProcessing,true);
- assert.deepEqual(p.snapshot({}, {},{},true,0).compactionValue,p.snapshot({}, {},{},true,Date.now()+1e9).compactionValue);
+ assert.deepEqual(p.snapshot({}, {},{},true,Date.UTC(2026,10,20)).compactionValue,p.snapshot({}, {},{},true,Date.UTC(2026,10,21)).compactionValue);
  assert.equal(snapshot(new TelemetryParser()).compactionValue.status,'unavailable');
 });
 test('parser resets growth after compaction and model changes, suppresses stale forecasts',()=>{
  const p=new TelemetryParser();p.consume({type:'turn_context',payload:{model:base.model}});
  for(let i=0;i<4;i++)p.consume(call(i,100000+i*10000));
- const pre=p.snapshot({}, {hook_event_name:'PreCompact',updated_at:'2026-10-20T00:00:04Z'});assert.equal(pre.compactionValue.status,'unavailable');
- p.consume({type:'compacted',timestamp:'2026-10-20T00:00:05Z',payload:{}});assert.equal(snapshot(p).compactionValue.status,'unavailable');
+ const pre=p.snapshot({}, {hook_event_name:'PreCompact',updated_at:'2026-11-20T00:00:04Z'});assert.equal(pre.compactionValue.status,'unavailable');
+ p.consume({type:'compacted',timestamp:'2026-11-20T00:00:05Z',payload:{}});assert.equal(snapshot(p).compactionValue.status,'unavailable');
  p.consume(call(6,40000));assert.equal(snapshot(p).compactionValue.assumptions.growth.sampleCount,0);
  for(let i=7;i<10;i++)p.consume(call(i,40000+(i-6)*3000));
  assert.equal(snapshot(p).compactionValue.growthPerCall,2000);
@@ -119,7 +119,7 @@ test('personal growth intervals span segments without bridging invalid calls, mo
  const p=new TelemetryParser();p.consume({type:'turn_context',payload:{model:base.model}});
  p.consume(call(0,10000));p.consume(call(1,10000));p.consume(call(1,10000));
  p.consume(call(2,-1));p.consume(call(3,40000));p.consume(call(4,45000));
- p.consume({type:'compacted',timestamp:'2026-10-20T00:00:05Z',payload:{}});
+ p.consume({type:'compacted',timestamp:'2026-11-20T00:00:05Z',payload:{}});
  p.consume(call(6,10000));p.consume(call(7,11000));
  p.consume({type:'turn_context',payload:{model:'other'}});p.consume(call(8,20000));p.consume(call(9,20010));
  assert.deepEqual(p.growthIntervals.map(x=>x.value),[0,5000,1000,10]);

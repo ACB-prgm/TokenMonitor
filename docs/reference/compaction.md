@@ -14,9 +14,9 @@ Thread estimates use bounded observations from the selected thread. The parser k
 
 ## Pricing and accounting
 
-All prices come from the existing `rates()` function using the latest recorded call's model, service tier and regional-processing flag. A missing or automatic tier assumes Standard and is disclosed. Unknown pricing or unavailable replacement cache-write pricing makes CV unavailable. Unknown context capacity remains unknown.
+The forecast uses rates effective at the time it runs, with the latest recorded call’s model, service tier and regional-processing flag. Historical compaction charges use the event time, and each subsequent call in the payback estimate uses its own recorded time. A missing or automatic tier assumes Standard and is disclosed. Unknown pricing or unavailable replacement cache-write pricing makes CV unavailable. Unknown context capacity remains unknown.
 
-Each projected call is priced independently at its complete projected input size. For GPT-6.1 Sol Standard, input above 272,000 tokens doubles fresh, cached and cache-write rates and multiplies output rates by 1.5. Exactly 272,000 remains short-context pricing. This threshold is a pricing boundary, separate from the reported context window. Other supported models and tiers use their existing rate rules.
+Each projected call is priced independently at its complete projected input size. For GPT-6.1 Sol Standard, input above 272,000 tokens doubles fresh, cached and cache-write rates and multiplies output rates by 1.5. Exactly 272,000 remains short-context pricing. This threshold is a pricing boundary, separate from the reported context window. The [pricing catalog](efficiency-metrics.md#pricing-catalog) defines the rates and context thresholds for each supported model and tier.
 
 For zero-based call index `j`, original input is `currentInput + j × growth`, and compacted input is `40000 + j × growth`. Both paths assume warm-prefix reuse, pricing projected normal context reads at cached-input rates. This approximation does not separately forecast fresh-token writes on every future interaction.
 
@@ -37,7 +37,7 @@ If either input path exceeds the reported context window, simulation stops befor
 
 Warm, Uncertain and Presumed cold cache states remain separate diagnostics. Cache age and the ordinary fraction of newly added uncached tokens do not multiply CV. A complete cache miss can affect both paths; actual future misses may change realized savings.
 
-This forecast makes no model calls, triggers no compaction, modifies no conversations, adds no network requests, and persists no new transcript data. Existing UI refresh and thread-selection behavior is unchanged. Deterministic dollar fixtures, rolling-estimate tests, parser parity, MCP integration and compact/expanded rendering tests cover the calculation and display.
+This forecast makes no model calls, triggers no compaction, modifies no conversations, and persists no new transcript data. Catalog refresh runs independently of the forecast. Existing UI refresh and thread-selection behavior is unchanged. Deterministic dollar fixtures, rolling-estimate tests, parser parity, MCP integration and compact/expanded rendering tests cover the calculation and display.
 
 ## Historical payback
 

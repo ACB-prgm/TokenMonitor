@@ -20,6 +20,14 @@ Spending comparisons use only the displayed aggregate KPI values. They require a
 
 Threshold settings validate ordered boundaries, support reset, and persist locally with separate DEV/release keys. Blocked storage keeps preferences in memory. Capacity warnings remain amber at 85% and red at 95%.
 
+## Pricing catalog
+
+The standalone [pricing.json](../../pricing.json) contains OpenAI's published flagship text-token pricing and GPT-5.3-Codex, covering all models in Token Monitor's bundled table. The running plugin still uses its bundled rates. Catalog rates are in USD per million tokens, with separate entries for each published tier, input-size band, and cache-write duration. Missing entries indicate unavailable prices. The long-context band starts above the specified token count and applies to the full request.
+
+Each model lists complete schedules in chronological order. For a rate change, append a schedule with the new effective date and retain earlier schedules. Use an ISO 8601 timestamp with an offset when the source specifies a time or time zone. A date-only value preserves day-level precision. `published-start` identifies a documented start and `verified-baseline` starts coverage on the verification date when the full schedule's historical start is unknown. Calls earlier than the first covered date have no verified schedule in this file.
+
+The GPT-6.2 Ultrafast rates switch at midnight Pacific time on March 1, 2027. GPT-5.6 Sol's published promotional window runs through November 30, 2026. A successor schedule is required to establish pricing beyond that window. [OpenAI API pricing](https://developers.openai.com/api/docs/pricing) · [OpenAI API changelog](https://developers.openai.com/api/docs/changelog#november-2026)
+
 ## Source and tests
 
 [Implementation](../../plugins/token-monitor-embedded/server/src/efficiency.ts) · [Regression tests](../../plugins/token-monitor-embedded/tests/efficiency.test.mjs) · [Documentation index](../index.md)

@@ -9,7 +9,7 @@ const repo=fileURLToPath(new URL('..',import.meta.url));
 test('documentation checker rejects redirects, broken links, casing and missing release records',async()=>{
  const root=await mkdtemp(path.join(os.tmpdir(),'tokenmonitor-docs-'));
  try{
-  for(const p of ['LICENSE','docs','AGENTS.md','README.md','CONTRIBUTING.md','CHANGELOG.md','VERSION','plugins/token-monitor-embedded/README.md','plugins/token-monitor-embedded/VALIDATION.md','plugins/token-monitor-embedded/server/src','plugins/token-monitor-embedded/ui/src','plugins/token-monitor-embedded/tests','scripts'])await cp(path.join(repo,p),path.join(root,p),{recursive:true});
+  for(const p of ['LICENSE','docs','AGENTS.md','README.md','CONTRIBUTING.md','CHANGELOG.md','VERSION','pricing.json','plugins/token-monitor-embedded/README.md','plugins/token-monitor-embedded/VALIDATION.md','plugins/token-monitor-embedded/server/src','plugins/token-monitor-embedded/ui/src','plugins/token-monitor-embedded/tests','scripts'])await cp(path.join(repo,p),path.join(root,p),{recursive:true});
   await checkDocs(root);
   const changelog=path.join(root,'CHANGELOG.md'),text=await readFile(changelog,'utf8');
   await writeFile(changelog,text.replace(/\r?\n/g,'\r\n'));await checkDocs(root);

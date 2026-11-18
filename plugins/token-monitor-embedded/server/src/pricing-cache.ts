@@ -29,6 +29,7 @@ export class PricingCache {
  private disk?:Cached;
  private attempted=-Infinity;
  private pending?:Promise<void>;
+ private stop=new AbortController();
  constructor(private home:string,private request:typeof fetch=fetch,private clock=Date.now){}
  private read(){
   try{
@@ -47,11 +48,13 @@ export class PricingCache {
  snapshot():PricingSnapshot{return this.read()??bundledSnapshot;}
  refresh():Promise<void>{
   if(this.pending)return this.pending;
+  if(this.stop.signal.aborted)return Promise.resolve();
   if(this.clock()-this.attempted<cooldown)return Promise.resolve();
   this.attempted=this.clock();
   this.pending=this.download().catch(()=>{}).finally(()=>{this.pending=undefined;});
   return this.pending;
  }
+ close(){this.stop.abort();}
  private async download(){
   const claimed=await withStateLock(lockRoot(this.home),()=>{
    const file=path.join(lockRoot(this.home),'last-attempt.json'),now=this.clock();
@@ -65,9 +68,9 @@ export class PricingCache {
    atomicJSON(file,{at:now});
    return true;
   });
-  if(!claimed)return;
+  if(!claimed||this.stop.signal.aborted)return;
   const cached=this.read();
-  const response=await this.request(url,{redirect:'error',signal:AbortSignal.timeout(5000),headers:cached?.etag?{'If-None-Match':cached.etag}:{}});
+  const response=await this.request(url,{redirect:'error',signal:AbortSignal.any([this.stop.signal,AbortSignal.timeout(5000)]),headers:cached?.etag?{'If-None-Match':cached.etag}:{}});
   if(response.status===304)return;
   if(response.status!==200||!response.body||Number(response.headers.get('content-length'))>limit){
    await response.body?.cancel();return;

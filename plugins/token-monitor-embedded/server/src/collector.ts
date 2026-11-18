@@ -145,7 +145,7 @@ export class TelemetryStore {
     const sessions=[this.resolve(id),this.hook()?.session,...this.metadata().map(row=>({session_id:row.id,transcript_path:row.rollout_path}))];
     return sessions.flatMap(s=>s&&acceptedTranscript(s.transcript_path,s.session_id,this.home)?[s.transcript_path]:[]);
   }
-  close(){this.efficiency?.close();this.entries.clear();this.discovery.close();this.growthHistory.close();}
+  close(){this.pricing.close();this.efficiency?.close();this.entries.clear();this.discovery.close();this.growthHistory.close();}
 }
 // In-process replacement for the former subprocess bridge. The request shape
 // stays stable so panel selection and revision handling do not change.

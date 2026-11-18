@@ -1,6 +1,7 @@
 import {Worker} from 'node:worker_threads';
 import type {Efficiency} from './efficiency.js';
 import type {HistoryFile} from './history-import.js';
+import type {AnalyticsPeriod,HistoryAnalytics} from './history-database.js';
 /** One lazy worker per MCP server, shared by all its panels. No detached process. */
 export class HistoryClient {
  private worker?:Worker;private retryAt=0;private serial=0;private closed=false;private scanPromise?:Promise<void>;private queued?:{files:HistoryFile[];complete:boolean;reconcile:boolean};
@@ -20,6 +21,7 @@ export class HistoryClient {
 
  snapshot(id?:string):Promise<Efficiency>{return this.request('snapshot',{id});}
  diagnostics(){return this.request('diagnostics',{});}
+ analytics(period:AnalyticsPeriod):Promise<HistoryAnalytics>{return this.request('analytics',{period});}
  savedTasks(query='',includeArchived=false){return this.request('saved',{query,includeArchived});}
  close(){this.closed=true;for(const p of this.pending.values())p.reject(Error('History client closed'));this.pending.clear();void this.worker?.terminate();this.worker=undefined;}
 }

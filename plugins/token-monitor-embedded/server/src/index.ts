@@ -109,6 +109,15 @@ server.registerTool('get_history_storage', {
  title:'Inspect local history storage',description:'Read aggregate local storage diagnostics on demand.',
  inputSchema:{panelId:z.string().uuid()},annotations,_meta:{ui:{visibility:['app']}},
 },async()=>{try{return {content:[],_meta:{storage:await collector.store.efficiency?.diagnostics()}};}catch{return {isError:true,content:[],_meta:{error:'Local history storage is temporarily unavailable.'}};}});
+server.registerTool('get_history_analytics', {
+ title:'Read local usage analytics',description:'Read aggregate spending and token usage from imported local history.',
+ inputSchema:{period:z.enum(['all','30','90'])},annotations,_meta:{ui:{visibility:['app']}},
+},async({period})=>{
+ try{
+  if(!collector.store.efficiency)throw Error('History storage unavailable');
+  return {content:[],_meta:{analytics:await collector.store.efficiency.analytics(period)}};
+ }catch{return {isError:true,content:[],_meta:{error:'Local usage analytics are temporarily unavailable.'}};}
+});
 server.registerTool('manage_updates', {
   title: 'TokenMonitor updates', description: 'Panel-only release checks, preferences, and explicitly requested verified installation through Codex.',
   inputSchema: { action: z.enum(['opening','check','configure','dismiss','install']), automatic: z.boolean().optional(),

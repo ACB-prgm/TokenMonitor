@@ -5,6 +5,11 @@ import {chmodSync,existsSync,statSync} from 'node:fs';
 import type {Bucket,NumericCall,Payback,ThreadHistory} from './efficiency.js';
 
 export const bucketNumbers=['cacheInput','cacheRead','input','cached','cacheWrite','output','calls','priced','inputPriced','inputCost','cost','overhead'] as const;
+export type AnalyticsPeriod='all'|'30'|'90';
+type AnalyticsRow={
+ kind:'trend'|'model';label:string;effort:string|null;
+ calls:number;priced:number;input:number;cached:number;output:number;cost:number;overhead:number;
+};
 const sampleNumbers=['input','cached','cacheWrite','output','reasoning','total','ordinal'] as const;
 const flags=['outputRecorded','reasoningRecorded','cachedRecorded','cacheWriteRecorded'] as const;
 /** Durable numeric history. SQL owns numeric facts; source availability never controls retention. */
@@ -176,6 +181,23 @@ export class HistoryDatabase {
   if(!daily&&exclude){const own=this.buckets(exclude);for(const r of rows){const b=own.find(o=>JSON.stringify([o.model,o.effort,o.rateBand,o.serviceTier,o.regionalProcessing])===JSON.stringify([r.model??undefined,r.effort??undefined,r.rateBand??undefined,r.serviceTier??undefined,r.regionalProcessing==null?undefined:!!r.regionalProcessing]));if(b)for(const k of bucketNumbers)r[k]-=b[k];}}
   return rows.filter(r=>r.calls||r.overhead).map(r=>{const b:any={timestamp:start??''};for(const k of bucketNumbers)b[k]=r[k];for(const k of ['model','effort','rateBand','serviceTier'])if(r[k]!=null)b[k]=r[k];if(r.regionalProcessing!=null)b.regionalProcessing=!!r.regionalProcessing;return b;});
  }
+ analytics(period:AnalyticsPeriod,now=Date.now()){
+  const start=period==='all'?'':new Date(now-(Number(period)-1)*864e5).toISOString().slice(0,10);
+  const end=new Date(now).toISOString().slice(0,10);
+  const sums=['calls','priced','input','cached','output','cost','overhead'].map(k=>`SUM(t.${k}) AS ${k}`).join(',');
+  const where="t.source NOT LIKE '~%' AND t.day BETWEEN ?1 AND ?2";
+  const date=period==='all'?'substr(t.day,1,7)':'t.day';
+  // One statement gives both breakdowns the same snapshot while hooks import in parallel.
+  return this.statement(`
+    SELECT 'trend' AS kind,${date} AS label,NULL AS effort,${sums}
+    FROM history_daily t WHERE ${where} GROUP BY label HAVING calls<>0 OR overhead<>0
+    UNION ALL
+    SELECT 'model',COALESCE(d.model,'Unknown model'),d.effort,${sums}
+    FROM history_daily t JOIN history_dimensions d ON d.id=t.dimension
+    WHERE ${where} GROUP BY d.model,d.effort HAVING calls<>0 OR overhead<>0
+    ORDER BY kind,label,effort
+  `).all({'1':start,'2':end}) as unknown as AnalyticsRow[];
+ }
  outcomes(source?:string,start?:string,end?:string,exclude?:string):Payback[]{const where=["source NOT LIKE '~%'",'events>0'],args:any[]=[];if(source){where.push('source=?');args.push(source);}if(exclude){where.push('source<>?');args.push(exclude);}if(start){where.push('day>=?');args.push(start);}if(end){where.push('day<?');args.push(end);}
   return (this.statement(`SELECT day,completed,valid,profitable,reason,SUM(events) AS events,SUM(net) AS net FROM history_outcomes WHERE ${where.join(' AND ')} GROUP BY day,completed,valid,profitable,reason`).all(...args) as any[]).map(r=>({timestamp:r.day,completed:r.completed?r.day:undefined,valid:!!r.valid,breakEven:r.profitable?1:null,reason:r.reason||undefined,calls:0,net:r.net,events:r.events}));
  }
@@ -202,3 +224,4 @@ export class HistoryDatabase {
  syncAvailability(files:{id:string}[]){const ids=new Set(files.map(f=>f.id)),changed=this.statement('SELECT source,available FROM history_catalogue').all().filter(row=>row.available!==Number(ids.has(String(row.source))));if(changed.length)this.transaction(()=>{for(const row of changed)this.statement('UPDATE history_catalogue SET available=? WHERE source=?').run(Number(ids.has(String(row.source))),row.source);this.changed();});}
  close(){this.db.close();}
 }
+export type HistoryAnalytics=ReturnType<HistoryDatabase['analytics']>;

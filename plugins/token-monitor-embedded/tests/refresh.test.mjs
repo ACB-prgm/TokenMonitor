@@ -8,8 +8,8 @@ const root=new URL('../',import.meta.url);
 const bundle=await build({entryPoints:[fileURLToPath(new URL('ui/src/main.tsx',root))],bundle:true,loader:{'.png':'dataurl'},platform:'node',format:'cjs',write:false,external:['react','react-dom/client','@modelcontextprotocol/ext-apps']});
 
 // Run the real panel controller with deterministic hooks and a deferred bridge.
-function panel(summary=false) {
- const slots=[],effects=[],calls=[];let cursor=0,component,poll,first=true;const opening=[];
+function panel(summary=false,host={}) {
+ const slots=[],effects=[],calls=[],modes=[];let cursor=0,component,poll,first=true;const opening=[];
  const react={
   createElement:(type,props)=>({type,props}),
   useState(initial){const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>{slots[i]=value;}];},
@@ -19,7 +19,8 @@ function panel(summary=false) {
  let bridge;
  class App {
   constructor(){bridge=this;}
-  getHostContext(){return {};}
+  getHostContext(){return host;}
+  async requestDisplayMode({mode}){modes.push(mode);}
   async connect(){}
   close(){}
   callServerTool(request){return new Promise(resolve=>calls.push({request,resolve}));}
@@ -32,8 +33,25 @@ function panel(summary=false) {
  render();first=false;for(const effect of effects)effect();
  const deliver=state=>bridge.ontoolresult({_meta:{monitor:state}});
  const settle=async(state,updates)=>{calls.at(-1).resolve({_meta:{monitor:state,updates}});await new Promise(resolve=>setImmediate(resolve));};
- return {render,deliver,settle,calls,opening,poll:()=>poll()};
+ return {render,deliver,settle,calls,opening,modes,poll:()=>poll()};
 }
+
+test('analytics opens in fullscreen when offered and preserves the monitored thread on return',async()=>{
+ const p=panel(false,{displayMode:'inline',availableDisplayModes:['inline','fullscreen']});
+ const state={panelId:'p',selectedId:'a',status:'Monitoring'};
+ p.deliver(state);await p.settle({...state,unchanged:true});
+ p.render().onAnalytics();
+ assert.deepEqual(p.modes,['fullscreen']);
+ const {load,onBack}=p.render();
+ const request=load('all');
+ assert.deepEqual(p.calls.at(-1).request,{name:'get_history_analytics',arguments:{period:'all'}});
+ p.calls.at(-1).resolve({_meta:{analytics:[]}});
+ assert.deepEqual(await request,[]);
+ onBack();assert.strictEqual(p.render().s,state);
+ const inline=panel(false,{displayMode:'inline',availableDisplayModes:['inline']});
+ inline.deliver(state);inline.render().onAnalytics();
+ assert.deepEqual(inline.modes,[]);assert.equal(typeof inline.render().load,'function');
+});
 
 test('polls retain unchanged views and queue selections made in flight',async()=>{
  const p=panel();

@@ -8,10 +8,17 @@ import {isDev,pluginName,serverDisplayName} from '../../shared/identity.js';
 import type {UpdateStatus} from '../../server/src/updates.js';
 import type {UpdateAction} from './updates.js';
 import type {ResumeView,ResumeAction} from './resume.js';
+import type {AnalyticsPeriod,HistoryAnalytics} from '../../server/src/history-database.js';
+import {HistoryAnalyticsView} from './history-analytics.js';
 
 const app = new App({ name: serverDisplayName, version: installedVersion });
 const layoutKey = isDev ? `${pluginName}-layout` : 'token-monitor-layout';
 const summary = document.documentElement.dataset.monitorView === 'summary';
+async function loadAnalytics(period:AnalyticsPeriod):Promise<HistoryAnalytics>{
+  const result=await app.callServerTool({name:'get_history_analytics',arguments:{period}});
+  if(result.isError||!Array.isArray(result._meta?.analytics))throw Error('History unavailable');
+  return result._meta.analytics as HistoryAnalytics;
+}
 const legacy = () => (window as any).openai as {widgetState?: Layout; setWidgetState?: (s: Layout)=>void} | undefined;
 function savedLayout(): Layout {
   try {
@@ -22,6 +29,7 @@ function savedLayout(): Layout {
 function Panel() {
   const [state,setState] = useState<Monitor>({panelId:'',status:'Connecting to local telemetry…'});
   const [layout,setLayout] = useState(savedLayout);
+  const [analytics,setAnalytics]=useState(false);
   const [error,setError] = useState('');
   const [updates,setUpdates] = useState<UpdateStatus>();
   const [updateError,setUpdateError] = useState('');
@@ -108,6 +116,13 @@ function Panel() {
     const next = {expanded,scale,layoutVersion:2}; setLayout(next);
     try { if (legacy()?.setWidgetState) legacy()!.setWidgetState!(next); else sessionStorage.setItem(layoutKey,JSON.stringify(next)); } catch { /* Layout remains usable without host persistence. */ }
   }
+  function openAnalytics(){
+    setAnalytics(true);
+    const context=app.getHostContext();
+    if(context?.displayMode!=='fullscreen'&&(!context?.availableDisplayModes||context.availableDisplayModes.includes('fullscreen'))){
+      void app.requestDisplayMode({mode:'fullscreen'}).catch(()=>{});
+    }
+  }
   useEffect(()=>{
     active.current=true;
     function theme() { const value=app.getHostContext()?.theme; if(value) document.documentElement.dataset.theme=value; }
@@ -133,7 +148,8 @@ function Panel() {
     const interval=summary ? undefined : setInterval(()=>{if(document.visibilityState==='visible')void refresh();},2000);
     return ()=>{active.current=false;serial.current++;clearInterval(interval);document.removeEventListener('visibilitychange',visible);app.close();};
   },[]);
-  return <MonitorView s={state} expanded={layout.expanded} scale={layout.scale} error={error}
+  if(analytics)return <HistoryAnalyticsView load={loadAnalytics} onBack={()=>setAnalytics(false)} scale={layout.scale} efficiency={state.efficiency}/>;
+  return <MonitorView s={state} expanded={layout.expanded} scale={layout.scale} error={error} onAnalytics={!summary&&state.panelId?openAnalytics:undefined}
     resume={resume} resumeBusy={resumeBusy} resumeError={resumeError} onResume={!summary?manageResume:undefined}
     onStorage={summary?undefined:async()=>{const result=await app.callServerTool({name:'get_history_storage',arguments:{panelId:current.current.panelId}});if(result.isError||!(result._meta as any)?.storage)throw Error('Storage diagnostics unavailable.');return (result._meta as any).storage;}} updates={updates} onUpdate={summary?undefined:action=>void manageUpdate(action)} updateError={updateError}
     onFilter={summary?undefined:(query,includeArchived)=>{filters.current={query,includeArchived};pendingFilter.current=fetching.current;retry.current.at=0;void refresh();}}

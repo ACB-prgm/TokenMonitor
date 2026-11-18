@@ -76,6 +76,18 @@ test('retention preserves summaries, and missing source does not erase imported 
  const revision=db.revision();drain(db,home,f);assert.equal(db.recent().length,0);assert.equal(db.revision(),revision);
  rmSync(f.file);assert.equal(importHistory(db,home,f,historyBasis).unavailable,true);assert.equal(summarize(db.buckets()).calls,1);assert.equal(db.savedTasks()[0].sourceAvailable,false);
 }));
+test('analytics groups retained usage by UTC period and model effort, excluding staging',()=>fixture(({db})=>{
+ const bucket={model:'gpt-6.1-sol',effort:'high',calls:1,priced:1,inputPriced:1,input:100,cached:80,cacheWrite:0,cacheInput:100,cacheRead:80,output:10,cost:2,inputCost:1,overhead:0};
+ db.addBucket('archived',{...bucket,timestamp:'2026-01-03'});
+ db.addBucket('current',{...bucket,timestamp:'2026-10-19',effort:'low',cost:0,priced:0});
+ db.addBucket('current',{...bucket,timestamp:'2026-10-19',effort:'low',calls:0,priced:0,input:0,cached:0,output:0,cost:0,overhead:.5});
+ db.addBucket('~staging',{...bucket,timestamp:'2026-10-19',cost:99});
+ const date=Date.parse('2026-10-20T00:00:00Z');
+ const all=db.analytics('all',date);
+ assert.deepEqual(all.filter(r=>r.kind==='trend').map(r=>[r.label,r.calls,r.cost+r.overhead]),[['2026-01',1,2],['2026-10',1,.5]]);
+ assert.deepEqual(all.filter(r=>r.kind==='model').map(r=>[r.effort,r.priced,r.input,r.cached]),[['high',1,100,80],['low',0,100,80]]);
+ assert.deepEqual(db.analytics('30',date).filter(r=>r.kind==='trend').map(r=>r.label),['2026-10-19']);
+}));
 test('replayed cumulative records stay deduplicated across persisted checkpoints',()=>fixture(({home,f,db})=>{
  const first=call(1);first.payload.info.total_token_usage={input_tokens:100000,output_tokens:1000};writeFileSync(f.file,lines([header,context,first]));drain(db,home,f);
  const replay=structuredClone(first);replay.timestamp=stamp(2);appendFileSync(f.file,lines([replay,call(3)]));drain(db,home,f);assert.equal(summarize(db.buckets()).calls,2);

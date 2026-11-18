@@ -4,6 +4,14 @@ The dashboard now follows the decision order: consolidated Thread Usage (context
 
 The header leads with the searchable local-thread selector, followed by Rescan threads, Refresh metrics and Settings. Refresh and Settings use 32 px square controls with centered 16 px icons. Rescan matches their height and uses the same square icon control at widths up to 480 px. An undismissed release update fills the Settings button orange and adds “update available” to its accessible name. Refresh retrieves telemetry; Rescan discovers restored or newly available local transcripts. Search uses names, IDs and existing workspace filtering, with pending/results states inside the selector. Archived history remains part of analytics; an already-selected archived thread remains visible. Settings holds scale, About/version, update controls, and performance thresholds.
 
+**Refresh metrics** runs the same check as the automatic two-second poll and clears the panel's retry delay after a connection failure. It reuses any check already in progress. Account allowances keep their own [refresh cadence](account-allowances.md#live-source). Use **Rescan threads** to rediscover local transcripts.
+
+## Usage analytics
+
+Open **Settings → Usage analytics** to see all imported local chats, including archived chats and saved usage from missing transcripts. The monitor asks Codex for fullscreen when available and can display analytics in its current pane. **Thread monitor** returns to the current thread view.
+
+All time groups activity by UTC month. The 30- and 90-day views group by UTC day and include today. The trend switches between estimated cost, recorded normal-call input plus output tokens, and normal calls. Trend data and the model/effort breakdown show exact counts, input cache-read share, and pricing coverage. Estimated cost includes attributed compaction charges where available, and historical usage keeps the [stored calculation basis](history-storage.md). Use the analytics **Refresh** button to reread saved totals while a backfill is running.
+
 ## Efficiency comparisons
 
 See [efficiency metrics](efficiency-metrics.md) for definitions, thresholds and coverage.

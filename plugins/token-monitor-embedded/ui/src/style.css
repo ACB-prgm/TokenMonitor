@@ -144,6 +144,7 @@ details[open]>summary::before,details[open]>summary .disclosure-caret,
 @media(max-width:480px){.compact-header .header-controls>.rescan-button{width:32px;padding:0}}
 .analytics-page{max-width:1200px;margin:auto;padding:clamp(12px,3vw,36px);line-height:1.45}
 .analytics-page header,.analytics-page header>div,.analytics-section-heading{display:flex;flex-wrap:wrap;align-items:center;gap:.65em;justify-content:space-between}
+.analytics-page header>div{margin-left:auto}
 .analytics-page h1{font-size:2em;letter-spacing:-.035em;margin:.65em 0 .1em}
 .analytics-page h2{font-size:1.12em;margin:0}
 .analytics-note{color:var(--muted);font-size:.9em}

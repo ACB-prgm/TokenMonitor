@@ -8,7 +8,7 @@ The header leads with the searchable local-thread selector, followed by Rescan t
 
 ## Usage analytics
 
-Open **Settings → Usage analytics** to see all imported local chats, including archived chats and saved usage from missing transcripts. The monitor asks Codex for fullscreen when available and can display analytics in its current pane. **Thread monitor** returns to the current thread view.
+Open **Token Monitor Analytics** from Codex's main navigation to see all imported local chats, including archived chats and saved usage from missing transcripts. DEV labels the entry **Token Monitor DEV Analytics**. The conversation monitor's **Settings → Usage analytics** links to the same standalone app and keeps analytics available in the conversation pane if the host cannot open the link. **Thread monitor** returns to the current thread view within that pane.
 
 All time groups activity by UTC month. The 30- and 90-day views group by UTC day and include today. The trend switches between estimated cost, recorded normal-call input plus output tokens, and normal calls. Trend data and the model/effort breakdown show exact counts, input cache-read share, and pricing coverage. Estimated cost includes attributed compaction charges where available, and historical usage keeps the [stored calculation basis](history-storage.md). Use the analytics **Refresh** button to reread saved totals while a backfill is running.
 

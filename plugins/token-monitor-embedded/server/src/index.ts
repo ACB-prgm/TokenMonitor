@@ -118,6 +118,15 @@ server.registerTool('get_history_analytics', {
   return {content:[],_meta:{analytics:await collector.store.efficiency.analytics(period)}};
  }catch{return {isError:true,content:[],_meta:{error:'Local usage analytics are temporarily unavailable.'}};}
 });
+server.registerTool('open_usage_analytics', {
+ title:`${serverDisplayName} Analytics`,
+ description:'Open the standalone local usage dashboard.',
+ inputSchema:{},annotations,
+ _meta:{ui:{resourceUri,visibility:['app']},'openai/ui':{entrypoints:[{type:'global'}]}},
+},async()=>{
+ const panelId=panels.create();
+ return {content:[],_meta:{monitor:await panels.state(panelId),analyticsHome:true}};
+});
 server.registerTool('manage_updates', {
   title: 'TokenMonitor updates', description: 'Panel-only release checks, preferences, and explicitly requested verified installation through Codex.',
   inputSchema: { action: z.enum(['opening','check','configure','dismiss','install']), automatic: z.boolean().optional(),

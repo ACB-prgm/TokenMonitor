@@ -21,7 +21,7 @@ function UsageTable({rows,models=false}:{rows:HistoryAnalytics;models?:boolean})
  </div>;
 }
 
-export function HistoryAnalyticsView({load,onBack,scale,efficiency}:{load:(period:AnalyticsPeriod)=>Promise<HistoryAnalytics>;onBack:()=>void;scale:number;efficiency?:Efficiency}){
+export function HistoryAnalyticsView({load,onBack,scale,efficiency}:{load:(period:AnalyticsPeriod)=>Promise<HistoryAnalytics>;onBack?:()=>void;scale:number;efficiency?:Efficiency}){
  const [period,setPeriod]=useState<AnalyticsPeriod>('all');
  const [metric,setMetric]=useState<keyof typeof metrics>('spend');
  const [request,setRequest]=useState(0);
@@ -49,7 +49,7 @@ export function HistoryAnalyticsView({load,onBack,scale,efficiency}:{load:(perio
  const frozen=efficiency?.history?.frozenThreads;
  return <main className="analytics-page" style={{fontSize:`${scale*90}%`}}>
   <header>
-   <button type="button" onClick={onBack}>‹ Thread monitor</button>
+   {onBack&&<button type="button" onClick={onBack}>‹ Thread monitor</button>}
    <div><label>Period <select value={period} onChange={e=>{setRows(undefined);setError('');setLoading(true);setPeriod(e.target.value as AnalyticsPeriod);}}>
     <option value="all">All time</option><option value="30">Last 30 days</option><option value="90">Last 90 days</option>
    </select></label><button type="button" disabled={loading} onClick={()=>{setLoading(true);setError('');setRequest(n=>n+1);}}>Refresh</button></div>

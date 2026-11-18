@@ -24,7 +24,7 @@ const sample={timestamp:stamp,model:'gpt-6.2-astra',input:100000,cached:0,cacheW
 const catalogResponse=(catalog,etag='"example"')=>new Response(JSON.stringify(catalog),{headers:{etag}});
 function fixture(t){
  const home=mkdtempSync(path.join(tmpdir(),'tm-pricing-'));
- t.after(()=>rmSync(home,{recursive:true,force:true}));
+ t.after(()=>rmSync(home,{recursive:true,force:true,maxRetries:10,retryDelay:100}));
  return home;
 }
 
@@ -111,55 +111,57 @@ test('live and saved costs adopt a new pricing basis with staged replay',async t
   {type:'event_msg',timestamp:stamp,payload:{type:'token_count',info:{last_token_usage:{input_tokens:sample.input,cached_input_tokens:0,cache_write_input_tokens:0,output_tokens:0}}}},
  ].map(serialize).join('\n')+'\n');
  const store=new TelemetryStore(home),history=new EfficiencyStore(home);
- t.after(()=>{store.close();history.close();});
- assert.equal(await store.record({session_id:'chat',transcript_path:file,hook_event_name:'Stop'}),true);
- const now=Date.parse(stamp)+1000,records=[{id:'chat',file}];
- await history.scan(home,records,true,now);
- assert.equal(store.snapshot('chat',now).usage.cost,.8);
- assert.equal(history.snapshot('chat',now).thread.cost,.8);
- const catalog=structuredClone(bundledCatalog);
- catalog.models[sample.model][0].tiers.standard.base.input=7;
- let tick=0;
- const cache=new PricingCache(home,async()=>catalogResponse(catalog),()=>tick);
- await cache.refresh();
- assert.equal(await cache.write(bundledSnapshot,()=>assert.fail('stale basis write')),undefined);
- assert.equal(history.snapshot('chat',now).comparisonReady,false);
- assert.equal(store.snapshot('chat',now).usage.cost,.7);
- await history.scan(home,records,true,now+1000);
- assert.equal(history.snapshot('chat',now+1000).thread.cost,.7);
- assert.equal(history.snapshot('chat',now+1000).comparisonReady,true);
+ try {
+  assert.equal(await store.record({session_id:'chat',transcript_path:file,hook_event_name:'Stop'}),true);
+  const now=Date.parse(stamp)+1000,records=[{id:'chat',file}];
+  await history.scan(home,records,true,now);
+  assert.equal(store.snapshot('chat',now).usage.cost,.8);
+  assert.equal(history.snapshot('chat',now).thread.cost,.8);
+  const catalog=structuredClone(bundledCatalog);
+  catalog.models[sample.model][0].tiers.standard.base.input=7;
+  let tick=0;
+  const cache=new PricingCache(home,async()=>catalogResponse(catalog),()=>tick);
+  await cache.refresh();
+  assert.equal(await cache.write(bundledSnapshot,()=>assert.fail('stale basis write')),undefined);
+  assert.equal(history.snapshot('chat',now).comparisonReady,false);
+  assert.equal(store.snapshot('chat',now).usage.cost,.7);
+  await history.scan(home,records,true,now+1000);
+  assert.equal(history.snapshot('chat',now+1000).thread.cost,.7);
+  assert.equal(history.snapshot('chat',now+1000).comparisonReady,true);
 
- rmSync(file);
- // An orphaned summary without retained numeric detail keeps its committed value.
- history.storage.statement("DELETE FROM history_samples WHERE source='chat'").run();
- catalog.models[sample.model][0].tiers.standard.base.input=6;
- tick+=300000;await cache.refresh();
- await history.scan(home,[],true,now+2000);
- const frozen=history.snapshot('chat',now+2000);
- assert.equal(frozen.thread.cost,.7);
- assert.equal(frozen.threadPricingCurrent,false);
- assert.equal(frozen.comparisonReady,false);
+  rmSync(file);
+  // An orphaned summary without retained numeric detail keeps its committed value.
+  history.storage.statement("DELETE FROM history_samples WHERE source='chat'").run();
+  catalog.models[sample.model][0].tiers.standard.base.input=6;
+  tick+=300000;await cache.refresh();
+  await history.scan(home,[],true,now+2000);
+  const frozen=history.snapshot('chat',now+2000);
+  assert.equal(frozen.thread.cost,.7);
+  assert.equal(frozen.threadPricingCurrent,false);
+  assert.equal(frozen.comparisonReady,false);
+ }finally{store.close();history.close();}
 });
 
 
 test('selected unknown models trigger a retry after the startup cooldown',async t=>{
  const home=fixture(t);
  const collector=new Collector(home,{touch(){},snapshot(){return {};},close(){}});
- t.after(()=>collector.close());
- collector.store.allowanceFiles=()=>[];
- let model='gpt-6.2-astra',tick=0,checks=0;
- collector.store.snapshot=()=>({available:true,model});
- collector.store.pricing=new PricingCache(home,async()=>{checks++;return new Response(null,{status:304});},()=>tick);
- collector.refreshPricing();
- await collector.store.pricing.refresh();
- assert.equal(checks,1);
- tick+=300000;
- await collector.request('state',{taskId:'chat'});
- assert.equal(checks,1);
- model='new-unlisted-model';
- await collector.request('state',{taskId:'chat'});
- await collector.store.pricing.refresh();
- assert.equal(checks,2);
- await collector.request('state',{taskId:'chat'});
- assert.equal(checks,2);
+ try {
+  collector.store.allowanceFiles=()=>[];
+  let model='gpt-6.2-astra',tick=0,checks=0;
+  collector.store.snapshot=()=>({available:true,model});
+  collector.store.pricing=new PricingCache(home,async()=>{checks++;return new Response(null,{status:304});},()=>tick);
+  collector.refreshPricing();
+  await collector.store.pricing.refresh();
+  assert.equal(checks,1);
+  tick+=300000;
+  await collector.request('state',{taskId:'chat'});
+  assert.equal(checks,1);
+  model='new-unlisted-model';
+  await collector.request('state',{taskId:'chat'});
+  await collector.store.pricing.refresh();
+  assert.equal(checks,2);
+  await collector.request('state',{taskId:'chat'});
+  assert.equal(checks,2);
+ }finally{collector.close();}
 });

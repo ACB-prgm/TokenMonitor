@@ -6,12 +6,28 @@ export const dashboardFields = ['calls','priced','inputPriced','inputCost','inpu
 export type DashboardTotals = Record<typeof dashboardFields[number],number>;
 type ThreadGroup = DashboardTotals & {source:string;title:string;model:string;effort:string;basis:string|null};
 export type DashboardThread = DashboardTotals & {source:string;title:string;expected:number|null;contextExpected:number|null;delta:number|null};
-const axis = ['model','effort','workspace'] as const;
+type DashboardModel = {model:string; total:DashboardTotals; efforts:{effort:string;input:number}[]};
 const sums = dashboardFields.map(k=>`SUM(${k}) AS ${k}`).join(',');
 const accumulate = (a:DashboardTotals,b:DashboardTotals,sign=1) => {
  for(const key of dashboardFields)a[key]+=sign*b[key];
 };
 export const emptyDashboardTotals = () => Object.fromEntries(dashboardFields.map(k=>[k,0])) as DashboardTotals;
+
+function rankModels(rows:ThreadGroup[]){
+ const models=new Map<string,{total:DashboardTotals;efforts:Map<string,number>}>();
+ const high=emptyDashboardTotals();
+ for(const row of rows){
+  const model=models.get(row.model)??{total:emptyDashboardTotals(),efforts:new Map<string,number>()};
+  accumulate(model.total,row);
+  if(row.calls)model.efforts.set(row.effort,(model.efforts.get(row.effort)??0)+row.input);
+  models.set(row.model,model);
+  if(row.effort.toLowerCase()==='high')accumulate(high,row);
+ }
+ const ranked=[...models].map(([model,{total,efforts}]):DashboardModel=>({
+  model,total,efforts:[...efforts].map(([effort,input])=>({effort,input})).sort((a,b)=>b.input-a.input||a.effort.localeCompare(b.effort)),
+ })).sort((a,b)=>b.total.input-a.total.input||a.model.localeCompare(b.model));
+ return {models:ranked,high};
+}
 
 function matchingThreads(rows:ThreadGroup[]){
  const cohorts = new Map<string,DashboardTotals>();
@@ -62,20 +78,20 @@ export function readHistoryDashboard(db:HistoryDatabase,period:AnalyticsPeriod,f
  SELECT 'trend' AS kind,${bucket} AS label,'' AS source,'' AS title,'' AS model,'' AS effort,NULL AS basis,${sums}
  FROM scoped WHERE day>=?3 GROUP BY label
  UNION ALL SELECT 'previous','', '', '', '', '', NULL,${sums} FROM scoped WHERE day<?3 HAVING COUNT(*)>0
- ${axis.map(k=>`UNION ALL SELECT '${k}',COALESCE(${k},''),'','','','',NULL,${sums} FROM scoped WHERE day>=?3 GROUP BY ${k}`).join('\n')}
  UNION ALL SELECT 'thread','',source,title,COALESCE(model,''),COALESCE(effort,''),basis,${sums}
  FROM scoped WHERE day>=?3 GROUP BY source,model,effort,basis HAVING calls>0 OR overhead<>0`).all(args) as unknown as Row[];
  const trend=rows.filter(r=>r.kind==='trend').sort((a,b)=>a.label.localeCompare(b.label));
- const threads=matchingThreads(rows.filter(r=>r.kind==='thread'));
+ const threadRows=rows.filter(r=>r.kind==='thread');
+ const threads=matchingThreads(threadRows);
+ const {models,high}=rankModels(threadRows);
  const ranked=threads.filter(r=>r.delta!==null).sort((a,b)=>a.delta!-b.delta!);
  const context=threads.filter(r=>r.contextExpected&&r.inputCost>1.30*r.contextExpected)
   .sort((a,b)=>(b.inputCost-b.contextExpected!)-(a.inputCost-a.contextExpected!))[0];
- const high=rows.find(r=>r.kind==='effort'&&r.label.toLowerCase()==='high');
- const effort=high&&high.splitCalls===high.priced&&high.priced>=20&&high.reasoningCost>=.25*high.cost
+ const effort=high.splitCalls===high.priced&&high.priced>=20&&high.reasoningCost>0&&high.reasoningCost>=.25*high.cost
   ?{perCall:high.reasoningCost/high.priced,share:high.reasoningCost/high.cost,calls:high.priced}:undefined;
  const payback=summarize([],db.outcomes(undefined,start||undefined,iso(today+day),undefined,filters.workspace));
  return {start,end,trend,previous:rows.find(r=>r.kind==='previous'),
-  mix:Object.fromEntries(axis.map(k=>[k,rows.filter(r=>r.kind===k)])) as Record<typeof axis[number],Row[]>,
+  models,
   choices:{
    model:db.statement("SELECT DISTINCT COALESCE(model,'') AS value FROM history_dimensions ORDER BY value").all().map(r=>String(r.value)),
    effort:db.statement("SELECT DISTINCT COALESCE(effort,'') AS value FROM history_dimensions ORDER BY value").all().map(r=>String(r.value)),

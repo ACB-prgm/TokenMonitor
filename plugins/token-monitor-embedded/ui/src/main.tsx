@@ -149,7 +149,7 @@ function Panel() {
     const interval=summary ? undefined : setInterval(()=>{if(document.visibilityState==='visible')void refresh();},2000);
     return ()=>{active.current=false;serial.current++;clearInterval(interval);document.removeEventListener('visibilitychange',visible);app.close();};
   },[]);
-  if(analytics)return <HistoryAnalyticsView load={loadAnalytics} onBack={analytics==='panel'?()=>setAnalytics(undefined):undefined} scale={layout.scale} efficiency={state.efficiency}/>;
+  if(analytics)return <HistoryAnalyticsView load={loadAnalytics} onBack={analytics==='panel'?()=>setAnalytics(undefined):undefined} efficiency={state.efficiency}/>;
   return <MonitorView s={state} expanded={layout.expanded} scale={layout.scale} error={error} onAnalytics={!summary&&state.panelId?openAnalytics:undefined}
     resume={resume} resumeBusy={resumeBusy} resumeError={resumeError} onResume={!summary?manageResume:undefined}
     onStorage={summary?undefined:async()=>{const result=await app.callServerTool({name:'get_history_storage',arguments:{panelId:current.current.panelId}});if(result.isError||!(result._meta as any)?.storage)throw Error('Storage diagnostics unavailable.');return (result._meta as any).storage;}} updates={updates} onUpdate={summary?undefined:action=>void manageUpdate(action)} updateError={updateError}

@@ -50,12 +50,16 @@ function history(period,filters={}){
   period==='90'?['2026-09-28','2026-10-05','2026-10-12','2026-10-19']:
   ['2026-10-15','2026-10-16','2026-10-18','2026-10-19'];
  const trend=labels.map((label,i)=>({label,...sample([2,5,3,7][i])}));
- const mix=Object.fromEntries(Object.entries(choices).map(([k,items])=>[k,items.filter(label=>filters[k]===undefined||filters[k]===label)
-  .map((label,i,all)=>({label,...sample(all.length===1?17:i===0?10:7)}))]));
+ const models=choices.model.filter(model=>filters.model===undefined||filters.model===model).map(model=>{
+  const factor=model===choices.model[0]?10:7;
+  const efforts=choices.effort.filter(effort=>filters.effort===undefined||filters.effort===effort)
+   .map(effort=>({effort,input:sample(effort==='high'?factor-2:2).input}));
+  return {model,total:sample(efforts.reduce((n,e)=>n+e.input,0)/sample(1).input),efforts};
+ });
  const low={...sample(3),source:'panel',title:'Panel layout',delta:-.31,expected:26.5,contextExpected:11};
  const high={...sample(7),source:'history',title:'History storage upgrade',delta:.88,expected:22.7,contextExpected:10};
  return {start:period==='all'?'':period==='7'?'2026-10-13':period==='30'?'2026-09-20':'2026-07-22',end:'2026-10-19',
-  trend,previous:period==='all'?undefined:sample(14),mix,choices,active:2,low:[low],high:[high],spend:[high,low],
+  trend,previous:period==='all'?undefined:sample(14),models,choices,active:2,low:[low],high:[high],spend:[high,low],
   context:high,effort:{perCall:.07,share:.35,calls:300},payback:{profitable:7,evaluable:10,pending:1,net:4.75}};
 }
 function counts(){document.querySelector('#counts').textContent='Refresh calls '+calls+' · prompts '+messages+' · context updates '+updates;}

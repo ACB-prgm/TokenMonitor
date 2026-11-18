@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import type {AnalyticsPeriod} from '../../server/src/history-database.js';
 import type {DashboardFilters,DashboardThread,DashboardTotals,HistoryDashboard} from '../../server/src/history-dashboard.js';
 import type {Efficiency} from '../../server/src/efficiency.js';
+import {pluginName} from '../../shared/identity.js';
 import {categories,exact,money,percent} from './analytics.js';
 
 const spend=(r:DashboardTotals)=>r.cost+r.overhead;
@@ -13,11 +14,17 @@ const metrics={
  cache:{label:'Cached input',value:cached,format:percent},
 };
 type Metric=keyof typeof metrics;
-type Display = {metric:Metric; group:keyof DashboardFilters; rank:string};
+type Display = {metric:Metric; rank:string};
 const splitKeys=['freshCost','readCost','writeCost','reasoningCost','otherCost','unsplitCost'] as const;
-const filterLabels={model:'Model',effort:'Effort',workspace:'Workspace'};
-const unknownLabels={model:'Unknown model',effort:'Unknown effort',workspace:'No workspace'};
+const filterLabels={model:'Model',effort:'Effort',workspace:'Project'};
+const unknownLabels={model:'Unknown model',effort:'Unknown effort',workspace:'No project'};
 const dimensions=Object.keys(filterLabels) as (keyof DashboardFilters)[];
+const scales=['Compact','Comfortable','Large'] as const;
+const scaleKey=`${pluginName}-analytics-scale`;
+function savedScale(){
+ try{return scales.find(s=>s===localStorage.getItem(scaleKey))??scales[0];}
+ catch{return scales[0];}
+}
 const periods={7:'Last 7 days',30:'Last 30 days',90:'Last 90 days',all:'All time'};
 const periodKeys=Object.keys(periods) as AnalyticsPeriod[];
 const signed=(value:number)=>`${value>0?'+':''}${Number(value.toFixed(1))}`;
@@ -59,10 +66,29 @@ function TrendMarks({values,metric,spark=false}:{values:(number|null)[];metric:M
  </svg>;
 }
 
-function Dashboard({data,period,onFilter,filters,display,setDisplay}:{data:HistoryDashboard;period:AnalyticsPeriod;
- onFilter:(key:keyof DashboardFilters,value:string)=>void; filters:DashboardFilters;
+function TopModels({models}:{models:HistoryDashboard['models']}){
+ return <section className="analytics-section">
+  <div className="analytics-section-heading"><h2>Your top models</h2><span className="analytics-note">Ranked by input tokens · includes cached input</span></div>
+  <div className="analytics-models">{models.map(({model,total,efforts})=><article key={model}>
+   <div className="analytics-section-heading"><h3>{labelFor('model',model)}</h3><span><b>{exact(total.input)}</b> <small>input tokens</small></span></div>
+   <ul className="analytics-efforts" aria-label="Input tokens by effort">
+    {efforts.map(({effort,input})=><li key={effort}>
+     <div className="analytics-section-heading"><span>{labelFor('effort',effort)}</span><span>{exact(input)}</span></div>
+     <div className="stack" aria-hidden="true"><span style={{width:`${total.input?input/total.input*100:0}%`}}/></div>
+    </li>)}
+   </ul>
+   <dl className="analytics-model-kpis">{(Object.keys(metrics) as Metric[]).map(key=>{
+    const m=metrics[key];
+    return <div key={key}><dt>{m.label}</dt><dd>{m.format(m.value(total))}</dd></div>;
+   })}</dl>
+   {total.priced<total.calls&&<p className="analytics-note">{exact(total.priced)} / {exact(total.calls)} calls priced</p>}
+  </article>)}</div>
+ </section>;
+}
+
+function Dashboard({data,period,display,setDisplay}:{data:HistoryDashboard;period:AnalyticsPeriod;
  display:Display; setDisplay:(next:Display)=>void}){
- const {metric,group,rank}=display;
+ const {metric,rank}=display;
  const [selection,setSelection]=useState<string>();
  const series=dateSeries(data,period);
  if(!series.length)return <p className="analytics-empty">No imported activity matches these filters.</p>;
@@ -73,7 +99,6 @@ function Dashboard({data,period,onFilter,filters,display,setDisplay}:{data:Histo
  const peak=metric==='cache'?100:Math.max(...values.map(v=>v??0));
  const composition=splitKeys.map((key,i)=>({...categories[i],value:total[key]}));
  const splitTotal=composition.reduce((n,part)=>n+part.value,0);
- const mix=[...data.mix[group]].sort((a,b)=>spend(b)-spend(a)||b.calls-a.calls);
  const active=(rank==='peer'?[...data.low,...data.high]:data.spend).find(t=>t.source===selection);
  const rankings=(rows:DashboardThread[],heading?:string)=><div>{heading&&<h3>{heading}</h3>}
   {rows.length?<ul className="analytics-rank-list">{rows.map(t=><li key={t.source}>
@@ -118,7 +143,6 @@ function Dashboard({data,period,onFilter,filters,display,setDisplay}:{data:Histo
    </div>
   </section>}
 
-  <div className="analytics-columns">
    <section className="analytics-section">
     <div className="analytics-section-heading"><h2>{cost.label} over time</h2><span className="analytics-note">{period==='all'?'Monthly':period==='90'?'Weekly':'Daily'} · UTC</span></div>
     <div className="analytics-trend"><div className="analytics-axis analytics-note"><span>{cost.format(peak)}</span><span>{cost.format(peak/2)}</span><span>{cost.format(0)}</span></div>
@@ -129,18 +153,7 @@ function Dashboard({data,period,onFilter,filters,display,setDisplay}:{data:Histo
      <tbody>{series.map(({label,row},i)=><tr key={label}><th scope="row">{label}</th><td>{cost.format(values[i])}</td><td>{exact(row?.calls??0)}</td></tr>)}</tbody>
     </table></div></details>
    </section>
-   <section className="analytics-section">
-    <div className="analytics-section-heading"><h2>Cost breakdown</h2>
-     <select aria-label="Group cost by" value={group} onChange={e=>setDisplay({...display,group:e.target.value as typeof group})}>{dimensions.map(k=><option key={k} value={k}>By {k}</option>)}</select>
-    </div>
-    <ul className="analytics-mix">{mix.map(r=><li key={r.label}>
-     <button type="button" aria-pressed={filters[group]===r.label} onClick={()=>onFilter(group,r.label)}>
-      <span><strong>{labelFor(group,r.label)}</strong><small>{money(metrics.spend.value(r))}{spend(total)>0&&` · ${percent(spend(r)/spend(total)*100)}`}</small></span>
-      <i aria-hidden="true" style={{width:`${spend(total)>0?spend(r)/spend(total)*100:0}%`}}/>
-     </button>
-    </li>)}</ul>
-   </section>
-  </div>
+   <TopModels models={data.models}/>
 
   <section className="analytics-section">
    <div className="analytics-section-heading"><div><h2>Thread outliers</h2><p className="analytics-note">{rank==='peer'?'Matched by model and effort · 20+ priced calls · comparable pricing':'Known charges in the selected period'}</p></div>
@@ -156,13 +169,14 @@ function Dashboard({data,period,onFilter,filters,display,setDisplay}:{data:Histo
     </div></>}</div>
   </section>
   <details className="analytics-section"><summary>Compaction outcomes · {data.payback.evaluable?`${data.payback.profitable} / ${data.payback.evaluable} paid back`:'No evaluable events'}</summary>
-   <p className="analytics-note">Selected dates and workspace, across all models and efforts. {exact(data.payback.pending)} pending{data.payback.evaluable?` · ${money(data.payback.net)} estimated net savings`:''}.</p>
+   <p className="analytics-note">Selected dates and project, across all models and efforts. {exact(data.payback.pending)} pending{data.payback.evaluable?` · ${money(data.payback.net)} estimated net savings`:''}.</p>
   </details>
  </>;
 }
 
-export function HistoryAnalyticsView({load,onBack,scale,efficiency}:{load:(period:AnalyticsPeriod,filters:DashboardFilters)=>Promise<HistoryDashboard>;onBack?:()=>void;scale:number;efficiency?:Efficiency}){
- const [display,setDisplay]=useState<Display>({metric:'spend',group:'model',rank:'peer'});
+export function HistoryAnalyticsView({load,onBack,efficiency}:{load:(period:AnalyticsPeriod,filters:DashboardFilters)=>Promise<HistoryDashboard>;onBack?:()=>void;efficiency?:Efficiency}){
+ const [scale,setScale]=useState(savedScale);
+ const [display,setDisplay]=useState<Display>({metric:'spend',rank:'peer'});
  const [period,setPeriod]=useState<AnalyticsPeriod>('30');
  const [filters,setFilters]=useState<DashboardFilters>({});
  const [loaded,setLoaded]=useState<{key:string;data:HistoryDashboard}>();
@@ -186,26 +200,33 @@ export function HistoryAnalyticsView({load,onBack,scale,efficiency}:{load:(perio
  },[key,period,filters,request,load]);
  const filter=(k:keyof DashboardFilters,value?:string)=>{
   setStatus('loading');
-  setFilters(current=>({...current,[k]:current[k]===value?undefined:value}));
+  setFilters(current=>({...current,[k]:value}));
  };
  const progress=efficiency?.progress;
- return <main className="analytics-page" style={{fontSize:`${scale*92}%`}}>
+ return <main className="analytics-page" data-scale={scale}>
   <header className="analytics-heading">
    <div>{onBack&&<button type="button" onClick={onBack}>‹ Thread monitor</button>}
     <h1 ref={heading} tabIndex={-1}>Usage analytics</h1><p className="analytics-note">Local Codex history · API-equivalent USD</p>
    </div>
-   <button type="button" disabled={status==='loading'} onClick={()=>{cache.current.delete(key);setStatus('loading');setRequest(n=>n+1);}}>Refresh</button>
+   <div className="analytics-heading-controls">
+    <label>View scale <select value={scale} onChange={e=>{
+     const next=scales[e.target.selectedIndex];
+     setScale(next);
+     try{localStorage.setItem(scaleKey,next);}catch{/* The current view still updates. */}
+    }}>{scales.map(s=><option key={s}>{s}</option>)}</select></label>
+    <button type="button" disabled={status==='loading'} onClick={()=>{cache.current.delete(key);setStatus('loading');setRequest(n=>n+1);}}>Refresh</button>
+   </div>
   </header>
   <div className="analytics-toolbar">
    <div className="analytics-periods" role="group" aria-label="Date range">{periodKeys.map(k=><button key={k} type="button" aria-pressed={period===k} onClick={()=>{if(period!==k){setStatus('loading');setPeriod(k);}}}>{periods[k]}</button>)}</div>
    <div className="analytics-filters">{dimensions.map(k=><select key={k} aria-label={filterLabels[k]} value={filters[k]===undefined?'all':`=${filters[k]}`} onChange={e=>filter(k,e.target.value==='all'?undefined:e.target.value.slice(1))}>
-    <option value="all">All {k}s</option>{data?.choices[k].map(v=><option key={v} value={`=${v}`}>{labelFor(k,v)}</option>)}
+    <option value="all">All {filterLabels[k].toLowerCase()}s</option>{data?.choices[k].map(v=><option key={v} value={`=${v}`}>{labelFor(k,v)}</option>)}
    </select>)}</div>
   </div>
   {progress?.running&&<p className="analytics-note">Importing history · {progress.processed} of {progress.total} chats checked. Refresh for current totals.</p>}
   {!!progress?.failed&&<p className="analytics-note">{exact(progress.failed)} chats could not be read.</p>}
   {status==='loading'&&<p role="status" className="analytics-note">Loading usage analytics…</p>}
   {status==='error'&&<p role="status">Local history is unavailable. Try refreshing.</p>}
-  {data&&loaded?.key===key&&status!=='loading'&&<Dashboard data={data} period={period} filters={filters} onFilter={filter} display={display} setDisplay={setDisplay}/>}
+  {data&&loaded?.key===key&&status!=='loading'&&<Dashboard data={data} period={period} display={display} setDisplay={setDisplay}/>}
  </main>;
 }

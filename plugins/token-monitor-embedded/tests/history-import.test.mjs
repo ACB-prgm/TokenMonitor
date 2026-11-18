@@ -181,10 +181,10 @@ test('active payback survives incremental import, restart and closure without do
 test('dashboard filters published history, reconciles cost categories and ranks comparable threads',()=>fixture(({db})=>{
  const basis=db.internBasis(historyBasis);
  const now=Date.parse('2026-11-18T00:00:00Z');
- const add=(source,model,workspace,calls,unit,day='2026-11-16',covered=true)=>{
+ const add=(source,model,workspace,calls,unit,day='2026-11-16',covered=true,effort='high')=>{
   db.statement('INSERT OR IGNORE INTO history_sources VALUES(?,?,?,NULL)').run(source,'',basis);
   db.statement('INSERT OR IGNORE INTO history_catalogue(source,title,workspace) VALUES(?,?,?)').run(source,source,workspace);
-  db.addBucket(source,{timestamp:day,model,effort:'high',calls,priced:calls,inputPriced:calls,
+  db.addBucket(source,{timestamp:day,model,effort,calls,priced:calls,inputPriced:calls,
    input:100*calls,cached:50*calls,output:calls,cacheInput:100*calls,cacheRead:50*calls,cacheWrite:0,
    cost:calls*unit,inputCost:calls*unit/2,overhead:0,freshCost:covered?calls*unit/2:0,
    reasoningCost:covered?calls*unit/2:0,splitCalls:covered?calls:0});
@@ -193,6 +193,7 @@ test('dashboard filters published history, reconciles cost categories and ranks 
  add('ordinary','model-a','work',30,1);
  add('old','model-a','work',20,1,'2026-11-08',false);
  add('different','model-b','other',60,5);
+ add('different','model-b','other',10,3,undefined,true,'medium');
  add('~staging','model-a','work',60,99);
  const read=mod.exports.readHistoryDashboard;
  const result=read(db,'7',{workspace:'work',model:'model-a'},now);
@@ -204,6 +205,13 @@ test('dashboard filters published history, reconciles cost categories and ranks 
  assert.equal(result.low[0].delta,-.5);
  assert.equal(result.context.title,'expensive');
  assert.equal(result.effort.share,.5);
+ assert.deepEqual(result.models.map(({model,total,efforts})=>[model,total.input,total.cached,total.cost,efforts]),[
+  ['model-a',5500,2750,80,[{effort:'high',input:5500}]],
+ ]);
+ const {models}=read(db,'7',{},now);
+ assert.deepEqual(models.map(m=>[m.model,m.total.input]),[['model-b',7000],['model-a',5500]]);
+ assert.deepEqual(models[0].efforts,[{effort:'high',input:6000},{effort:'medium',input:1000}]);
+ assert.deepEqual(read(db,'7',{effort:'medium',workspace:'other'},now).models.map(m=>m.total.input),[1000]);
  assert.equal(read(db,'90',{},now).trend.at(-1).label,'2026-11-16');
  assert.equal(read(db,'all',{workspace:'work'},now).trend[0].splitCalls,55);
  assert.equal(read(db,'7',{model:'missing'},now).trend.length,0);

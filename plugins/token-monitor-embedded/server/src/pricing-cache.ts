@@ -17,7 +17,7 @@ function canonical(value:unknown):unknown{
 }
 function basis(c:Catalog){
  const models=Object.fromEntries(Object.entries(c.models).map(([id,schedules])=>[id,schedules.map(({dateBasis:_,dateSource:__,effectiveFrom,...rules})=>({...rules,effectiveFrom:Date.parse(effectiveFrom)}))]));
- return JSON.stringify({version:6,table:createHash('sha256').update(JSON.stringify(canonical({models,aliases:c.aliases}))).digest('hex')});
+ return JSON.stringify({version:7,table:createHash('sha256').update(JSON.stringify(canonical({models,aliases:c.aliases}))).digest('hex')});
 }
 export type PricingSnapshot={pricing:Pricing;basis:string;origin:'bundled'|'cached'};
 export const bundledSnapshot:PricingSnapshot={pricing:bundledPricing,basis:basis(bundledCatalog),origin:'bundled'};

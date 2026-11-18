@@ -208,3 +208,14 @@ test('dashboard filters published history, reconciles cost categories and ranks 
  assert.equal(read(db,'all',{workspace:'work'},now).trend[0].splitCalls,55);
  assert.equal(read(db,'7',{model:'missing'},now).trend.length,0);
 }));
+
+test('transcript import persists the exact priced call composition',()=>fixture(({db,home,f})=>{
+ const timestamp='2026-11-18T12:00:00.000Z',now=Date.parse(timestamp);
+ writeFileSync(f.file,lines([{...header,timestamp},{...context,timestamp},{...call(0),timestamp}]));
+ drain(db,home,f,{now});
+ const {trend:[row]}=mod.exports.readHistoryDashboard(db,'7',{},now);
+ assert.equal(row.priced,1);
+ assert.equal(row.splitCalls,1);
+ assert.ok(row.reasoningCost>0);
+ assert.ok(Math.abs(row.cost-row.freshCost-row.readCost-row.writeCost-row.reasoningCost-row.otherCost-row.unsplitCost)<1e-12);
+}));

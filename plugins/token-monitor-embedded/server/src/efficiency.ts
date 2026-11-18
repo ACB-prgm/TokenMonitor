@@ -10,7 +10,7 @@ import {bundledSnapshot,PricingCache,type PricingSnapshot} from './pricing-cache
 import {acceptedTranscript,privateDirectory,stateRoot} from './platform.js';
 export const historyBasis=bundledSnapshot.basis;
 function compatibleBasis(definition:string,expectedBasis:string):boolean {
- try{const {version,...basis}=JSON.parse(definition),{version:current,...expected}=JSON.parse(expectedBasis);return [3,4,5,current].includes(version)&&Object.keys(basis).length===Object.keys(expected).length&&Object.entries(expected).every(([key,value])=>basis[key]===value);}catch{return false;}
+ try{const {version,...basis}=JSON.parse(definition),{version:current,...expected}=JSON.parse(expectedBasis);return [3,4,5,6,current].includes(version)&&Object.keys(basis).length===Object.keys(expected).length&&Object.entries(expected).every(([key,value])=>basis[key]===value);}catch{return false;}
 }
 export {HistoryBuilder,summarize,callBucket,inputCost} from './history-builder.js';
 import {HistoryBuilder,summarize,callBucket,type NumericCall,type Bucket,type Payback,type ThreadHistory,type Summary} from './history-builder.js';

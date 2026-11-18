@@ -20,7 +20,8 @@ export function summarize(buckets:Bucket[],paybacks:Payback[]=[]){
   pending:count(paybacks.filter(p=>!resolved(p))),excluded:count(paybacks.filter(p=>p.completed&&!p.valid)),inactivity:count(valid.filter(p=>p.reason==='inactivity'))};
 }
 export type Summary=ReturnType<typeof summarize>;
-export function callBucket(s:NumericCall,pricing=bundledPricing):Bucket{const c=inputCost(s,pricing),p=price(s,pricing);return {timestamp:s.timestamp,model:s.model,effort:s.effort,rateBand:JSON.stringify(p.rates),cacheInput:c!=null?s.input:0,cacheRead:c!=null?s.cached:0,serviceTier:s.serviceTier,regionalProcessing:s.regionalProcessing,input:s.input,cached:s.cached,cacheWrite:s.cacheWrite,output:s.output,calls:1,priced:p.total!=null?1:0,inputPriced:c!=null?1:0,cost:p.total??0,inputCost:c??0,overhead:0};}
+export function callBucket(s:NumericCall,pricing=bundledPricing):Bucket{const c=inputCost(s,pricing),p=price(s,pricing);return {timestamp:s.timestamp,model:s.model,effort:s.effort,rateBand:JSON.stringify(p.rates),cacheInput:c!=null?s.input:0,cacheRead:c!=null?s.cached:0,serviceTier:s.serviceTier,regionalProcessing:s.regionalProcessing,input:s.input,cached:s.cached,cacheWrite:s.cacheWrite,output:s.output,calls:1,priced:p.total!=null?1:0,inputPriced:c!=null?1:0,cost:p.total??0,inputCost:c??0,overhead:0,
+ ...Object.fromEntries(compositionKeys.map((key,i)=>[key,i===6?Number(!!p.categories):p.categories?.[i]??0]))};}
 export class HistoryBuilder {
  constructor(private pricing=bundledPricing){}
  data:ThreadHistory={first:[],last:[],buckets:[],paybacks:[],charges:[]};private groups=new Map<string,Bucket>();private previous?:NumericCall;private epoch?:Payback;private retained?:number;private before?:NumericCall;private overheadBucket?:Bucket;private charge?:Bucket;private originalRead=0;private overhead=0;private compaction?:CompactionDetail;

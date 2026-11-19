@@ -2,6 +2,8 @@
 
 The dashboard now follows the decision order: consolidated Thread Usage (context capacity, account allowances and lifetime thread spending), efficiency comparisons, supported insights, latest-call diagnostics, and recent call history. Spending uses the dated schedules in the [pricing catalog](efficiency-metrics.md#pricing-catalog).
 
+The thread monitor fills the width available in its Codex pane. On systems where scrollbars take up layout space, the pane reserves that space so opening and closing Recent Calls previews keeps the chart and dashboard aligned.
+
 The header leads with the searchable local-thread selector, followed by Rescan threads, Refresh metrics and Settings. Refresh and Settings use 32 px square controls with centered 16 px icons. Rescan matches their height and uses the same square icon control at widths up to 480 px. An undismissed release update fills the Settings button orange and adds “update available” to its accessible name. Refresh retrieves telemetry; Rescan discovers restored or newly available local transcripts. Search uses names, IDs and existing project filtering, with pending/results states inside the selector. Archived history remains part of analytics; an already-selected archived thread remains visible. Settings holds scale, About/version, update controls, and performance thresholds.
 
 **Refresh metrics** runs the same check as the automatic two-second poll and clears the panel's retry delay after a connection failure. It reuses any check already in progress. Account allowances keep their own [refresh cadence](account-allowances.md#live-source). Use **Rescan threads** to rediscover local transcripts.

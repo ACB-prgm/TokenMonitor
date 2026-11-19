@@ -1,4 +1,5 @@
 import type {DashboardFilters,HistoryDashboard} from './history-dashboard.js';
+import type {AnalyticsGrain} from '../../shared/analytics-grain.js';
 import {Worker} from 'node:worker_threads';
 import type {Efficiency} from './efficiency.js';
 import type {HistoryFile} from './history-import.js';
@@ -23,7 +24,7 @@ export class HistoryClient {
  snapshot(id?:string):Promise<Efficiency>{return this.request('snapshot',{id});}
  diagnostics(){return this.request('diagnostics',{});}
  analytics(period:AnalyticsPeriod):Promise<HistoryAnalytics>{return this.request('analytics',{period});}
- dashboard(period:AnalyticsPeriod,filters:DashboardFilters):Promise<HistoryDashboard>{return this.request('dashboard',{period,filters});}
+ dashboard(period:AnalyticsPeriod,filters:DashboardFilters,grain?:AnalyticsGrain):Promise<HistoryDashboard>{return this.request('dashboard',{period,filters,grain});}
  savedTasks(query='',includeArchived=false){return this.request('saved',{query,includeArchived});}
  close(){this.closed=true;for(const p of this.pending.values())p.reject(Error('History client closed'));this.pending.clear();void this.worker?.terminate();this.worker=undefined;}
 }

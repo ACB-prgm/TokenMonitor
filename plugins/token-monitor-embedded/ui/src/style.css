@@ -182,7 +182,6 @@ details[open]>summary::before,details[open]>summary .disclosure-caret,
 .analytics-trend{display:flex;align-items:stretch;gap:.6em;height:clamp(8em,calc(5em + 8vw),11em);margin-top:.8em}
 .analytics-axis{display:flex;flex-direction:column;justify-content:space-between;text-align:right;font-variant-numeric:tabular-nums}
 .analytics-trend svg{min-width:0;flex:1;stroke:var(--blue)}
-.analytics-trend rect{fill:var(--blue);stroke:none}
 .analytics-trend line.analytics-gridline{stroke:var(--line)}
 .analytics-dates{display:flex;justify-content:space-between;margin:.2em 0 .45em}
 .analytics-page details summary{cursor:pointer;color:var(--muted)}

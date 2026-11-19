@@ -1,5 +1,6 @@
 import type {AnalyticsPeriod,HistoryDatabase} from './history-database.js';
 import {compositionKeys,summarize} from './history-builder.js';
+import {defaultAnalyticsGrain,type AnalyticsGrain} from '../../shared/analytics-grain.js';
 
 export type DashboardFilters = {model?:string; effort?:string; workspace?:string};
 export const dashboardFields = ['calls','priced','inputPriced','inputCost','input','cached','output','cost','overhead',...compositionKeys] as const;
@@ -56,13 +57,17 @@ function matchingThreads(rows:ThreadGroup[]){
  });
 }
 
-export function readHistoryDashboard(db:HistoryDatabase,period:AnalyticsPeriod,filters:DashboardFilters,now=Date.now()){
+export function readHistoryDashboard(db:HistoryDatabase,period:AnalyticsPeriod,filters:DashboardFilters,now=Date.now(),grain=defaultAnalyticsGrain(period)){
  const day=864e5, today=Math.floor(now/day)*day;
  const iso=(n:number)=>new Date(n).toISOString().slice(0,10);
  const end=iso(today);
  const start=period==='all'?'':iso(today-(Number(period)-1)*day);
  const previous=period==='all'?'':iso(today-(2*Number(period)-1)*day);
- const bucket=period==='all'?'substr(day,1,7)':period==='90'?"date(day,'-' || ((CAST(strftime('%w',day) AS INTEGER)+6)%7) || ' days')":'day';
+ const buckets:Record<AnalyticsGrain,string>={
+  day:'day',
+  week:"date(day,'-' || ((CAST(strftime('%w',day) AS INTEGER)+6)%7) || ' days')",
+  month:"date(day,'start of month')",
+ };
  const scope=`SELECT t.*, d.model AS model, d.effort AS effort, c.workspace AS workspace,
   COALESCE(c.title,'Saved chat · '||substr(t.source,-8)) AS title, COALESCE(p.basis,s.basis) AS basis
  FROM history_daily t JOIN history_dimensions d ON d.id=t.dimension
@@ -75,7 +80,7 @@ export function readHistoryDashboard(db:HistoryDatabase,period:AnalyticsPeriod,f
  const args={'1':previous,'2':end,'3':start,'4':filters.model??null,'5':filters.effort??null,'6':filters.workspace??null};
  type Row = DashboardTotals & {kind:string; label:string;source:string;title:string;model:string;effort:string;basis:string|null};
  const rows=db.statement(`WITH scoped AS MATERIALIZED (${scope})
- SELECT 'trend' AS kind,${bucket} AS label,'' AS source,'' AS title,'' AS model,'' AS effort,NULL AS basis,${sums}
+ SELECT 'trend' AS kind,${buckets[grain]} AS label,'' AS source,'' AS title,'' AS model,'' AS effort,NULL AS basis,${sums}
  FROM scoped WHERE day>=?3 GROUP BY label
  UNION ALL SELECT 'previous','', '', '', '', '', NULL,${sums} FROM scoped WHERE day<?3 HAVING COUNT(*)>0
  UNION ALL SELECT 'thread','',source,title,COALESCE(model,''),COALESCE(effort,''),basis,${sums}

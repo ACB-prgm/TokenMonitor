@@ -12,11 +12,13 @@ The header leads with the searchable local-thread selector, followed by Rescan t
 
 Open **Token Monitor Analytics** from Codex's main navigation to see all imported local chats, including archived chats and saved usage from missing transcripts. DEV labels the entry **Token Monitor DEV Analytics**. The conversation monitor's **Settings → Usage analytics** links to the same standalone app and keeps analytics available in the conversation pane if the host cannot open the link. **Thread monitor** returns to the current thread view within that pane.
 
-The standalone view starts at Last 30 days. Last 7 and 30 days group by UTC day, Last 90 days by UTC week starting Monday, and All time by UTC month. Periods include today. Model, effort and project filter the view. KPI cards switch the trend between estimated cost, cost per call, context cost per call and cached input share. Rolling windows compare with the preceding equal-length period.
+The standalone view starts at Last 30 days. Last 7 and 30 days default to Daily, and Last 90 days and All time default to Weekly. Choose Daily, Weekly or Monthly in the toolbar. Buckets use UTC calendar dates, with weeks starting Monday. Periods include today. Model, effort and project filter the view. KPI cards switch the trend between estimated cost, total tokens, cost per call, context cost per call and cached input share. Total tokens adds recorded normal-call input and output. Cached input and reasoning output are already included in those counts. Rolling windows compare with the preceding equal-length period.
+
+KPI charts and sparklines interpolate linearly between measured buckets. Exact trend values still show missing measurements as unavailable, and period totals and comparisons use recorded activity.
 
 **View scale** defaults to Compact. Comfortable and Large resize typography, spacing, charts, and card widths, so the layout reflows with available space. The analytics preference saves locally when storage is available and is independent of the thread monitor's display scale.
 
-**Your top models** ranks models in the selected slice by total recorded normal-call input tokens, including cached input. Each card shows the input count by reasoning effort and the same four KPIs calculated from that model's totals. The project selection applies through the filter.
+**Your top models** ranks models in the selected slice by total recorded normal-call input tokens, including cached input. Each card shows the input count by reasoning effort and the same KPIs calculated from that model's totals. The project selection applies through the filter.
 
 Cost composition reuses the thread monitor categories and shows normal-call dollars and share. Compaction charges appear separately and remain included in total estimated cost. The chart reports category coverage because older summaries and unpriced calls may lack a breakdown. A background replay fills categories from readable transcripts while keeping published totals available.
 

@@ -213,7 +213,15 @@ test('dashboard filters published history, reconciles cost categories and ranks 
  assert.deepEqual(models[0].efforts,[{effort:'high',input:6000},{effort:'medium',input:1000}]);
  assert.deepEqual(read(db,'7',{effort:'medium',workspace:'other'},now).models.map(m=>m.total.input),[1000]);
  assert.equal(read(db,'90',{},now).trend.at(-1).label,'2026-11-16');
- assert.equal(read(db,'all',{workspace:'work'},now).trend[0].splitCalls,55);
+ const work={workspace:'work'};
+ assert.deepEqual(read(db,'all',work,now).trend.map(r=>[r.label,r.splitCalls]),[
+  ['2026-11-02',0],['2026-11-16',55],
+ ]);
+ assert.deepEqual(read(db,'30',work,now).trend.map(r=>r.label),['2026-11-08','2026-11-16']);
+ const monthly=read(db,'7',work,now,'month');
+ assert.deepEqual(monthly.trend.map(r=>[r.label,r.calls,r.input+r.output]),[['2026-11-01',55,5555]]);
+ assert.equal(monthly.previous.calls,20,'grain does not change the selected dates');
+ assert.deepEqual(read(db,'all',work,now,'day').trend.map(r=>r.label),['2026-11-08','2026-11-16']);
  assert.equal(read(db,'7',{model:'missing'},now).trend.length,0);
 }));
 

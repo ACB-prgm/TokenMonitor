@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 1.14.0
+
+- Choose daily, weekly, or monthly UTC buckets in Usage Analytics. The trend chart connects observed buckets, and **Exact trend values** shows which buckets have data.
+- Select **Total tokens** to chart input plus output tokens, with abbreviations on the chart and full counts in the table.
+- Ask Codex about Token Monitor to use the bundled help skill and its dashboard walkthrough, metric calculations, FAQ, and efficiency guidance.
+- The conversation dashboard fills the available pane width and reserves scrollbar space to reduce layout shifts.
+
 ## 1.13.0
 
 - Open Usage analytics from Codex's main navigation or the thread monitor's Settings. Explore all imported history or the last 7, 30 or 90 days with model, effort and project filters.

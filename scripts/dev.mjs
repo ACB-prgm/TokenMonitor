@@ -5,6 +5,7 @@ import {randomInt,randomUUID} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import {buildPlugin} from '../plugins/token-monitor-embedded/scripts/build.mjs';
+import {copyPluginHelp} from './plugin-help.mjs';
 
 const repo=fileURLToPath(new URL('..',import.meta.url));
 export const marketplaceName='tokenmonitor-dev';
@@ -25,6 +26,7 @@ export async function buildDev({marketplaceRoot=path.join(repo,'.build/tokenmoni
   await mkdir(path.join(pluginRoot,'.codex-plugin'),{recursive:true});
   await writeJSON(path.join(pluginRoot,'.codex-plugin/plugin.json'),manifest);
   await cp(path.join(repo,'plugins/token-monitor-embedded/assets'),path.join(pluginRoot,'assets'),{recursive:true});
+  await copyPluginHelp(pluginRoot);
   for(const name of ['LICENSE','NOTICE']) await cp(path.join(repo,name),path.join(pluginRoot,name));
   await writeJSON(path.join(pluginRoot,'.mcp.json'),{mcpServers:{[pluginName]:{
     command:process.execPath,args:['./server/dist/index.mjs'],cwd:'.',

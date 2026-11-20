@@ -2,6 +2,7 @@
 // One shared implementation; platform manifests select only the runtime/bootstrap.
 import {mkdir,readFile,writeFile,rm,cp,readdir,chmod,stat} from 'node:fs/promises';
 import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';import {gzipSync} from 'node:zlib';import {execFileSync} from 'node:child_process';
+import {copyPluginHelp} from './plugin-help.mjs';
 const repo=fileURLToPath(new URL('..',import.meta.url)),plugin=path.join(repo,'plugins/token-monitor-embedded');
 const pin=JSON.parse(await readFile(path.join(plugin,'scripts/runtime.json'),'utf8')),version=(await readFile(path.join(repo,'VERSION'),'utf8')).trim();
 const host=`${process.platform==='darwin'?'macos':process.platform==='win32'?'windows':process.platform}-${process.arch}`;
@@ -24,6 +25,7 @@ for(const target of targets){
  const prefix=config.archive.replace(/\.(tar\.gz|zip)$/,'');const node=await readFile(path.join(extract,prefix,config.executable));
  const output=path.join(repo,'dist',target,'token-monitor-embedded');await rm(output,{recursive:true,force:true});await mkdir(output,{recursive:true});
  for(const name of ['.codex-plugin','assets','server/dist','ui/dist','README.md','VALIDATION.md'])await cp(path.join(plugin,name),path.join(output,name),{recursive:true});
+ await copyPluginHelp(output);
  for(const name of ['LICENSE','NOTICE'])await cp(path.join(repo,name),path.join(output,name));
  await mkdir(path.join(output,'runtime'),{recursive:true});await writeFile(path.join(output,'runtime/node.gz'),gzipSync(node,{mtime:0}));await writeFile(path.join(output,'runtime/node.sha256'),digest(node)+'\n');await cp(path.join(extract,prefix,'LICENSE'),path.join(output,'runtime/NODE-LICENSE.txt'));
  await mkdir(path.join(output,'scripts'),{recursive:true});const windows=config.os==='win';const launcher=windows?'launch.ps1':'launch.sh';await cp(path.join(plugin,'scripts',launcher),path.join(output,'scripts',launcher));

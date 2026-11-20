@@ -1,9 +1,11 @@
-# TokenMonitor Embedded 1.13.0
+# TokenMonitor Embedded 1.14.0
 
 Local Codex token telemetry with a React panel, TypeScript collector and bundled Node runtime. Open with `open_monitor` or the optional trusted startup hook. Polling adds no model turns. Costs are API-equivalent estimates, not invoices.
 
 Install the package matching your OS and processor. Codex transcripts and metadata remain read-only. Durable numeric history and preferences live in private plugin state; raw transcripts are not exported. DEV and release keep separate state.
 
 See the [documentation index](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/index.md), [installation guide](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/guides/installation.md), and [compaction reference](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/reference/compaction.md).
+
+Ask Codex about Token Monitor's dashboard, calculations, or efficiency tips. The installed plugin bundles a help skill and release-matched references. See [Using Token Monitor](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/guides/using-token-monitor.md).
 
 License: PolyForm Noncommercial 1.0.0. Bundled dependencies retain their notices.

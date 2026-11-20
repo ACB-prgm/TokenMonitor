@@ -10,6 +10,7 @@ Current reference pages describe this checkout. Release records and evidence des
 | Tests and validation | [testing](guides/testing.md) | Tests and validation questions |
 | Release preparation | [releasing](guides/releasing.md) | Release preparation questions |
 | Dashboard, controls, previews | [dashboard](reference/dashboard.md) | Dashboard, controls, previews questions |
+| Dashboard walkthrough, FAQ, and efficiency tips | [Using Token Monitor](guides/using-token-monitor.md) | Find a feature, interpret a reading, or decide what to change |
 | Quotas, allowances, freshness | [account-allowances](reference/account-allowances.md) | Quotas, allowances, freshness questions |
 | CV, compaction, payback, cache | [compaction](reference/compaction.md) | CV, compaction, payback, cache questions |
 | Costs, comparisons, coverage | [efficiency-metrics](reference/efficiency-metrics.md) | Costs, comparisons, coverage questions |
@@ -17,7 +18,7 @@ Current reference pages describe this checkout. Release records and evidence des
 | SQLite, retention, discovery, recovery | [history-storage](reference/history-storage.md) | SQLite, retention, discovery, recovery questions |
 | Historical releases | [index](releases/index.md) | Historical releases questions |
 
-Current release: [1.13.0 notes](releases/1.13.0/notes.md) · [1.13.0 validation](releases/1.13.0/validation.md).
+Current release: [1.14.0 notes](releases/1.14.0/notes.md) · [1.14.0 validation](releases/1.14.0/validation.md).
 
 ## Development evidence
 

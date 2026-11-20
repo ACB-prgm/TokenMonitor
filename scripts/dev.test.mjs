@@ -25,6 +25,10 @@ test('DEV builds have isolated identity/state and serve the real panel over MCP'
     const manifest=await json(path.join(first.pluginRoot,'.codex-plugin/plugin.json'));
     assert.equal(manifest.name,'token-monitor-dev');assert.equal(manifest.interface.displayName,'Token Monitor DEV');
     assert.match(manifest.version,/^\d+\.\d+\.\d+-dev\.\d+\.\d+$/);
+    assert.equal(manifest.skills,'./skills/');
+    const skillRoot=path.join(first.pluginRoot,manifest.skills,'token-monitor-help');
+    assert.match(await readFile(path.join(skillRoot,'SKILL.md'),'utf8'),/^---\r?\nname: token-monitor-help\r?\n/);
+    assert.match(await readFile(path.join(skillRoot,'references/docs/guides/using-token-monitor.md'),'utf8'),/## Frequently asked questions/);
     const config=await json(path.join(first.pluginRoot,'.mcp.json'));
     assert.deepEqual(Object.keys(config.mcpServers),['token-monitor-dev']);
     assert.equal(config.mcpServers['token-monitor-dev'].command,process.execPath);

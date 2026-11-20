@@ -3,12 +3,15 @@ import type {AnalyticsPeriod} from '../../server/src/history-database.js';
 import type {DashboardFilters,DashboardThread,DashboardTotals,HistoryDashboard} from '../../server/src/history-dashboard.js';
 import type {Efficiency} from '../../server/src/efficiency.js';
 import {pluginName} from '../../shared/identity.js';
+import {analyticsBucketStart,analyticsGrains,defaultAnalyticsGrain,type AnalyticsGrain} from '../../shared/analytics-grain.js';
 import {categories,exact,money,percent} from './analytics.js';
 
 const spend=(r:DashboardTotals)=>r.cost+r.overhead;
 const cached=(r:DashboardTotals)=>r.input?r.cached/r.input*100:null;
+const tokenCount=new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1});
 const metrics={
  spend:{label:'Estimated cost',value:(r:DashboardTotals)=>r.priced||r.overhead?spend(r):null,format:money},
+ tokens:{label:'Total tokens',value:(r:DashboardTotals)=>r.input+r.output,format:(n:number|null)=>n===null?exact(n):tokenCount.format(n)},
  call:{label:'Cost per call',value:(r:DashboardTotals)=>r.priced?spend(r)/r.priced:null,format:money},
  context:{label:'Context cost per call',value:(r:DashboardTotals)=>r.inputPriced?r.inputCost/r.inputPriced:null,format:money},
  cache:{label:'Cached input',value:cached,format:percent},
@@ -27,6 +30,7 @@ function savedScale(){
 }
 const periods={7:'Last 7 days',30:'Last 30 days',90:'Last 90 days',all:'All time'};
 const periodKeys=Object.keys(periods) as AnalyticsPeriod[];
+const grainLabels={day:'Daily',week:'Weekly',month:'Monthly'};
 const signed=(value:number)=>`${value>0?'+':''}${Number(value.toFixed(1))}`;
 const labelFor=(key:keyof DashboardFilters,value:string)=>value||unknownLabels[key];
 const sumRows=(rows:DashboardTotals[]):DashboardTotals=>Object.fromEntries(
@@ -34,35 +38,33 @@ const sumRows=(rows:DashboardTotals[]):DashboardTotals=>Object.fromEntries(
   .map(key=>[key,rows.reduce((sum,row)=>sum+row[key as keyof DashboardTotals],0)])
 ) as DashboardTotals;
 
-function dateSeries(data:HistoryDashboard,period:AnalyticsPeriod){
+function dateSeries(data:HistoryDashboard,grain:AnalyticsGrain){
  if(!data.trend.length)return [];
- const day=864e5, keys=new Map(data.trend.map(r=>[r.label,r]));
- const first=data.start||data.trend[0].label;
- const start=new Date((first.length===7?first+'-01':first)+'T00:00:00Z');
+ const keys=new Map(data.trend.map(r=>[r.label,r]));
+ const start=analyticsBucketStart(data.start||data.trend[0].label,grain);
  const end=new Date(data.end+'T00:00:00Z');
- if(period==='all')start.setUTCDate(1);
- if(period==='90')start.setUTCDate(start.getUTCDate()-(start.getUTCDay()+6)%7);
  const rows=[];
- for(const d=start;d<=end;period==='all'?d.setUTCMonth(d.getUTCMonth()+1):d.setTime(d.getTime()+(period==='90'?7:1)*day)){
-  const label=d.toISOString().slice(0,period==='all'?7:10);
+ for(const d=start;d<=end;grain==='month'?d.setUTCMonth(d.getUTCMonth()+1):d.setUTCDate(d.getUTCDate()+(grain==='week'?7:1))){
+  const label=d.toISOString().slice(0,10);
   rows.push({label,row:keys.get(label)});
  }
  return rows;
 }
 
 function TrendMarks({values,metric,spark=false}:{values:(number|null)[];metric:Metric;spark?:boolean}){
- const peak=Math.max(...values.map(n=>n??0),0);
+ const peak=values.reduce<number>((max,n)=>Math.max(max,n??0),0);
  const scale=!spark&&metric==='cache'?100:peak||1;
  const step=1000/Math.max(values.length,1);
  const x=(i:number)=>(i+.5)*step;
  const y=(n:number)=>98-(n/scale)*94;
- const path=values.map((value,i)=>value===null?'':`${i&&values[i-1]!==null?'L':'M'}${x(i)} ${y(value)}`).join(' ');
+ // Keep each bucket's x position so the line interpolates across missing observations.
+ const points=values.flatMap((value,i)=>value===null?[]:[{x:x(i),y:y(value)}]);
+ const path=points.map((point,i)=>`${i?'L':'M'}${point.x} ${point.y}`).join(' ');
+ const point=points.length===1?points[0]:undefined;
  return <svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">
   {!spark&&[4,51,98].map(n=><line key={n} x1="0" x2="1000" y1={n} y2={n} className="analytics-gridline" vectorEffect="non-scaling-stroke"/>)}
-  {metric==='spend'&&!spark?values.map((v,i)=>v!=null&&v>0&&<rect key={i} x={x(i)-step*.32} y={y(v)} width={step*.64} height={98-y(v)} rx={Math.min(step*.11,4)}/>)
-   :<><path d={path} fill="none" strokeWidth={spark?1.25:2} vectorEffect="non-scaling-stroke"/>
-    {!spark&&values.map((v,i)=>v!==null&&(i===0||values[i-1]===null)&&(i===values.length-1||values[i+1]===null)&&
-     <line key={i} x1={x(i)-3} x2={x(i)+3} y1={y(v)} y2={y(v)} strokeWidth="3" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>)}</>}
+  <path d={path} fill="none" strokeWidth={spark?1.25:2} vectorEffect="non-scaling-stroke"/>
+  {point&&<line x1={point.x-3} x2={point.x+3} y1={point.y} y2={point.y} strokeWidth={spark?1.25:3} strokeLinecap="round" vectorEffect="non-scaling-stroke"/>}
  </svg>;
 }
 
@@ -86,17 +88,18 @@ function TopModels({models}:{models:HistoryDashboard['models']}){
  </section>;
 }
 
-function Dashboard({data,period,display,setDisplay}:{data:HistoryDashboard;period:AnalyticsPeriod;
+function Dashboard({data,period,grain,display,setDisplay}:{data:HistoryDashboard;period:AnalyticsPeriod;grain:AnalyticsGrain;
  display:Display; setDisplay:(next:Display)=>void}){
  const {metric,rank}=display;
  const [selection,setSelection]=useState<string>();
- const series=dateSeries(data,period);
+ const series=dateSeries(data,grain);
  if(!series.length)return <p className="analytics-empty">No imported activity matches these filters.</p>;
  const total=sumRows(data.trend);
  const cost=metrics[metric];
- const valuesFor=(key:Metric)=>series.map(({row})=>row?metrics[key].value(row):key==='spend'?0:null);
+ const formatExact=metric==='tokens'?exact:cost.format;
+ const valuesFor=(key:Metric)=>series.map(({row})=>row?metrics[key].value(row):null);
  const values=valuesFor(metric);
- const peak=metric==='cache'?100:Math.max(...values.map(v=>v??0));
+ const peak=metric==='cache'?100:values.reduce<number>((max,v)=>Math.max(max,v??0),0);
  const composition=splitKeys.map((key,i)=>({...categories[i],value:total[key]}));
  const splitTotal=composition.reduce((n,part)=>n+part.value,0);
  const active=(rank==='peer'?[...data.low,...data.high]:data.spend).find(t=>t.source===selection);
@@ -144,13 +147,13 @@ function Dashboard({data,period,display,setDisplay}:{data:HistoryDashboard;perio
   </section>}
 
    <section className="analytics-section">
-    <div className="analytics-section-heading"><h2>{cost.label} over time</h2><span className="analytics-note">{period==='all'?'Monthly':period==='90'?'Weekly':'Daily'} · UTC</span></div>
+    <div className="analytics-section-heading"><h2>{cost.label} over time</h2><span className="analytics-note">{grainLabels[grain]} · UTC</span></div>
     <div className="analytics-trend"><div className="analytics-axis analytics-note"><span>{cost.format(peak)}</span><span>{cost.format(peak/2)}</span><span>{cost.format(0)}</span></div>
      <TrendMarks values={values} metric={metric}/>
     </div>
     <div className="analytics-dates analytics-note"><span>{series[0].label}</span><span>{series.at(-1)!.label}</span></div>
     <details><summary>Exact trend values</summary><div className="analytics-table"><table><thead><tr><th scope="col">UTC bucket start</th><th scope="col">{cost.label}</th><th scope="col">Calls</th></tr></thead>
-     <tbody>{series.map(({label,row},i)=><tr key={label}><th scope="row">{label}</th><td>{cost.format(values[i])}</td><td>{exact(row?.calls??0)}</td></tr>)}</tbody>
+     <tbody>{series.map(({label,row},i)=><tr key={label}><th scope="row">{label}</th><td>{formatExact(values[i])}</td><td>{exact(row?.calls??0)}</td></tr>)}</tbody>
     </table></div></details>
    </section>
    <TopModels models={data.models}/>
@@ -174,10 +177,11 @@ function Dashboard({data,period,display,setDisplay}:{data:HistoryDashboard;perio
  </>;
 }
 
-export function HistoryAnalyticsView({load,onBack,efficiency}:{load:(period:AnalyticsPeriod,filters:DashboardFilters)=>Promise<HistoryDashboard>;onBack?:()=>void;efficiency?:Efficiency}){
+export function HistoryAnalyticsView({load,onBack,efficiency}:{load:(period:AnalyticsPeriod,filters:DashboardFilters,grain:AnalyticsGrain)=>Promise<HistoryDashboard>;onBack?:()=>void;efficiency?:Efficiency}){
  const [scale,setScale]=useState(savedScale);
  const [display,setDisplay]=useState<Display>({metric:'spend',rank:'peer'});
  const [period,setPeriod]=useState<AnalyticsPeriod>('30');
+ const [grain,setGrain]=useState<AnalyticsGrain>(()=>defaultAnalyticsGrain(period));
  const [filters,setFilters]=useState<DashboardFilters>({});
  const [loaded,setLoaded]=useState<{key:string;data:HistoryDashboard}>();
  const data=loaded?.data;
@@ -185,19 +189,19 @@ export function HistoryAnalyticsView({load,onBack,efficiency}:{load:(period:Anal
  const [status,setStatus]=useState<'loading'|'ready'|'error'>('loading');
  const heading=useRef<HTMLHeadingElement>(null);
  const cache=useRef(new Map<string,HistoryDashboard>());
- const key=JSON.stringify([period,filters]);
+ const key=JSON.stringify([period,filters,grain]);
  useEffect(()=>{heading.current?.focus();},[]);
  useEffect(()=>{
   let active=true;
   const cached=cache.current.get(key);
   if(cached){setLoaded({key,data:cached});setStatus('ready');}
-  load(period,filters).then(result=>{
+  load(period,filters,grain).then(result=>{
    if(!active)return;
    if(cache.current.size>=12)cache.current.clear();
    cache.current.set(key,result);setLoaded({key,data:result});setStatus('ready');
   },()=>{if(active)setStatus('error');});
   return()=>{active=false;};
- },[key,period,filters,request,load]);
+ },[key,period,filters,grain,request,load]);
  const filter=(k:keyof DashboardFilters,value?:string)=>{
   setStatus('loading');
   setFilters(current=>({...current,[k]:value}));
@@ -218,8 +222,12 @@ export function HistoryAnalyticsView({load,onBack,efficiency}:{load:(period:Anal
    </div>
   </header>
   <div className="analytics-toolbar">
-   <div className="analytics-periods" role="group" aria-label="Date range">{periodKeys.map(k=><button key={k} type="button" aria-pressed={period===k} onClick={()=>{if(period!==k){setStatus('loading');setPeriod(k);}}}>{periods[k]}</button>)}</div>
-   <div className="analytics-filters">{dimensions.map(k=><select key={k} aria-label={filterLabels[k]} value={filters[k]===undefined?'all':`=${filters[k]}`} onChange={e=>filter(k,e.target.value==='all'?undefined:e.target.value.slice(1))}>
+   <div className="analytics-periods" role="group" aria-label="Date range">{periodKeys.map(k=><button key={k} type="button" aria-pressed={period===k} onClick={()=>{if(period!==k){setStatus('loading');setPeriod(k);setGrain(defaultAnalyticsGrain(k));}}}>{periods[k]}</button>)}</div>
+   <div className="analytics-filters">
+    <select aria-label="Time grain" value={grain} onChange={e=>{setStatus('loading');setGrain(analyticsGrains[e.target.selectedIndex]);}}>
+     {analyticsGrains.map(k=><option key={k} value={k}>{grainLabels[k]}</option>)}
+    </select>
+    {dimensions.map(k=><select key={k} aria-label={filterLabels[k]} value={filters[k]===undefined?'all':`=${filters[k]}`} onChange={e=>filter(k,e.target.value==='all'?undefined:e.target.value.slice(1))}>
     <option value="all">All {filterLabels[k].toLowerCase()}s</option>{data?.choices[k].map(v=><option key={v} value={`=${v}`}>{labelFor(k,v)}</option>)}
    </select>)}</div>
   </div>
@@ -227,6 +235,6 @@ export function HistoryAnalyticsView({load,onBack,efficiency}:{load:(period:Anal
   {!!progress?.failed&&<p className="analytics-note">{exact(progress.failed)} chats could not be read.</p>}
   {status==='loading'&&<p role="status" className="analytics-note">Loading usage analytics…</p>}
   {status==='error'&&<p role="status">Local history is unavailable. Try refreshing.</p>}
-  {data&&loaded?.key===key&&status!=='loading'&&<Dashboard data={data} period={period} display={display} setDisplay={setDisplay}/>}
+  {data&&loaded?.key===key&&status!=='loading'&&<Dashboard data={data} period={period} grain={grain} display={display} setDisplay={setDisplay}/>}
  </main>;
 }

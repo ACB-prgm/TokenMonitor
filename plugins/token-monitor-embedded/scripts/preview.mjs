@@ -12,6 +12,7 @@ await writeFile(path.join(output,'index.html'),`<!doctype html><html><head><meta
 await build({stdin:{resolveDir:root,contents:`
 import {AppBridge,PostMessageTransport} from '@modelcontextprotocol/ext-apps/app-bridge';
 import {installedVersion} from './shared/version.js';
+import {analyticsBucketStart,defaultAnalyticsGrain} from './shared/analytics-grain.js';
 import {estimateTurnPayback} from './server/src/turns.js';
 import {estimateCompactionValue} from './server/src/metrics.js';
 import {compactionDetail} from './server/src/compaction.js';
@@ -45,11 +46,16 @@ const sample=(factor)=>({calls:30*factor,priced:30*factor,inputPriced:30*factor,
  input:900000*factor,cached:740000*factor,output:11000*factor,cost:6*factor,overhead:.1*factor,inputCost:3*factor,
  freshCost:1.8*factor,readCost:.8*factor,writeCost:.4*factor,reasoningCost:2.1*factor,otherCost:.8*factor,unsplitCost:.1*factor});
 const choices={model:['gpt-6.1-sol','gpt-6.2-astra'],effort:['high','medium'],workspace:['TokenMonitor']};
-function history(period,filters={}){
- const labels=period==='all'?['2026-07','2026-08','2026-09','2026-10']:
-  period==='90'?['2026-09-28','2026-10-05','2026-10-12','2026-10-19']:
-  ['2026-10-15','2026-10-16','2026-10-18','2026-10-19'];
- const trend=labels.map((label,i)=>({label,...sample([2,5,3,7][i])}));
+function history(period,filters={},grain=defaultAnalyticsGrain(period)){
+ const start=period==='all'?'':period==='7'?'2026-10-13':period==='30'?'2026-09-20':'2026-07-22';
+ const days=['2026-05-20','2026-07-23','2026-10-01','2026-10-07','2026-10-15','2026-10-16','2026-10-18','2026-10-19'];
+ const buckets=new Map();
+ days.forEach((day,i)=>{
+  if(day<start)return;
+  const label=analyticsBucketStart(day,grain).toISOString().slice(0,10);
+  buckets.set(label,(buckets.get(label)??0)+i+1);
+ });
+ const trend=[...buckets].map(([label,factor])=>({label,...sample(factor)}));
  const models=choices.model.filter(model=>filters.model===undefined||filters.model===model).map(model=>{
   const factor=model===choices.model[0]?10:7;
   const efforts=choices.effort.filter(effort=>filters.effort===undefined||filters.effort===effort)
@@ -58,12 +64,12 @@ function history(period,filters={}){
  });
  const low={...sample(3),source:'panel',title:'Panel layout',delta:-.31,expected:26.5,contextExpected:11};
  const high={...sample(7),source:'history',title:'History storage upgrade',delta:.88,expected:22.7,contextExpected:10};
- return {start:period==='all'?'':period==='7'?'2026-10-13':period==='30'?'2026-09-20':'2026-07-22',end:'2026-10-19',
+ return {start,end:'2026-10-19',
   trend,previous:period==='all'?undefined:sample(14),models,choices,active:2,low:[low],high:[high],spend:[high,low],
   context:high,effort:{perCall:.07,share:.35,calls:300},payback:{profitable:7,evaluable:10,pending:1,net:4.75}};
 }
 function counts(){document.querySelector('#counts').textContent='Refresh calls '+calls+' · prompts '+messages+' · context updates '+updates;}
-bridge.oncalltool=async p=>{calls++;counts();if(p.name==='get_history_storage')return {content:[],_meta:{storage:{retentionDays:90,databaseBytes:121425920,journalBytes:0,reusableBytes:4096,backlog:0,frozenThreads:2}}};if(p.name==='manage_updates'){const a=p.arguments;if(a.action==='configure'){if(a.automatic!==undefined)updateState.automatic=a.automatic;if(a.target)updateState.target=a.target==='auto'?updateState.detectedTarget:a.target;}if(a.action==='dismiss')updateState.dismissed=true;return {content:[],_meta:{updates:{...updateState}}};}if(offline)throw new Error('Simulated collector disconnect');if(p.name==='get_history_analytics')return {content:[],_meta:{dashboard:history(p.arguments.period,p.arguments.filters)}};if(p.arguments.action==='select'){state.selectedId=p.arguments.taskId;state.task=catalog.find(t=>t.id===state.selectedId);}return {content:[],_meta:{updates:{...updateState},monitor:renderState(p.arguments)}};};
+bridge.oncalltool=async p=>{calls++;counts();if(p.name==='get_history_storage')return {content:[],_meta:{storage:{retentionDays:90,databaseBytes:121425920,journalBytes:0,reusableBytes:4096,backlog:0,frozenThreads:2}}};if(p.name==='manage_updates'){const a=p.arguments;if(a.action==='configure'){if(a.automatic!==undefined)updateState.automatic=a.automatic;if(a.target)updateState.target=a.target==='auto'?updateState.detectedTarget:a.target;}if(a.action==='dismiss')updateState.dismissed=true;return {content:[],_meta:{updates:{...updateState}}};}if(offline)throw new Error('Simulated collector disconnect');if(p.name==='get_history_analytics')return {content:[],_meta:{dashboard:history(p.arguments.period,p.arguments.filters,p.arguments.grain)}};if(p.arguments.action==='select'){state.selectedId=p.arguments.taskId;state.task=catalog.find(t=>t.id===state.selectedId);}return {content:[],_meta:{updates:{...updateState},monitor:renderState(p.arguments)}};};
 bridge.onmessage=async()=>{messages++;counts();return {};};bridge.onupdatemodelcontext=async()=>{updates++;counts();return {};};
 bridge.oninitialized=async()=>{await bridge.sendToolInput({arguments:{}});await bridge.sendToolResult({content:[],_meta:{monitor:state,analyticsHome:new URLSearchParams(location.search).has('analytics')}});counts();};
 bridge.connect(new PostMessageTransport(frame.contentWindow,frame.contentWindow)).then(()=>bridge.setHostContext({theme:'light',displayMode:'fullscreen',availableDisplayModes:['inline','fullscreen']}));

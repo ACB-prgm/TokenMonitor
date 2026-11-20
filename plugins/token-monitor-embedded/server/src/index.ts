@@ -8,6 +8,7 @@ import { recordRouting } from './routing-trace.js';
 import { acknowledgeStartup, startupState } from './startup.js';
 import {installedVersion} from '../../shared/version.js';
 import {pluginName,serverDisplayName,isDev} from '../../shared/identity.js';
+import {analyticsGrains} from '../../shared/analytics-grain.js';
 import {AutoUpdater} from './auto-update.js';
 import {Updates, targets,compareVersions} from './updates.js';
 import { Panels } from './panels.js';
@@ -111,11 +112,11 @@ server.registerTool('get_history_storage', {
 },async()=>{try{return {content:[],_meta:{storage:await collector.store.efficiency?.diagnostics()}};}catch{return {isError:true,content:[],_meta:{error:'Local history storage is temporarily unavailable.'}};}});
 server.registerTool('get_history_analytics', {
  title:'Read local usage analytics',description:'Read aggregate spending and token usage from imported local history.',
- inputSchema:{period:z.enum(['all','7','30','90']),filters:z.object({model:z.string().max(512).optional(),effort:z.string().max(512).optional(),workspace:z.string().max(4096).optional()}).optional()},annotations,_meta:{ui:{visibility:['app']}},
-},async({period,filters})=>{
+ inputSchema:{period:z.enum(['all','7','30','90']),grain:z.enum(analyticsGrains).optional(),filters:z.object({model:z.string().max(512).optional(),effort:z.string().max(512).optional(),workspace:z.string().max(4096).optional()}).optional()},annotations,_meta:{ui:{visibility:['app']}},
+},async({period,filters,grain})=>{
  try{
   if(!collector.store.efficiency)throw Error('History storage unavailable');
-  if(filters)return {content:[],_meta:{dashboard:await collector.store.efficiency.dashboard(period,filters)}};
+  if(filters||grain)return {content:[],_meta:{dashboard:await collector.store.efficiency.dashboard(period,filters??{},grain)}};
   return {content:[],_meta:{analytics:await collector.store.efficiency.analytics(period)}};
  }catch{return {isError:true,content:[],_meta:{error:'Local usage analytics are temporarily unavailable.'}};}
 });

@@ -14,7 +14,7 @@ Open **Token Monitor Analytics** from Codex's main navigation to see all importe
 
 The standalone view starts at Last 30 days. Last 7 and 30 days default to Daily, and Last 90 days and All time default to Weekly. Choose Daily, Weekly or Monthly in the toolbar. Buckets use UTC calendar dates, with weeks starting Monday. Periods include today. Model, effort and project filter the view. KPI cards switch the trend between estimated cost, total tokens, cost per call, context cost per call and cached input share. Total tokens adds recorded normal-call input and output. Cached input and reasoning output are already included in those counts. Rolling windows compare with the preceding equal-length period.
 
-KPI charts and sparklines interpolate linearly between measured buckets. Exact trend values still show missing measurements as unavailable, and period totals and comparisons use recorded activity.
+KPI charts and sparklines interpolate linearly between measured buckets. Total tokens uses K, M or B on KPI cards and the chart axis. Exact trend values shows full token counts and marks missing measurements as unavailable. Period totals and comparisons use recorded activity.
 
 **View scale** defaults to Compact. Comfortable and Large resize typography, spacing, charts, and card widths, so the layout reflows with available space. The analytics preference saves locally when storage is available and is independent of the thread monitor's display scale.
 

@@ -8,9 +8,10 @@ import {categories,exact,money,percent} from './analytics.js';
 
 const spend=(r:DashboardTotals)=>r.cost+r.overhead;
 const cached=(r:DashboardTotals)=>r.input?r.cached/r.input*100:null;
+const tokenCount=new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1});
 const metrics={
  spend:{label:'Estimated cost',value:(r:DashboardTotals)=>r.priced||r.overhead?spend(r):null,format:money},
- tokens:{label:'Total tokens',value:(r:DashboardTotals)=>r.input+r.output,format:exact},
+ tokens:{label:'Total tokens',value:(r:DashboardTotals)=>r.input+r.output,format:(n:number|null)=>n===null?exact(n):tokenCount.format(n)},
  call:{label:'Cost per call',value:(r:DashboardTotals)=>r.priced?spend(r)/r.priced:null,format:money},
  context:{label:'Context cost per call',value:(r:DashboardTotals)=>r.inputPriced?r.inputCost/r.inputPriced:null,format:money},
  cache:{label:'Cached input',value:cached,format:percent},
@@ -95,6 +96,7 @@ function Dashboard({data,period,grain,display,setDisplay}:{data:HistoryDashboard
  if(!series.length)return <p className="analytics-empty">No imported activity matches these filters.</p>;
  const total=sumRows(data.trend);
  const cost=metrics[metric];
+ const formatExact=metric==='tokens'?exact:cost.format;
  const valuesFor=(key:Metric)=>series.map(({row})=>row?metrics[key].value(row):null);
  const values=valuesFor(metric);
  const peak=metric==='cache'?100:values.reduce<number>((max,v)=>Math.max(max,v??0),0);
@@ -151,7 +153,7 @@ function Dashboard({data,period,grain,display,setDisplay}:{data:HistoryDashboard
     </div>
     <div className="analytics-dates analytics-note"><span>{series[0].label}</span><span>{series.at(-1)!.label}</span></div>
     <details><summary>Exact trend values</summary><div className="analytics-table"><table><thead><tr><th scope="col">UTC bucket start</th><th scope="col">{cost.label}</th><th scope="col">Calls</th></tr></thead>
-     <tbody>{series.map(({label,row},i)=><tr key={label}><th scope="row">{label}</th><td>{cost.format(values[i])}</td><td>{exact(row?.calls??0)}</td></tr>)}</tbody>
+     <tbody>{series.map(({label,row},i)=><tr key={label}><th scope="row">{label}</th><td>{formatExact(values[i])}</td><td>{exact(row?.calls??0)}</td></tr>)}</tbody>
     </table></div></details>
    </section>
    <TopModels models={data.models}/>

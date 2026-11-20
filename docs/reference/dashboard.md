@@ -1,6 +1,6 @@
 # Dashboard redesign
 
-The dashboard now follows the decision order: consolidated Thread Usage (context capacity, account allowances and lifetime thread spending), efficiency comparisons, supported insights, latest-call diagnostics, and recent call history. Spending uses the dated schedules in the [pricing catalog](efficiency-metrics.md#pricing-catalog).
+Below the thread selector, the dashboard shows eligible Efficiency Insights, then Thread Usage (context capacity, account allowances and lifetime thread spending), efficiency comparisons, latest-call diagnostics, and recent call history. Spending uses the dated schedules in the [pricing catalog](efficiency-metrics.md#pricing-catalog). See [Using Token Monitor](../guides/using-token-monitor.md) for common questions and efficiency tips.
 
 The thread monitor fills the width available in its Codex pane. On systems where scrollbars take up layout space, the pane reserves that space so opening and closing Recent Calls previews keeps the chart and dashboard aligned.
 
@@ -23,6 +23,8 @@ KPI charts and sparklines interpolate linearly between measured buckets. Total t
 Cost composition reuses the thread monitor categories and shows normal-call dollars and share. Compaction charges appear separately and remain included in total estimated cost. The chart reports category coverage because older summaries and unpriced calls may lack a breakdown. A background replay fills categories from readable transcripts while keeping published totals available.
 
 Thread outliers compare the selected activity with other threads at the same model and effort and compatible recorded pricing basis. Expected cost weights each peer group by the thread's call mix. Rankings require fully priced data and at least 20 calls on each side. Total estimated cost mode also includes threads without a suitable peer baseline. Expand a row to see context, output, compaction, and cache share. How to improve highlights a material context cost gap or offers a lower-effort trial when measured high-effort reasoning cost is substantial. Compaction outcomes respect date and project across all models and efforts.
+
+For each matched group, multiply the other chats' total cost per call (including compaction charges) by the inspected thread's calls in that group. Sum across groups for the expected cost. The ranking delta is `100 × (observed cost / expected cost − 1)`. Context comparisons use input cost in place of total cost. The improvement card looks for a thread more than 30% above its matched context baseline. The effort card requires at least 20 priced High-effort calls with category coverage and reasoning at least 25% of normal-call cost. Spending and token KPI changes are relative percentages against a nonzero preceding-period value. Cached input change is a percentage-point difference.
 
 Use analytics **Refresh** to reread saved totals while backfill is running.
 

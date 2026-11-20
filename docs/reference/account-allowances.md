@@ -4,13 +4,9 @@ The five-hour and weekly allowances describe the Codex account, independently of
 
 ## Live source
 
-While monitor state is requested, the MCP server lazily starts one installed Codex CLI subprocess using `codex app-server --listen stdio://`. It initializes the protocol, then calls [`account/rateLimits/read`](https://learn.chatgpt.com/docs/app-server#6-rate-limits-chatgpt). It can also receive account-limit notifications. There are no login, reset-credit, thread, or model-turn requests.
+The MCP server reads signed-in Codex usage through the desktop app bridge using the authenticated caller's chat. Ordinary panel reads share a cached snapshot and one in-flight request per process, refreshing after 30 seconds. Failures mark retained data stale and back off from 15 seconds up to five minutes. If the bridge or account identity is unavailable, monitoring continues with local catalogue telemetry. The account read itself starts no model turn.
 
-The process inherits the collector's `CODEX_HOME` and uses Codex's existing authentication. The executable is resolved from an absolute `CODEX_CLI_PATH`, PATH, or standard macOS Codex/ChatGPT application locations. No runtime downloads or API keys are required. If the installed CLI or account authentication is unavailable, monitoring continues with local telemetry.
-
-Live refreshes run at most once every 30 seconds and are shared by panels within the same MCP process. Initialization and individual reads each have a five-second deadline. Failure terminates the connection and schedules retries after 30, 60, 120, 240, then 300 seconds. Closing the collector or 60 seconds without state requests stops the subprocess. Account requests may use the network through Codex; transcript parsing and financial estimates remain local. Authentication and diagnostic output are not retained or returned to the panel.
-
-When the response includes `rateLimitsByLimitId`, only its `codex` bucket is used. The legacy `rateLimits` bucket is used only when the map is absent. Five-hour and weekly windows are identified by 300 and 10,080 minutes, regardless of which slot contains them. Other metered buckets are excluded.
+The display reads five-hour and weekly windows from the Codex usage bucket, identified by 300 and 10,080 minutes regardless of slot. Other metered buckets are excluded from the displayed windows. Continuation checks capacity separately.
 
 ## Local catalogue fallback
 
@@ -28,7 +24,18 @@ A live reading no more than 60 seconds old takes precedence. Otherwise, the newe
 
 When the reported reset time passes without a newer observation, the UI shows **Awaiting refresh**. It does not assume that the account is back to 100% or estimate consumption from thread cost.
 
+## Estimated thread contribution
+
+Observed remaining allowance is `100% − account used percentage`, clamped for display. The thread estimate is `lifetime priced normal-call USD × 12.9` percentage points for five hours and `× 2.1` for weekly. For example, $2 of measured normal-call API-equivalent cost gives approximately 25.8 and 4.2 percentage points, respectively. The calibration spans resets and can exceed 100%. It excludes separate compaction charges and unpriced calls. The displayed account remaining values come from their own observations.
+
+## Continue after reset
+
+In **Settings → Continue after reset**, choose **Off** (the default), **Current thread**, or **All threads** (existing and future eligible local chats on this host). The choice persists. When a fresh five-hour observation reaches 90% used, the panel can offer the same setting. **Not now** dismisses that offer for the selected chat and reset window.
+
+With permission enabled, the worker checks for a latest failed turn with confirmed usage-limit evidence. It checks about every 15 seconds, waits until five seconds after any known blocking resets, and verifies fresh capacity and the unchanged idle thread before sending one continuation. A weekly or other metered limit can also block dispatch. Completed work, manually interrupted work, temporary rate limits and ambiguous failures do not qualify. A new turn or switching the setting off cancels a waiting attempt. The worker pauses for unavailable or archived chats, identity changes, or missing live evidence. It does not resend after uncertain delivery.
+
+Keep Codex running and the computer awake. The worker can run with the panel hidden while the plugin process stays alive. Settings and attempt state are stored locally.
 
 ## Source and tests
 
-[Implementation](../../plugins/token-monitor-embedded/server/src/allowances.ts) · [Regression tests](../../plugins/token-monitor-embedded/tests/allowances.test.mjs) · [Documentation index](../index.md)
+[Allowance selection](../../plugins/token-monitor-embedded/server/src/allowances.ts) · [Bridge](../../plugins/token-monitor-embedded/server/src/bridge-usage.ts) · [Continuation](../../plugins/token-monitor-embedded/server/src/continuation.ts) · [Regression tests](../../plugins/token-monitor-embedded/tests/allowances.test.mjs) · [Documentation index](../index.md)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify real Codex discovers packaged hooks without executing or trusting them."""
+"""Verify real Codex discovers packaged help and hooks without trusting the hooks."""
 import json
 import os
 from pathlib import Path
@@ -18,7 +18,7 @@ REPO = Path(__file__).resolve().parents[1]
 
 @unittest.skipUnless(shutil.which('codex'), 'Codex runtime is required for hook discovery')
 class EmbeddedHookDiscoveryTests(unittest.TestCase):
-    def test_release_hooks_are_discovered_as_untrusted_plugin_hooks(self):
+    def test_release_skill_and_untrusted_hooks_are_discovered(self):
         manifest = json.loads((REPO / 'plugins/token-monitor-embedded/.codex-plugin/plugin.json').read_text())
         name, version = manifest['name'], manifest['version']
         target = os.environ.get('TOKENMONITOR_TEST_TARGET') or ('windows' if os.name == 'nt' else 'macos') + '-' + ('arm64' if platform.machine().lower() in ('arm64', 'aarch64') else 'x64')
@@ -31,11 +31,11 @@ class EmbeddedHookDiscoveryTests(unittest.TestCase):
             plugin.mkdir(parents=True)
             with zipfile.ZipFile(archive) as bundle:
                 self.assertNotIn(f'{name}/plugin.json', bundle.namelist(), 'Portable manifest shadows hook support')
-                for relative in ['.codex-plugin/plugin.json', 'hooks/hooks.json']:
+                for relative in ['.codex-plugin/plugin.json', 'hooks/hooks.json', 'skills/token-monitor-help/SKILL.md']:
                     target = plugin / relative
                     target.parent.mkdir(parents=True, exist_ok=True)
                     target.write_bytes(bundle.read(f'{name}/{relative}'))
-            # Only manifests are copied: no hook executable can run during this test.
+            # No hook executable is copied or can run during this test.
             (root / '.agents/plugins').mkdir(parents=True)
             (root / '.agents/plugins/marketplace.json').write_text(json.dumps({
                 'name': 'hook-test', 'plugins': [{'name': name, 'source': {'source': 'local', 'path': './fixture'}}]}))
@@ -73,6 +73,13 @@ class EmbeddedHookDiscoveryTests(unittest.TestCase):
                     self.assertEqual(len(found), 6)
                     self.assertTrue(all(hook['source'] == 'plugin' and hook['trustStatus'] == 'untrusted' for hook in found))
                     self.assertTrue(all(not item['errors'] and not item['warnings'] for item in result['data']), json.dumps([{'errors': item['errors'], 'warnings': item['warnings']} for item in result['data']]))
+                    result = call(3, 'skills/list', {'cwds': [str(root)]})
+                    skills = [skill for item in result['data'] for skill in item['skills']
+                              if skill['name'].split(':')[-1] == 'token-monitor-help']
+                    self.assertEqual(len(skills), 1)
+                    self.assertTrue(skills[0]['enabled'])
+                    self.assertEqual(Path(skills[0]['path']).resolve(),
+                                     (plugin / 'skills/token-monitor-help/SKILL.md').resolve())
                 finally:
                     process.terminate()
                     try:

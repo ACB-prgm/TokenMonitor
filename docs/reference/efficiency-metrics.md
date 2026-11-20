@@ -10,6 +10,20 @@ The Comp row includes all imported calls in the selected UTC period, including t
 
 Periods use UTC calendar days. Averages are weighted sums divided by qualifying counts. Latest-100 windows use retained normal calls, including unpriced calls in the window; separately attributed compaction charges within that window are included. Routine snapshots carry aggregate summaries and selected recent calls, without loading or transmitting lifetime call lists or weekly tables. Missing or zero references have no percentage change.
 
+## Per-call accounting
+
+| Metric | Calculation |
+| --- | --- |
+| Fresh input in the composition | Total input minus cache-read and cache-write tokens. Latest Call and the Context chart show uncached input as total input minus cache reads. |
+| Input cost | `(fresh × input rate + cache reads × read rate + cache writes × write rate) / 1,000,000` |
+| Output cost | `output × output rate / 1,000,000`. When reasoning is known, split output cost between thinking and other output using the same rate. Otherwise show unsplit output. |
+| Normal-call cost | Input cost plus output cost. Thread and analytics estimated cost add attributed compaction charges separately. |
+| Cached input share | `100 × cache-read tokens / input tokens`. For aggregates, divide the totals so larger calls carry their actual weight. The thread display requires complete cache accounting. |
+| Cache savings | `input tokens × ordinary input rate / 1,000,000 − input cost` summed over fully priced calls. The baseline treats the same input as ordinary fresh input. |
+| Total tokens | Input plus output. Cached reads and writes are input categories, and thinking is part of output. |
+
+For example, with 10,000 input tokens (8,000 cache reads, zero writes) and 500 output tokens, sample rates of $2 fresh input, $0.50 cache reads and $8 output per million give $0.008 input cost and $0.004 output cost. The call estimate is $0.012, cached share is 80%, and cache savings are $0.012 against the $0.020 ordinary-input baseline. These are illustrative rates. Use the shown call rates, model, tier, full input size and timestamp for real data.
+
 ## Efficiency comparisons
 
 The expandable KPI strip has Thread and Comp rows, ordered Context/call, Cost/call, Compaction payback. The always-visible “Compare with” selector shares its header and defaults to the last seven UTC calendar days, with 30 days and all history available. Thread deltas divide the displayed Thread average by the displayed Comp average. Comp includes all chats in the selected period, including this thread; its deltas compare against the immediately preceding equal-length period. All history has no preceding period and omits Comp deltas. Both cost metrics use spending-change badges because differences in models, effort and work can affect the aggregates. Zero or absent references produce no delta. Asterisks indicate fewer than 20 priced calls in either population, incomplete pricing, or incomplete import.

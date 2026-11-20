@@ -6,4 +6,6 @@ Install the package matching your OS and processor. Codex transcripts and metada
 
 See the [documentation index](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/index.md), [installation guide](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/guides/installation.md), and [compaction reference](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/reference/compaction.md).
 
+Ask Codex about Token Monitor's dashboard, calculations, or efficiency tips. The installed plugin bundles a help skill and release-matched references. See [Using Token Monitor](https://github.com/ACB-prgm/TokenMonitor/blob/main/docs/guides/using-token-monitor.md).
+
 License: PolyForm Noncommercial 1.0.0. Bundled dependencies retain their notices.

@@ -57,7 +57,7 @@ function matchingThreads(rows:ThreadGroup[]){
  });
 }
 
-export function readHistoryDashboard(db:HistoryDatabase,period:AnalyticsPeriod,filters:DashboardFilters,now=Date.now(),grain=defaultAnalyticsGrain(period)){
+export function readHistoryDashboard(db:HistoryDatabase,period:AnalyticsPeriod,filters:DashboardFilters,now=Date.now(),grain:AnalyticsGrain=defaultAnalyticsGrain){
  const day=864e5, today=Math.floor(now/day)*day;
  const iso=(n:number)=>new Date(n).toISOString().slice(0,10);
  const end=iso(today);

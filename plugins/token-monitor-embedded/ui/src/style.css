@@ -183,6 +183,7 @@ details[open]>summary::before,details[open]>summary .disclosure-caret,
 .analytics-axis{display:flex;flex-direction:column;justify-content:space-between;text-align:right;font-variant-numeric:tabular-nums}
 .analytics-trend svg{min-width:0;flex:1;stroke:var(--blue)}
 .analytics-trend line.analytics-gridline{stroke:var(--line)}
+.analytics-trend .analytics-column{fill:var(--blue);stroke:none}
 .analytics-dates{display:flex;justify-content:space-between;margin:.2em 0 .45em}
 .analytics-page details summary{cursor:pointer;color:var(--muted)}
 .analytics-table{overflow:auto;margin-top:.55em;max-height:16em}

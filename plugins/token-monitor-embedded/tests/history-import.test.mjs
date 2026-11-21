@@ -197,6 +197,7 @@ test('dashboard filters published history, reconciles cost categories and ranks 
  add('~staging','model-a','work',60,99);
  const read=mod.exports.readHistoryDashboard;
  const result=read(db,'7',{workspace:'work',model:'model-a'},now);
+ assert.equal(result.trend[0].label,'2026-11-16');
  assert.equal(result.trend[0].calls,55);
  assert.equal(result.trend[0].splitCalls,55);
  assert.equal(result.trend[0].freshCost+result.trend[0].reasoningCost,result.trend[0].cost);
@@ -217,7 +218,7 @@ test('dashboard filters published history, reconciles cost categories and ranks 
  assert.deepEqual(read(db,'all',work,now).trend.map(r=>[r.label,r.splitCalls]),[
   ['2026-11-02',0],['2026-11-16',55],
  ]);
- assert.deepEqual(read(db,'30',work,now).trend.map(r=>r.label),['2026-11-08','2026-11-16']);
+ assert.deepEqual(read(db,'30',work,now).trend.map(r=>r.label),['2026-11-02','2026-11-16']);
  const monthly=read(db,'7',work,now,'month');
  assert.deepEqual(monthly.trend.map(r=>[r.label,r.calls,r.input+r.output]),[['2026-11-01',55,5555]]);
  assert.equal(monthly.previous.calls,20,'grain does not change the selected dates');

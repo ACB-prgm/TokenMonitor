@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.14.1
+
+- Usage Analytics opens with a weekly line chart and keeps the selected grain when the date range changes.
+- Choose Columns for the main trend. Line charts connect measured buckets across gaps, and **Exact trend values** identifies missing measurements.
+
 ## 1.14.0
 
 - Choose daily, weekly, or monthly UTC buckets in Usage Analytics. The trend chart connects observed buckets, and **Exact trend values** shows which buckets have data.

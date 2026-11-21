@@ -1,5 +1,6 @@
 # Release history
 
+- [1.14.1 notes](1.14.1/notes.md) · [Validation](1.14.1/validation.md)
 - [1.14.0 notes](1.14.0/notes.md) · [Validation](1.14.0/validation.md)
 - [1.13.0 notes](1.13.0/notes.md) · [Validation](1.13.0/validation.md)
 - [1.12.0 notes](1.12.0/notes.md) · [Validation](1.12.0/validation.md)

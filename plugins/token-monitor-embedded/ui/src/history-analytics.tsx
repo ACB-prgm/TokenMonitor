@@ -17,7 +17,9 @@ const metrics={
  cache:{label:'Cached input',value:cached,format:percent},
 };
 type Metric=keyof typeof metrics;
-type Display = {metric:Metric; rank:string};
+const chartTypes=['Line','Columns'] as const;
+type ChartType=typeof chartTypes[number];
+type Display = {metric:Metric; rank:string; chartType:ChartType};
 const splitKeys=['freshCost','readCost','writeCost','reasoningCost','otherCost','unsplitCost'] as const;
 const filterLabels={model:'Model',effort:'Effort',workspace:'Project'};
 const unknownLabels={model:'Unknown model',effort:'Unknown effort',workspace:'No project'};
@@ -51,7 +53,7 @@ function dateSeries(data:HistoryDashboard,grain:AnalyticsGrain){
  return rows;
 }
 
-function TrendMarks({values,metric,spark=false}:{values:(number|null)[];metric:Metric;spark?:boolean}){
+function TrendMarks({values,metric,spark=false,chartType='Line'}:{values:(number|null)[];metric:Metric;spark?:boolean;chartType?:ChartType}){
  const peak=values.reduce<number>((max,n)=>Math.max(max,n??0),0);
  const scale=!spark&&metric==='cache'?100:peak||1;
  const step=1000/Math.max(values.length,1);
@@ -63,8 +65,9 @@ function TrendMarks({values,metric,spark=false}:{values:(number|null)[];metric:M
  const point=points.length===1?points[0]:undefined;
  return <svg viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true">
   {!spark&&[4,51,98].map(n=><line key={n} x1="0" x2="1000" y1={n} y2={n} className="analytics-gridline" vectorEffect="non-scaling-stroke"/>)}
-  <path d={path} fill="none" strokeWidth={spark?1.25:2} vectorEffect="non-scaling-stroke"/>
-  {point&&<line x1={point.x-3} x2={point.x+3} y1={point.y} y2={point.y} strokeWidth={spark?1.25:3} strokeLinecap="round" vectorEffect="non-scaling-stroke"/>}
+  {chartType==='Columns'?points.map(({x,y})=><rect key={x} x={x-step*.32} y={y} width={step*.64} height={98-y} className="analytics-column"/>)
+   :point?<line x1={point.x-3} x2={point.x+3} y1={point.y} y2={point.y} strokeWidth={spark?1.25:3} strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+   :<path d={path} fill="none" strokeWidth={spark?1.25:2} vectorEffect="non-scaling-stroke"/>}
  </svg>;
 }
 
@@ -149,7 +152,7 @@ function Dashboard({data,period,grain,display,setDisplay}:{data:HistoryDashboard
    <section className="analytics-section">
     <div className="analytics-section-heading"><h2>{cost.label} over time</h2><span className="analytics-note">{grainLabels[grain]} · UTC</span></div>
     <div className="analytics-trend"><div className="analytics-axis analytics-note"><span>{cost.format(peak)}</span><span>{cost.format(peak/2)}</span><span>{cost.format(0)}</span></div>
-     <TrendMarks values={values} metric={metric}/>
+     <TrendMarks values={values} metric={metric} chartType={display.chartType}/>
     </div>
     <div className="analytics-dates analytics-note"><span>{series[0].label}</span><span>{series.at(-1)!.label}</span></div>
     <details><summary>Exact trend values</summary><div className="analytics-table"><table><thead><tr><th scope="col">UTC bucket start</th><th scope="col">{cost.label}</th><th scope="col">Calls</th></tr></thead>
@@ -179,9 +182,9 @@ function Dashboard({data,period,grain,display,setDisplay}:{data:HistoryDashboard
 
 export function HistoryAnalyticsView({load,onBack,efficiency}:{load:(period:AnalyticsPeriod,filters:DashboardFilters,grain:AnalyticsGrain)=>Promise<HistoryDashboard>;onBack?:()=>void;efficiency?:Efficiency}){
  const [scale,setScale]=useState(savedScale);
- const [display,setDisplay]=useState<Display>({metric:'spend',rank:'peer'});
+ const [display,setDisplay]=useState<Display>({metric:'spend',rank:'peer',chartType:'Line'});
  const [period,setPeriod]=useState<AnalyticsPeriod>('30');
- const [grain,setGrain]=useState<AnalyticsGrain>(()=>defaultAnalyticsGrain(period));
+ const [grain,setGrain]=useState<AnalyticsGrain>(defaultAnalyticsGrain);
  const [filters,setFilters]=useState<DashboardFilters>({});
  const [loaded,setLoaded]=useState<{key:string;data:HistoryDashboard}>();
  const data=loaded?.data;
@@ -222,10 +225,13 @@ export function HistoryAnalyticsView({load,onBack,efficiency}:{load:(period:Anal
    </div>
   </header>
   <div className="analytics-toolbar">
-   <div className="analytics-periods" role="group" aria-label="Date range">{periodKeys.map(k=><button key={k} type="button" aria-pressed={period===k} onClick={()=>{if(period!==k){setStatus('loading');setPeriod(k);setGrain(defaultAnalyticsGrain(k));}}}>{periods[k]}</button>)}</div>
+   <div className="analytics-periods" role="group" aria-label="Date range">{periodKeys.map(k=><button key={k} type="button" aria-pressed={period===k} onClick={()=>{if(period!==k){setStatus('loading');setPeriod(k);}}}>{periods[k]}</button>)}</div>
    <div className="analytics-filters">
     <select aria-label="Time grain" value={grain} onChange={e=>{setStatus('loading');setGrain(analyticsGrains[e.target.selectedIndex]);}}>
      {analyticsGrains.map(k=><option key={k} value={k}>{grainLabels[k]}</option>)}
+    </select>
+    <select aria-label="Trend chart type" value={display.chartType} onChange={e=>setDisplay({...display,chartType:chartTypes[e.target.selectedIndex]})}>
+     {chartTypes.map(type=><option key={type}>{type}</option>)}
     </select>
     {dimensions.map(k=><select key={k} aria-label={filterLabels[k]} value={filters[k]===undefined?'all':`=${filters[k]}`} onChange={e=>filter(k,e.target.value==='all'?undefined:e.target.value.slice(1))}>
     <option value="all">All {filterLabels[k].toLowerCase()}s</option>{data?.choices[k].map(v=><option key={v} value={`=${v}`}>{labelFor(k,v)}</option>)}

@@ -46,7 +46,7 @@ const sample=(factor)=>({calls:30*factor,priced:30*factor,inputPriced:30*factor,
  input:900000*factor,cached:740000*factor,output:11000*factor,cost:6*factor,overhead:.1*factor,inputCost:3*factor,
  freshCost:1.8*factor,readCost:.8*factor,writeCost:.4*factor,reasoningCost:2.1*factor,otherCost:.8*factor,unsplitCost:.1*factor});
 const choices={model:['gpt-6.1-sol','gpt-6.2-astra'],effort:['high','medium'],workspace:['TokenMonitor']};
-function history(period,filters={},grain=defaultAnalyticsGrain(period)){
+function history(period,filters={},grain=defaultAnalyticsGrain){
  const start=period==='all'?'':period==='7'?'2026-10-13':period==='30'?'2026-09-20':'2026-07-22';
  const days=['2026-05-20','2026-07-23','2026-10-01','2026-10-07','2026-10-15','2026-10-16','2026-10-18','2026-10-19'];
  const buckets=new Map();
